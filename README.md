@@ -7,6 +7,8 @@ Includes among other things:
 - A piano roll
 - Built in voice viewer/editor
 - You can play units on your (qwerty) keyboard (maybe one day MIDI keyboard support)
+- MIDI (`.mid`) import
+- PiyoPiyo (`.pmd`) import
 
 Powered by the [ptcow](<https://github.com/crumblingstatue/ptcow/>) PxTone playback library.
 
