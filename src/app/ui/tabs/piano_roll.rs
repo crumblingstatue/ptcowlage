@@ -420,6 +420,7 @@ fn roll_ui_inner(
     // Left click popup
     if let Some(mp) = mouse_screen_pos
         && state.interact_mode == InteractMode::View
+        && ui_contains_ptr
         && lmb_clicked
     {
         if !hovered_events.is_empty() {
