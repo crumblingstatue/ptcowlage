@@ -1132,10 +1132,13 @@ fn help_popup_button(ui: &mut egui::Ui, interact_mode: InteractMode) {
             ui.input_label("Shift+lmb");
             ui.end_row();
             match interact_mode {
-                InteractMode::View | InteractMode::Edit => {
+                InteractMode::View => {
                     ui.label("Note info");
                     ui.input_label("lmb");
-                    ui.end_row();
+                }
+                InteractMode::Edit => {
+                    ui.label("Selection box");
+                    ui.input_label("lmb drag");
                 }
                 InteractMode::Place => {
                     ui.label("Place note");
