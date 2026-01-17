@@ -1,0 +1,521 @@
+use {
+    crate::{
+        app::ui::{
+            UnitPopupTab, handle_units_command, tabs::voices::VoicesUiState, unit_color,
+            unit_popup_ui,
+        },
+        audio_out::{AuxAudioState, SongState},
+        evilscript,
+    },
+    eframe::egui,
+    egui_extras::Column,
+    egui_toast::{Toast, ToastKind, ToastOptions, Toasts},
+    ptcow::{Event, EventPayload, SampleRate, UnitIdx, VoiceIdx},
+};
+
+pub struct RawEventsUiState {
+    follow: bool,
+    unit_popup_tab: UnitPopupTab,
+    filter: Filter,
+    filtered_events: Vec<usize>,
+    pub go_to: Option<usize>,
+    pub highlight: Option<usize>,
+    cmd_string_buf: String,
+    toasts: Toasts,
+}
+
+impl Default for RawEventsUiState {
+    fn default() -> Self {
+        Self {
+            follow: Default::default(),
+            unit_popup_tab: UnitPopupTab::Unit,
+            filter: Filter::default(),
+            filtered_events: Vec::new(),
+            go_to: None,
+            highlight: None,
+            cmd_string_buf: String::new(),
+            toasts: Toasts::new()
+                .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
+                .direction(egui::Direction::BottomUp),
+        }
+    }
+}
+
+enum EventListCmd {
+    Remove { idx: usize },
+    Insert { idx: usize, event: Event },
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+struct Filter {
+    unit: Option<UnitIdx>,
+    event: Option<u8>,
+}
+
+impl Filter {
+    const fn is_active(&self) -> bool {
+        self.unit.is_some() || self.event.is_some()
+    }
+}
+
+pub fn ui(
+    ui: &mut egui::Ui,
+    song: &mut SongState,
+    ui_state: &mut RawEventsUiState,
+    out_rate: SampleRate,
+    aux: &AuxAudioState,
+    voices_ui_state: &mut VoicesUiState,
+) {
+    ui_state.toasts.show(ui.ctx());
+    top_ui(ui, song, ui_state);
+
+    ui.separator();
+    // Work around overlapping borrows of units
+    let unit_names: Vec<String> = song
+        .herd
+        .units
+        .iter()
+        .map(|unit| unit.name.clone())
+        .collect();
+    let mut unit_cmd = None;
+    let mut ev_list_cmd = None;
+    let k_c = ui.input(|inp| inp.key_pressed(egui::Key::C));
+    let mut table = egui_extras::TableBuilder::new(ui)
+        .striped(true)
+        .column(Column::initial(48.0))
+        .column(Column::auto())
+        .column(Column::auto())
+        .column(Column::remainder());
+    if let Some(go_to) = ui_state.go_to.take() {
+        ui_state.follow = false;
+        ui_state.highlight = Some(go_to);
+        table = table.scroll_to_row(go_to, Some(egui::Align::Center));
+    }
+    if ui_state.follow {
+        if ui_state.filter.is_active() {
+            if let Some(idx) = ui_state
+                .filtered_events
+                .iter()
+                .position(|idx| *idx == song.herd.evt_idx)
+            {
+                table = table.scroll_to_row(idx, Some(egui::Align::Center));
+            }
+        } else {
+            table = table.scroll_to_row(song.herd.evt_idx, Some(egui::Align::Center));
+        }
+    }
+    table
+        .header(16.0, |mut header| {
+            header.col(|ui| {
+                ui.label("no.");
+            });
+            header.col(|ui| {
+                ui.label("tick");
+            });
+            header.col(|ui| {
+                ui.label("unit");
+            });
+            header.col(|ui| {
+                ui.label("payload");
+            });
+        })
+        .body(|mut body| {
+            body.ui_mut().style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+            let rows_len = if ui_state.filter.is_active() {
+                ui_state.filtered_events.len()
+            } else {
+                song.song.events.eves.len()
+            };
+            body.rows(16.0, rows_len, |mut row| {
+                let mut idx = row.index();
+                // Redirect to event from filtered index
+                if ui_state.filter.is_active() {
+                    idx = ui_state.filtered_events[idx];
+                }
+                if song.herd.evt_idx == idx {
+                    row.set_selected(true);
+                }
+                if let Some(highlight) = ui_state.highlight
+                    && highlight == idx
+                {
+                    row.set_selected(true);
+                }
+                let Some(ev) = song.song.events.eves.get_mut(idx) else {
+                    row.col(|ui| {
+                        ui.label("<out of bounds>");
+                    });
+                    return;
+                };
+                let (_rect, re) = row.col(|ui| {
+                    ui.add(egui::Label::new(idx.to_string()).sense(egui::Sense::click()))
+                        .context_menu(|ui| {
+                            if ui.button("Delete").clicked() {
+                                ev_list_cmd = Some(EventListCmd::Remove { idx });
+                            }
+                            ui.menu_button("Insert", |ui| {
+                                let mut payload = None;
+                                if ui.button("Volume").clicked() {
+                                    payload = Some(EventPayload::Volume(127));
+                                }
+                                if ui.button("Voice").clicked() {
+                                    payload = Some(EventPayload::SetVoice(VoiceIdx(0)));
+                                }
+                                if let Some(payload) = payload {
+                                    let event = Event {
+                                        payload,
+                                        unit: ev.unit,
+                                        tick: ev.tick,
+                                    };
+                                    ev_list_cmd = Some(EventListCmd::Insert { idx, event });
+                                }
+                            });
+                            if ui.button("Clone (C)").clicked() {
+                                ev_list_cmd = Some(EventListCmd::Insert { idx, event: *ev });
+                            }
+                        });
+                });
+                if re.hovered() && k_c {
+                    ev_list_cmd = Some(EventListCmd::Insert { idx, event: *ev });
+                }
+                row.col(|ui| {
+                    if ui.link(ev.tick.to_string()).clicked() {
+                        song.herd.evt_idx = idx;
+                        song.herd.seek_to_sample(ptcow::timing::tick_to_sample(
+                            ev.tick,
+                            song.ins.samples_per_tick,
+                        ));
+                    }
+                });
+                row.col(|ui| match song.herd.units.get_mut(ev.unit.usize()) {
+                    Some(unit) => {
+                        #[derive(Clone, Copy)]
+                        enum PopupKind {
+                            Left,
+                            Right,
+                        }
+
+                        let re = ui.link(unit_rich_text(ev.unit, &unit.name));
+                        let mut toggle = false;
+                        if re.clicked_by(egui::PointerButton::Primary) {
+                            ui.memory_mut(|mem| mem.data.insert_temp(re.id, PopupKind::Left));
+                            toggle = true;
+                        } else if re.clicked_by(egui::PointerButton::Secondary) {
+                            ui.memory_mut(|mem| mem.data.insert_temp(re.id, PopupKind::Right));
+                            toggle = true;
+                        }
+                        let popup_kind = ui.memory(|mem| mem.data.get_temp::<PopupKind>(re.id));
+                        let close_behavior = match popup_kind {
+                            Some(PopupKind::Left) => egui::PopupCloseBehavior::CloseOnClickOutside,
+                            _ => egui::PopupCloseBehavior::CloseOnClick,
+                        };
+                        egui::Popup::from_response(&re)
+                            .close_behavior(close_behavior)
+                            .open_memory(toggle.then_some(egui::SetOpenCommand::Toggle))
+                            .show(|ui| {
+                                let Some(kind) = popup_kind else {
+                                    return;
+                                };
+                                match kind {
+                                    PopupKind::Left => {
+                                        unit_popup_ui(
+                                            ui,
+                                            ev.unit,
+                                            unit,
+                                            &mut song.ins,
+                                            &mut unit_cmd,
+                                            &mut ui_state.unit_popup_tab,
+                                            out_rate,
+                                            aux,
+                                            voices_ui_state,
+                                        );
+                                    }
+                                    PopupKind::Right => {
+                                        for (idx, unit_name) in unit_names.iter().enumerate() {
+                                            if ui
+                                                .button(
+                                                    egui::RichText::new(unit_name)
+                                                        .color(unit_color(idx)),
+                                                )
+                                                .clicked()
+                                            {
+                                                ev.unit = UnitIdx(idx as u8);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                    }
+                    None => {
+                        ui.label(
+                            egui::RichText::new(format!("<invalid:{}>", ev.unit.0))
+                                .color(egui::Color32::RED),
+                        );
+                    }
+                });
+                row.col(|ui| match &mut ev.payload {
+                    EventPayload::Null => {
+                        ui.label("null");
+                    }
+                    EventPayload::On { duration } => {
+                        ui.horizontal(|ui| {
+                            ui.label("On");
+                            ui.add(egui::DragValue::new(duration));
+                        });
+                    }
+                    EventPayload::Key(key) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Key");
+                            ui.add(egui::DragValue::new(key));
+                        });
+                    }
+                    EventPayload::PanVol(vol) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Pan volume");
+                            ui.add(egui::DragValue::new(vol));
+                        });
+                    }
+                    EventPayload::Velocity(vel) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Velocity");
+                            ui.add(egui::DragValue::new(vel));
+                        });
+                    }
+                    EventPayload::Volume(vol) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Volume");
+                            ui.add(egui::DragValue::new(vol));
+                        });
+                    }
+                    EventPayload::Portament { duration } => {
+                        ui.horizontal(|ui| {
+                            ui.label("Portament");
+                            ui.add(egui::DragValue::new(duration));
+                        });
+                    }
+                    EventPayload::BeatClock => {
+                        ui.label("BeatClock");
+                    }
+                    EventPayload::BeatTempo => {
+                        ui.label("BeatTempo");
+                    }
+                    EventPayload::BeatNum => {
+                        ui.label("BeatNum");
+                    }
+                    EventPayload::Repeat => {
+                        ui.label("Repeat");
+                    }
+                    EventPayload::Last => {
+                        ui.label("Last");
+                    }
+                    EventPayload::SetVoice(v_idx) => {
+                        ui.horizontal(|ui| {
+                            let mut num_usize = v_idx.usize();
+                            egui::ComboBox::new("v_dropdown", "Voice").show_index(
+                                ui,
+                                &mut num_usize,
+                                song.ins.voices.len(),
+                                |idx| {
+                                    song.ins.voices.get(idx).map_or_else(
+                                        || {
+                                            egui::RichText::new("<invalid>")
+                                                .color(egui::Color32::RED)
+                                        },
+                                        |v| egui::RichText::new(&v.name),
+                                    )
+                                },
+                            );
+                            *v_idx = VoiceIdx(num_usize.try_into().unwrap());
+                        });
+                    }
+                    EventPayload::SetGroup(group_idx) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Group");
+                            ui.add(egui::DragValue::new(&mut group_idx.0));
+                        });
+                    }
+                    EventPayload::Tuning(val) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Tuning");
+                            ui.add(egui::DragValue::new(val));
+                        });
+                    }
+                    EventPayload::PanTime(val) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Pan time");
+                            ui.add(egui::DragValue::new(val));
+                        });
+                    }
+                    EventPayload::PtcowDebug(val) => {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new(format!("Debug: {val}"))
+                                    .color(egui::Color32::YELLOW),
+                            );
+                        });
+                    }
+                });
+            });
+        });
+    handle_units_command(unit_cmd, song);
+    if let Some(cmd) = ev_list_cmd {
+        match cmd {
+            EventListCmd::Remove { idx } => {
+                song.song.events.eves.remove(idx);
+            }
+            EventListCmd::Insert { idx, event } => {
+                song.song.events.eves.insert(idx, event);
+            }
+        }
+    }
+}
+
+fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiState) {
+    ui.horizontal(|ui| {
+        let re = ui.add(
+            egui::TextEdit::singleline(&mut ui_state.cmd_string_buf).hint_text("Evil command line"),
+        );
+        if re.lost_focus() && ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
+            match evilscript::parse(&ui_state.cmd_string_buf) {
+                Ok(cmd) => {
+                    if let Some(out) = evilscript::exec(cmd, song) {
+                        ui_state.toasts.add(
+                            Toast::new()
+                                .kind(ToastKind::Info)
+                                .text(out)
+                                .options(ToastOptions::default().duration_in_seconds(15.0)),
+                        );
+                    }
+                }
+                Err(e) => {
+                    ui_state.toasts.add(
+                        Toast::new()
+                            .kind(ToastKind::Error)
+                            .text(e.to_string())
+                            .options(ToastOptions::default().duration_in_seconds(5.0)),
+                    );
+                }
+            }
+            ui_state.cmd_string_buf.clear();
+        }
+        ui.checkbox(&mut ui_state.follow, "Follow");
+        ui.separator();
+        ui.label("Filter");
+        let filt_clean = ui_state.filter;
+        let selected_text = match &ui_state.filter.unit {
+            Some(u) => unit_rich_text(
+                *u,
+                song.herd
+                    .units
+                    .get(u.usize())
+                    .map_or("unresolved", |unit| &unit.name),
+            ),
+            None => "Off".into(),
+        };
+        egui::ComboBox::new("filter_cb", "Unit")
+            .selected_text(selected_text)
+            .show_ui(ui, |ui| {
+                if ui
+                    .selectable_label(ui_state.filter.unit.is_none(), "Off")
+                    .clicked()
+                {
+                    ui_state.filter.unit = None;
+                }
+                for (i, unit) in song.herd.units.iter().enumerate() {
+                    let idx = UnitIdx(i as u8);
+                    if ui
+                        .selectable_label(
+                            ui_state.filter.unit == Some(idx),
+                            unit_rich_text(idx, &unit.name),
+                        )
+                        .clicked()
+                    {
+                        ui_state.filter.unit = Some(idx);
+                    }
+                }
+            });
+        let selected_text = ui_state
+            .filter
+            .event
+            .map_or("Off", |disc| ev_discr_name(disc));
+        egui::ComboBox::new("event_cb", "Event")
+            .selected_text(selected_text)
+            .show_ui(ui, |ui| {
+                if ui.button("Off").clicked() {
+                    ui_state.filter.event = None;
+                }
+                for i in 0..16 {
+                    if ui
+                        .selectable_label(ui_state.filter.event == Some(i), ev_discr_name(i))
+                        .clicked()
+                    {
+                        ui_state.filter.event = Some(i);
+                    }
+                }
+            });
+        // Recalculate filtered events if filter changed
+        if ui_state.filter != filt_clean {
+            ui_state.filtered_events = song
+                .song
+                .events
+                .eves
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, evt)| {
+                    if let Some(idx) = ui_state.filter.unit
+                        && evt.unit != idx
+                    {
+                        return None;
+                    }
+                    if let Some(disc) = ui_state.filter.event
+                        && disc != evt.payload.discriminant()
+                    {
+                        return None;
+                    }
+                    Some(idx)
+                })
+                .collect();
+        }
+    });
+}
+
+const fn ev_discr_name(discr: u8) -> &'static str {
+    match discr {
+        0 => "Null",
+        1 => "On",
+        2 => "Key",
+        3 => "PanVolume",
+        4 => "Velocity",
+        5 => "Volume",
+        6 => "Portament",
+        7 => "BeatClock",
+        8 => "BeatTempo",
+        9 => "BeatNum",
+        10 => "Repeat",
+        11 => "Last",
+        12 => "VoiceNo",
+        13 => "GroupNo",
+        14 => "Tuning",
+        15 => "PanTime",
+        16 => "PtcowDebug",
+        _ => "Unknown",
+    }
+}
+
+fn unit_rich_text(idx: UnitIdx, text: &str) -> egui::RichText {
+    let color = unit_color(idx.usize());
+    egui::RichText::new(text)
+        .color(invert_color(color))
+        .background_color(color)
+}
+
+pub fn invert_color(color: egui::Color32) -> egui::Color32 {
+    // Color32 stores rgba as u8 values
+    let [r, g, b, a] = color.to_array();
+
+    egui::Color32::from_rgba_premultiplied(
+        255 - r,
+        255 - g,
+        255 - b,
+        a, // keep alpha the same
+    )
+}

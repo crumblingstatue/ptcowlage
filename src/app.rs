@@ -1,0 +1,416 @@
+use {
+    crate::{
+        CliArgs,
+        app::{
+            command_queue::{Cmd, CommandQueue},
+            ui::file_ops::{FILT_MIDI, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
+        },
+        audio_out::{self, AuxAudioState, SongState, SongStateHandle, spawn_ptcow_audio_thread},
+        evilscript,
+    },
+    anyhow::Context,
+    eframe::egui,
+    egui_file_dialog::FileDialog,
+    ptcow::{Event, EventPayload, Herd, MooInstructions, SampleRate, SampleT, Song, UnitIdx},
+    std::{
+        path::{Path, PathBuf},
+        sync::{Arc, Mutex},
+    },
+    tinyaudio::OutputDevice,
+};
+
+pub mod command_queue;
+mod ui;
+
+pub struct App {
+    song: SongStateHandle,
+    file_dia: FileDialog,
+    pt_audio_dev: OutputDevice,
+    out_rate: SampleRate,
+    out_buf_size: usize,
+    ui_state: ui::UiState,
+    /// Currently opened file
+    open_file: Option<PathBuf>,
+    midi: MidiImportOpts,
+    modal_payload: Option<ModalPayload>,
+    pub(crate) cmd: CommandQueue,
+    aux_state: AuxAudioState,
+}
+
+enum ModalPayload {
+    Msg(String),
+    SeekToSamplePrompt(SampleT),
+}
+
+pub struct MidiImportOpts {
+    base_key: u8,
+}
+
+impl App {
+    pub fn new(args: CliArgs) -> Self {
+        let sample_rate = 44_100;
+        let mut song_state = SongState {
+            herd: Herd::default(),
+            song: Song::default(),
+            ins: MooInstructions::new(sample_rate),
+            pause: true,
+            master_vol: 1.0,
+        };
+        let mut modal_payload = None;
+        if let Some(mid_path) = args.midi_import {
+            let mid_data = std::fs::read(&mid_path).unwrap();
+            match mid2ptcop::write_midi_to_pxtone(
+                &mid_data,
+                &mut song_state.herd,
+                &mut song_state.song,
+                32,
+            ) {
+                Ok(_) => {
+                    song_state.song.recalculate_length();
+                }
+                Err(e) => {
+                    modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                }
+            };
+        }
+        if let Some(path) = args.piyo_import {
+            let piyo_data = std::fs::read(&path).unwrap();
+            let piyo = piyopiyo::Song::load(&piyo_data).unwrap();
+            crate::piyopiyo::import(
+                &piyo,
+                &mut song_state.herd,
+                &mut song_state.song,
+                &mut song_state.ins,
+                sample_rate,
+            );
+        }
+        if let Some(ptcop_path) = args.voice_import {
+            import_voices(&ptcop_path, &mut song_state);
+        }
+        let aux_state = audio_out::spawn_aux_audio_thread(sample_rate, 1024);
+        // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
+        crate::audio_out::prepare_song(&mut song_state);
+        ptcow::rebuild_tones(
+            &mut song_state.ins,
+            sample_rate,
+            &mut song_state.herd.delays,
+            &mut song_state.herd.overdrives,
+            &song_state.song.master,
+        );
+        let song_state_handle = Arc::new(Mutex::new(song_state));
+        let out_buf_size = 1024;
+        let mut this = Self {
+            song: song_state_handle.clone(),
+            file_dia: FileDialog::new()
+                .add_file_filter_extensions(FILT_PTCOP, vec!["ptcop"])
+                .add_save_extension(FILT_PTCOP, "ptcop")
+                .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
+                .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"]),
+            pt_audio_dev: spawn_ptcow_audio_thread(sample_rate, out_buf_size, song_state_handle),
+            out_rate: sample_rate,
+            out_buf_size,
+            ui_state: ui::UiState::default(),
+            open_file: None,
+            midi: MidiImportOpts { base_key: 32 },
+            modal_payload,
+            cmd: CommandQueue::default(),
+            aux_state,
+        };
+        #[expect(clippy::collapsible_if)]
+        if let Some(path) = args.open {
+            if let Err(e) = this.load_song(path) {
+                this.modal_payload =
+                    Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+            }
+        }
+        // Do some EvilScript on the final state before running the app
+        if let Some(evil) = args.evil
+            && let Ok(cmd) = evilscript::parse(&evil)
+        {
+            evilscript::exec(cmd, &mut this.song.lock().unwrap());
+        }
+        this
+    }
+}
+
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| ui::top_panel::top_panel(self, ui));
+        if self.ui_state.show_left_panel() {
+            egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));
+        }
+        egui::CentralPanel::default().show(ctx, |ui| ui::central_panel(self, ui));
+
+        match self.file_dia.user_data::<FileOp>() {
+            Some(FileOp::ImportMidi) => {
+                self.file_dia
+                    .update_with_right_panel_ui(ctx, &mut |ui, _dia| {
+                        ui.heading("Midi import");
+                        ui.label("Base key");
+                        ui.add(egui::DragValue::new(&mut self.midi.base_key));
+                    });
+            }
+            _ => {
+                self.file_dia.update(ctx);
+            }
+        }
+
+        if let Some(path) = self.file_dia.take_picked()
+            && let Some(op) = self.file_dia.user_data::<FileOp>()
+        {
+            match op {
+                FileOp::OpenProj => {
+                    if let Err(e) = self.load_song(path) {
+                        self.modal_payload =
+                            Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                    }
+                }
+                FileOp::ImportVoices => {
+                    let mut song = self.song.lock().unwrap();
+                    import_voices(&path, &mut song);
+                }
+                FileOp::ImportMidi => {
+                    let mid_data = std::fs::read(&path).unwrap();
+                    let mut song = self.song.lock().unwrap();
+                    let song = &mut *song;
+                    match mid2ptcop::write_midi_to_pxtone(
+                        &mid_data,
+                        &mut song.herd,
+                        &mut song.song,
+                        self.midi.base_key,
+                    ) {
+                        Ok(_) => {
+                            song.song.recalculate_length();
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                }
+                FileOp::ImportPiyoPiyo => {
+                    let data = std::fs::read(&path).unwrap();
+                    let piyo = piyopiyo::Song::load(&data).unwrap();
+                    let mut song = self.song.lock().unwrap();
+                    let song = &mut *song;
+                    crate::piyopiyo::import(
+                        &piyo,
+                        &mut song.herd,
+                        &mut song.song,
+                        &mut song.ins,
+                        self.out_rate,
+                    );
+                }
+                FileOp::SaveProjAs => {
+                    let song = self.song.lock().unwrap();
+                    match ptcow::serialize_project(&song.song, &song.herd, &song.ins) {
+                        Ok(bytes) => {
+                            std::fs::write(&path, bytes).unwrap();
+                            self.open_file = Some(path);
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                    drop(song);
+                }
+            }
+        }
+        if let Some(payload) = &mut self.modal_payload {
+            let mut close = false;
+            egui::Modal::new("modal_popup".into()).show(ctx, |ui| match payload {
+                ModalPayload::Msg(msg) => {
+                    ui.label(&*msg);
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                }
+                ModalPayload::SeekToSamplePrompt(samp) => {
+                    ui.heading("Seek to sample");
+                    ui.add(egui::DragValue::new(samp));
+                    if ui.button("Seek").clicked() {
+                        self.song.lock().unwrap().herd.seek_to_sample(*samp);
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                }
+            });
+            if close {
+                self.modal_payload = None;
+            }
+        }
+        while let Some(cmd) = self.cmd.pop() {
+            self.do_cmd(cmd);
+        }
+    }
+}
+
+fn import_voices(path: &Path, song: &mut SongState) {
+    let data = std::fs::read(path).unwrap();
+    let (_, _, ins) = ptcow::read_song(&data, 44_100).unwrap();
+
+    song.ins.voices = ins.voices;
+}
+
+impl App {
+    // INVARIANT: Locks the song
+    pub fn load_song(&mut self, path: PathBuf) -> anyhow::Result<()> {
+        let data = std::fs::read(&path).context("Failed to read file")?;
+        let (song, herd, ins) = ptcow::read_song(&data, self.out_rate)?;
+        let mut song_g = self.song.lock().unwrap();
+        let song_ref = &mut *song_g;
+        song_ref.song = song;
+        song_ref.herd = herd;
+        song_ref.ins = ins;
+        self.open_file = Some(path);
+        // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
+        crate::audio_out::prepare_song(song_ref);
+        ptcow::rebuild_tones(
+            &mut song_ref.ins,
+            self.out_rate,
+            &mut song_ref.herd.delays,
+            &mut song_ref.herd.overdrives,
+            &song_ref.song.master,
+        );
+        // Set a default toot unit if units aren't empty
+        let has_units = !song_ref.herd.units.is_empty();
+        if has_units {
+            self.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
+            // Set initial voices, etc.
+            do_tick0_events(song_ref);
+        }
+        Ok(())
+    }
+    /// INVARIANT: Call this outside of any critical section, because it locks the song handle
+    fn do_cmd(&mut self, cmd: Cmd) {
+        match cmd {
+            Cmd::ReloadCurrentFile => self.reload_current_file(),
+            Cmd::SaveCurrentFile => self.save_current_file(),
+            Cmd::OpenEventInEventsTab { index } => {
+                self.ui_state.tab = ui::Tab::Events;
+                self.ui_state.raw_events.go_to = Some(index);
+            }
+            Cmd::RemoveNoteAtIdx { idx } => {
+                let mut song = self.song.lock().unwrap();
+                let eves = &mut song.song.events.eves;
+                let target_ev = eves[idx];
+                // Remove this event and all key events for this unit on the same tick
+                let coll = |eve: &Event| {
+                    eve.unit == target_ev.unit && matches!(eve.payload, EventPayload::Key(_))
+                };
+                let cont = |eve: &Event| eve.tick == target_ev.tick;
+                let mut indices = domain_expansion(eves, idx, cont, coll);
+                indices.sort();
+                // Remove indices in reverse order to not invalidate indices
+                for idx in indices.iter().rev() {
+                    eves.remove(*idx);
+                }
+            }
+            Cmd::ReplaceAudioThread => {
+                Self::replace_pt_audio_thread(
+                    &mut self.pt_audio_dev,
+                    self.out_rate,
+                    self.out_buf_size,
+                    self.song.clone(),
+                );
+            }
+        }
+    }
+    fn reload_current_file(&mut self) {
+        if let Some(path) = &self.open_file
+            && let Err(e) = self.load_song(path.clone())
+        {
+            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+        }
+    }
+    fn save_current_file(&self) {
+        if let Some(path) = &self.open_file {
+            let song = self.song.lock().unwrap();
+            let serialized = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
+            std::fs::write(path, serialized).unwrap();
+        }
+    }
+    /// Replace already running ptcow audio thread with a new one
+    ///
+    /// IMPORTANT: This should be called *OUTSIDE* of any critical section involving the song state handle
+    /// Otherwise, a deadlock can happen.
+    ///
+    /// You should probably be sending [crate::app::command_queue::Cmd::ReplaceAudioThread] instead.
+    fn replace_pt_audio_thread(
+        app_pt_audio_dev: &mut OutputDevice,
+        app_out_rate: SampleRate,
+        app_out_buf_size: usize,
+        app_song: SongStateHandle,
+    ) {
+        replace_with::replace_with_or_abort(app_pt_audio_dev, |dev| {
+            // Drop the old handle, so the thread can join, and we avoid a deadlock.
+            drop(dev);
+            // Now we can spawn the new thread
+            spawn_ptcow_audio_thread(app_out_rate, app_out_buf_size, app_song)
+        });
+    }
+}
+
+// Apply things like setting initial voices for units on tick 0
+fn do_tick0_events(song: &mut SongState) {
+    for ev in song.song.events.eves.iter().take_while(|ev| ev.tick == 0) {
+        let Some(unit) = song.herd.units.get_mut(ev.unit.usize()) else {
+            continue;
+        };
+        match ev.payload {
+            EventPayload::Velocity(vel) => unit.velocity = vel,
+            EventPayload::Volume(vol) => unit.volume = vol,
+            EventPayload::SetVoice(idx) => {
+                unit.reset_voice(&song.ins, idx, song.song.master.timing)
+            }
+            EventPayload::SetGroup(group_idx) => unit.group = group_idx,
+            _ => {}
+        }
+    }
+}
+
+/// 領域展開
+/// Finds indices of items matching the `Coll` predicate in both directions from `center`.
+/// Continues search while `Cont` predicate holds true.
+/// The returned `Vec` also contains `center`
+fn domain_expansion<T, Cont, Coll>(
+    slice: &[T],
+    center: usize,
+    mut p_continue: Cont,
+    mut p_collect: Coll,
+) -> Vec<usize>
+where
+    Cont: FnMut(&T) -> bool,
+    Coll: FnMut(&T) -> bool,
+{
+    let mut indices = vec![center];
+    let mut cursor = center;
+    loop {
+        if cursor == 0 {
+            break;
+        }
+        cursor -= 1;
+        if !p_continue(&slice[cursor]) {
+            break;
+        }
+        if p_collect(&slice[cursor]) {
+            indices.push(cursor);
+        }
+    }
+    cursor = center;
+    loop {
+        if cursor >= slice.len() {
+            break;
+        }
+        cursor += 1;
+        if !p_continue(&slice[cursor]) {
+            break;
+        }
+        if p_collect(&slice[cursor]) {
+            indices.push(cursor);
+        }
+    }
+    indices
+}

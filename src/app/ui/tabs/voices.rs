@@ -1,0 +1,553 @@
+use {
+    crate::{
+        app::ui::{
+            file_ops::{FILT_PTCOP, FileOp},
+            voice_img, waveform_edit_widget,
+        },
+        audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
+    },
+    bitflags::Flags as _,
+    eframe::egui,
+    egui_file_dialog::FileDialog,
+    ptcow::{
+        Bps, ChNum, EnvPt, NoiseData, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
+        NoiseTable, NoiseType, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags, VoiceIdx,
+        VoiceInstance, VoiceUnit, WaveData, noise_to_pcm,
+    },
+    rustc_hash::FxHashMap,
+    std::iter::zip,
+};
+
+#[derive(Default)]
+pub struct VoicesUiState {
+    selected_idx: usize,
+    // Keep track of (preview) sounds playing for each voice
+    playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
+}
+
+pub fn ui(
+    ui: &mut egui::Ui,
+    song: &mut SongState,
+    file_dia: &mut FileDialog,
+    ui_state: &mut VoicesUiState,
+    out_rate: SampleRate,
+    aux: &AuxAudioState,
+) {
+    ui.horizontal_wrapped(|ui| {
+        ui.menu_button("+ Add", |ui| {
+            if ui.button("Wave").clicked() {
+                let mut voice = Voice {
+                    name: format!("Wave {}", song.ins.voices.len()),
+                    ..Default::default()
+                };
+                voice.allocate::<false>();
+                voice.units[0].pan = 64;
+                voice.units[0].volume = 127;
+                voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
+                voice.units[0].data = VoiceData::Wave(WaveData::Coord {
+                    resolution: 64,
+                    points: Vec::new(),
+                });
+                song.ins.voices.push(voice);
+            }
+            if ui.button("Noise").clicked() {
+                let mut voice = Voice {
+                    name: format!("Noise {}", song.ins.voices.len()),
+                    ..Default::default()
+                };
+                voice.allocate::<false>();
+                voice.units[0].pan = 64;
+                voice.units[0].volume = 127;
+                voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
+                voice.units[0].data = VoiceData::Noise(NoiseData::default());
+                song.ins.voices.push(voice);
+            }
+        });
+        if ui.button("Import...").clicked() {
+            file_dia.config_mut().default_file_filter = Some(FILT_PTCOP.into());
+            file_dia.set_user_data(FileOp::ImportVoices);
+            file_dia.pick_file();
+        }
+        for (i, voice) in song.ins.voices.iter().enumerate() {
+            let img = voice_img(voice);
+            if ui
+                .selectable_value(&mut ui_state.selected_idx, i, (img, &voice.name))
+                .clicked()
+            {
+                ui_state.selected_idx = i;
+            }
+        }
+    });
+    ui.separator();
+    let mut op = None;
+    egui::ScrollArea::vertical()
+        .auto_shrink(false)
+        .show(ui, |ui| {
+            if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
+                voice_ui(
+                    ui,
+                    voice,
+                    ui_state.selected_idx,
+                    &mut op,
+                    out_rate,
+                    aux,
+                    ui_state,
+                );
+            }
+        });
+    if let Some(op) = op {
+        match op {
+            VoiceUiOp::MoveUp(idx) => {
+                let voice = song.ins.voices.remove(idx);
+                song.ins.voices.insert(idx.saturating_sub(1), voice);
+            }
+            VoiceUiOp::MoveDown(idx) => {
+                let voice = song.ins.voices.remove(idx);
+                song.ins.voices.insert(idx + 1, voice);
+            }
+            VoiceUiOp::MoveBegin(idx) => {
+                let voice = song.ins.voices.remove(idx);
+                song.ins.voices.insert(0, voice);
+            }
+            VoiceUiOp::MoveEnd(idx) => {
+                let voice = song.ins.voices.remove(idx);
+                song.ins
+                    .voices
+                    .insert(song.ins.voices.len().saturating_sub(1), voice);
+            }
+            VoiceUiOp::Delete(idx) => {
+                song.ins.voices.remove(idx);
+            }
+        }
+    }
+}
+
+enum VoiceUiOp {
+    MoveUp(usize),
+    MoveDown(usize),
+    MoveBegin(usize),
+    MoveEnd(usize),
+    Delete(usize),
+}
+
+fn voice_ui(
+    ui: &mut egui::Ui,
+    voice: &mut Voice,
+    idx: usize,
+    op: &mut Option<VoiceUiOp>,
+    out_rate: SampleRate,
+    aux: &AuxAudioState,
+    ui_state: &mut VoicesUiState,
+) {
+    ui.horizontal(|ui| {
+        ui.text_edit_singleline(&mut voice.name);
+        if ui.button("⬆").clicked() {
+            *op = Some(VoiceUiOp::MoveUp(idx));
+        }
+        if ui.button("⬇").clicked() {
+            *op = Some(VoiceUiOp::MoveDown(idx));
+        }
+        if ui.button("⮪").clicked() {
+            *op = Some(VoiceUiOp::MoveBegin(idx));
+        }
+        if ui.button("⮫").clicked() {
+            *op = Some(VoiceUiOp::MoveEnd(idx));
+        }
+        if ui.button("del").clicked() {
+            *op = Some(VoiceUiOp::Delete(idx));
+        }
+    });
+
+    ui.indent("voic", |ui| {
+        voice_ui_inner(
+            ui,
+            voice,
+            VoiceIdx(idx.try_into().unwrap()),
+            out_rate,
+            aux,
+            ui_state,
+        );
+    });
+}
+
+pub fn voice_ui_inner(
+    ui: &mut egui::Ui,
+    voice: &mut Voice,
+    voice_idx: VoiceIdx,
+    out_rate: SampleRate,
+    aux: &AuxAudioState,
+    ui_state: &mut VoicesUiState,
+) {
+    for (unit, inst) in zip(&mut voice.units, &mut voice.insts) {
+        ui.strong("v-unit");
+        ui.indent("vu", |ui| {
+            voice_unit_ui(ui, unit, inst, out_rate, voice_idx, ui_state, aux);
+        });
+    }
+    for (i, inst) in voice.insts.iter_mut().enumerate() {
+        ui.strong("v-instance");
+        ui.indent("vi", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Sample buf");
+                if let Some(sound_key) = ui_state.playing_sounds.get(&voice_idx) {
+                    if ui.button("Stop").clicked() {
+                        aux.send
+                            .send(AuxMsg::StopAudio { key: *sound_key })
+                            .unwrap();
+                        ui_state.playing_sounds.remove(&voice_idx);
+                    }
+                } else {
+                    if ui.button("Play").clicked() {
+                        let key = aux.next_key();
+                        ui_state.playing_sounds.insert(voice_idx, key);
+                        aux.send
+                            .send(AuxMsg::PlaySamples16 {
+                                key,
+                                sample_data: bytemuck::pod_collect_to_vec(&inst.sample_buf),
+                            })
+                            .unwrap();
+                    }
+                }
+
+                let mut len = inst.sample_buf.len();
+                if ui
+                    .add(egui::DragValue::new(&mut len).update_while_editing(false))
+                    .changed()
+                {
+                    inst.sample_buf.resize(len, 0);
+                }
+                ui.label("Number of samples");
+                ui.add(egui::DragValue::new(&mut inst.num_samples));
+            });
+            waveform_edit_widget(
+                ui,
+                &mut inst.sample_buf,
+                256.,
+                egui::Id::new("smp_buf").with(i),
+            );
+            ui.horizontal(|ui| {
+                ui.label("Envelope");
+                let mut len = inst.env.len();
+                if ui
+                    .add(egui::DragValue::new(&mut len).update_while_editing(false))
+                    .changed()
+                {
+                    inst.env.resize(len, 0);
+                }
+            });
+            if !inst.env.is_empty() {
+                waveform_edit_widget(ui, &mut inst.env, 256.0, egui::Id::new("env_buf").with(i));
+            }
+            ui.label("Envelope release");
+            ui.add(egui::DragValue::new(&mut inst.env_release));
+        });
+    }
+    if voice.insts.len() > 1 && voice.units.len() > 1 {
+        if ui.button("pop").clicked() {
+            voice.insts.pop();
+            voice.units.pop();
+        }
+    }
+}
+
+/// Returns whether the serialize checkbox was clicked
+fn osci_ui(
+    ui: &mut egui::Ui,
+    osci: &mut NoiseDesignOscillator,
+    name: &str,
+    mut serialize: bool,
+) -> bool {
+    let mut ser_clicked = false;
+    ui.horizontal(|ui| {
+        ui.heading(name);
+        ser_clicked = ui.checkbox(&mut serialize, "serialize").clicked();
+    });
+    ui.indent("osci", |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.selectable_value(&mut osci.type_, NoiseType::Sine, "Sine");
+            ui.selectable_value(&mut osci.type_, NoiseType::Saw, "Saw");
+            ui.selectable_value(&mut osci.type_, NoiseType::Rect, "Rect");
+            ui.selectable_value(&mut osci.type_, NoiseType::Random, "Random");
+            ui.selectable_value(&mut osci.type_, NoiseType::Saw2, "Saw2");
+            ui.selectable_value(&mut osci.type_, NoiseType::Rect2, "Rect2");
+            ui.selectable_value(&mut osci.type_, NoiseType::Tri, "Tri");
+            ui.selectable_value(&mut osci.type_, NoiseType::Random2, "Random2");
+            ui.selectable_value(&mut osci.type_, NoiseType::Rect3, "Rect3");
+            ui.selectable_value(&mut osci.type_, NoiseType::Rect4, "Rect4");
+            ui.selectable_value(&mut osci.type_, NoiseType::Rect8, "Rect8");
+            ui.selectable_value(&mut osci.type_, NoiseType::Rect16, "Rect16");
+            ui.selectable_value(&mut osci.type_, NoiseType::Saw3, "Saw3");
+            ui.selectable_value(&mut osci.type_, NoiseType::Saw4, "Saw4");
+            ui.selectable_value(&mut osci.type_, NoiseType::Saw6, "Saw6");
+            ui.selectable_value(&mut osci.type_, NoiseType::Saw8, "Saw8");
+            ui.end_row();
+            ui.label("freq");
+            ui.add(egui::DragValue::new(&mut osci.freq));
+            ui.label("volume");
+            ui.add(egui::DragValue::new(&mut osci.volume));
+            ui.label("offset");
+            ui.add(egui::DragValue::new(&mut osci.offset));
+            ui.checkbox(&mut osci.invert, "invert");
+        });
+    });
+    ser_clicked
+}
+
+fn voice_unit_ui(
+    ui: &mut egui::Ui,
+    unit: &mut VoiceUnit,
+    inst: &mut VoiceInstance,
+    out_rate: SampleRate,
+    voice_idx: VoiceIdx,
+    ui_state: &mut VoicesUiState,
+    aux: &AuxAudioState,
+) {
+    match &mut unit.data {
+        VoiceData::Noise(noise) => {
+            ui.label("smp num 44k");
+            ui.add(egui::DragValue::new(&mut noise.smp_num_44k));
+            noise.units.retain(|unit| {
+                let mut retain = true;
+                ui.horizontal(|ui| {
+                    ui.label("pan");
+                    ui.add(egui::DragValue::new(&mut unit.pan));
+                    if ui.button("-").clicked() {
+                        retain = false;
+                    }
+                });
+                let clicked = osci_ui(
+                    ui,
+                    &mut unit.main,
+                    "main",
+                    unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN),
+                );
+                if clicked {
+                    unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_MAIN);
+                }
+                let clicked = osci_ui(
+                    ui,
+                    &mut unit.freq,
+                    "freq",
+                    unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ),
+                );
+                if clicked {
+                    unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_FREQ);
+                }
+                let clicked = osci_ui(
+                    ui,
+                    &mut unit.volu,
+                    "volu",
+                    unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU),
+                );
+                if clicked {
+                    unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_VOLU);
+                }
+                ui.horizontal(|ui| {
+                    ui.label("Envelope points");
+                    if ui
+                        .add_enabled(!unit.enves.is_full(), egui::Button::new("+"))
+                        .clicked()
+                    {
+                        unit.enves.push(EnvPt { x: 1, y: 1 });
+                    }
+                });
+                for env_pt in &mut unit.enves {
+                    ui.add(egui::DragValue::new(&mut env_pt.x));
+                    ui.add(egui::DragValue::new(&mut env_pt.y));
+                }
+                retain
+            });
+
+            if ui.button("+").clicked() {
+                noise.units.push(NoiseDesignUnit::default());
+            }
+            let tbl = NoiseTable::generate();
+            inst.sample_buf = noise_to_pcm(noise, &tbl).smp;
+            inst.num_samples = noise.smp_num_44k;
+        }
+        VoiceData::Pcm(pcm) => {
+            ui.label(format!("pcm data ({} bytes)", pcm.smp.len()));
+            ui.indent("pcm", |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.selectable_value(&mut pcm.bps, Bps::B8, "8 bit");
+                    ui.selectable_value(&mut pcm.bps, Bps::B16, "16 bit");
+                    ui.separator();
+                    ui.selectable_value(&mut pcm.ch, ChNum::Mono, "Mono");
+                    ui.selectable_value(&mut pcm.ch, ChNum::Stereo, "Stereo");
+                    ui.end_row();
+                    ui.label("body");
+                    ui.add(egui::DragValue::new(&mut pcm.num_samples));
+                    ui.end_row();
+                    ui.label("sample rate");
+                    ui.add(egui::DragValue::new(&mut pcm.sps));
+                });
+            });
+        }
+        VoiceData::Wave(wave_data) => {
+            ui.horizontal_wrapped(|ui| {
+                match wave_data {
+                    WaveData::Coord { points, resolution } => {
+                        ui.label(format!("{} points", points.len()));
+                        for pt in &mut *points {
+                            ui.add(egui::DragValue::new(&mut pt.x).prefix("x "))
+                                .changed();
+                            ui.add(egui::DragValue::new(&mut pt.y).prefix("y "))
+                                .changed();
+                        }
+                        if ui.button("+").clicked() {
+                            points.push(OsciPt {
+                                x: points.last().map_or(0, |pt| pt.x) + 16,
+                                y: 0,
+                            });
+                        }
+                        if ui.button("-").clicked() {
+                            points.pop();
+                        }
+                        ui.label("Resolution");
+                        ui.add(egui::DragValue::new(resolution)).changed();
+                    }
+                    WaveData::Overtone { points } => {
+                        ui.label(format!("{} points", points.len()));
+                        for pt in &mut *points {
+                            ui.add(egui::DragValue::new(&mut pt.x).prefix("x "))
+                                .changed();
+                            ui.add(egui::DragValue::new(&mut pt.y).prefix("y "))
+                                .changed();
+                        }
+                        if ui.button("+").clicked() {
+                            points.push(OsciPt {
+                                x: points.last().map_or(0, |pt| pt.x) + 16,
+                                y: 0,
+                            });
+                        }
+                        if ui.button("-").clicked() {
+                            points.pop();
+                        }
+                    }
+                };
+
+                ui.end_row();
+                ui.label("Kind");
+                if ui
+                    .selectable_label(matches!(*wave_data, WaveData::Coord { .. }), "Coordinate")
+                    .clicked()
+                {
+                    *wave_data = WaveData::Coord {
+                        points: Vec::new(),
+                        resolution: 64,
+                    };
+                }
+                if ui
+                    .selectable_label(matches!(wave_data, WaveData::Overtone { .. }), "Overtone")
+                    .clicked()
+                {
+                    *wave_data = WaveData::Overtone { points: Vec::new() };
+                }
+            });
+
+            if let WaveData::Coord { points, .. } = wave_data {
+                let (rect, _re) =
+                    ui.allocate_exact_size(egui::vec2(200.0, 200.0), egui::Sense::click_and_drag());
+                let p = ui.painter_at(rect);
+                let lt = rect.left_top();
+                let egui_points: Vec<egui::Pos2> = points
+                    .iter()
+                    .map(|pt| egui::pos2(lt.x + pt.x as f32, (lt.y + 100.) + pt.y as f32))
+                    .collect();
+                p.line(egui_points, egui::Stroke::new(2.0, egui::Color32::WHITE));
+            }
+            inst.recalc_wave_data(wave_data, unit.volume, unit.pan);
+        }
+        VoiceData::OggV(oggv) => {
+            ui.label("Ogg/Vorbis voice");
+            ui.label("channel number");
+            ui.add(egui::DragValue::new(&mut oggv.ch));
+            ui.label("sps2");
+            ui.add(egui::DragValue::new(&mut oggv.sps2));
+        }
+    }
+    // If the sound is aux playing currently, update its buffer as well
+    if let Some(key) = ui_state.playing_sounds.get(&voice_idx) {
+        aux.send
+            .send(AuxMsg::PlaySamples16 {
+                key: *key,
+                sample_data: bytemuck::pod_collect_to_vec(&inst.sample_buf),
+            })
+            .unwrap();
+    }
+    ui.horizontal_wrapped(|ui| {
+        ui.label("Flags");
+        for (name, flag) in VoiceFlags::iter_defined_names() {
+            let mut contains = unit.flags.contains(flag);
+            if ui.checkbox(&mut contains, name).clicked() {
+                unit.flags ^= flag;
+            }
+        }
+        ui.end_row();
+        ui.label("Basic key");
+        ui.add(egui::DragValue::new(&mut unit.basic_key));
+        ui.end_row();
+        ui.label("Volume");
+        ui.add(egui::DragValue::new(&mut unit.volume));
+        ui.label("Pan");
+        ui.add(egui::Slider::new(&mut unit.pan, 0..=128));
+        ui.label("Tuning");
+        ui.add(egui::DragValue::new(&mut unit.tuning).speed(0.001));
+        ui.end_row();
+        ui.label(format!("Envelope ({} points)", unit.envelope.points.len()));
+        ui.label("fps");
+        ui.add(egui::DragValue::new(&mut unit.envelope.seconds_per_point));
+        if ui.button("+").clicked() {
+            unit.envelope.points.push(EnvPt {
+                x: unit.envelope.points.last().map_or(0, |pt| pt.x) + 16,
+                y: 0,
+            });
+        }
+        if ui.button("-").clicked() {
+            unit.envelope.points.pop();
+        }
+        if ui.button("Recalculate").clicked() {
+            inst.recalc_envelope(unit, out_rate);
+        }
+        ui.end_row();
+        let mut x_cursor = 0;
+        if let Some((last, init)) = unit.envelope.points.split_last_mut() {
+            for pt in init {
+                x_cursor += pt.x;
+                ui.label("x");
+                ui.add(egui::DragValue::new(&mut pt.x));
+                ui.label("y");
+                ui.add(egui::DragValue::new(&mut pt.y));
+            }
+            ui.label(format!("envelope width: {x_cursor}"));
+            ui.label("Tail");
+            ui.add(egui::DragValue::new(&mut last.x));
+            ui.add(egui::DragValue::new(&mut last.y));
+        }
+        ui.end_row();
+        if !unit.envelope.points.is_empty() {
+            envelope_src_ui(unit, ui, x_cursor);
+        }
+    });
+}
+
+fn envelope_src_ui(unit: &mut VoiceUnit, ui: &mut egui::Ui, x_cursor: u16) {
+    let (rect, _re) = ui.allocate_exact_size(
+        egui::vec2(x_cursor as f32, 256.0),
+        egui::Sense::click_and_drag(),
+    );
+    let p = ui.painter_at(rect);
+    let lt = rect.left_top();
+    p.rect_filled(rect, 2.0, egui::Color32::BLACK);
+    let mut x_cursor = 0;
+    let egui_points: Vec<egui::Pos2> = unit
+        .envelope
+        .points
+        .iter()
+        .map(|pt| {
+            x_cursor += pt.x;
+            egui::pos2(lt.x + x_cursor as f32, lt.y + pt.y as f32)
+        })
+        .collect();
+    p.line(egui_points, egui::Stroke::new(2.0, egui::Color32::WHITE));
+}

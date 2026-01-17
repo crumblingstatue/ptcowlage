@@ -1,0 +1,37 @@
+[package]
+name = "ptcowlage"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+
+[dependencies]
+eframe.version = "0.33"
+eframe.default-features = false
+eframe.features = ["default_fonts", "glow", "x11", "wayland"]
+egui_extras.version = "0.33"
+egui_extras.features = ["image"]
+egui-file-dialog = "0.12"
+egui-toast = "0.19"
+ptcow = "0.4.0"
+tinyaudio = "2"
+anyhow = "1"
+clap.version = "4.5"
+clap.features = ["derive"]
+bitflags.version = "2.10"
+# For midi conversion
+mid2ptcop.git = "https://github.com/crumblingstatue/mid2ptcop.git"
+# For PiyoPiyo conversion
+piyopiyo.git = "https://github.com/crumblingstatue/piyopiyo-rs.git"
+arrayvec = "0.7"
+bytemuck = "1.24"
+rustc-hash = "2.1.1"
+replace_with = "0.1.8"
+# For finding japanese fallback font
+fontique = "0.7.0"
+
+[profile.dev]
+debug = "line-tables-only"
+opt-level = 1
+
+[profile.release]
+lto = "thin"
