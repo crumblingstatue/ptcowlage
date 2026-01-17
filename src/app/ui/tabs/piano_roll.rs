@@ -1136,8 +1136,6 @@ fn help_popup_button(ui: &mut egui::Ui, interact_mode: InteractMode) {
                     ui.label("Note info");
                     ui.input_label("lmb");
                     ui.end_row();
-                    ui.label("Context menu");
-                    ui.input_label("rmb");
                 }
                 InteractMode::Place => {
                     ui.label("Place note");
