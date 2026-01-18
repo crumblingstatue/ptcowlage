@@ -5,6 +5,7 @@ use {
         cell::Cell,
         collections::hash_map::Entry,
         iter::zip,
+        ops::RangeInclusive,
         panic::AssertUnwindSafe,
         sync::{Arc, Mutex},
     },
@@ -26,6 +27,10 @@ impl Default for OutParams {
 }
 
 impl OutParams {
+    /// A buffer size outside of this range doesn't make sense
+    pub const SANE_BUF_SIZE_RANGE: RangeInclusive<usize> = 32..=65536;
+    /// An output rate outside of this range doesn't make sense
+    pub const SANE_RATE_RANGE: RangeInclusive<SampleRate> = 1000..=65535;
     pub fn latency_ms(self) -> f32 {
         // Stereo output
         let ch = 2.0;
