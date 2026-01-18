@@ -131,7 +131,19 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
         );
         button.ui(ui, |ui| {
-            timing_popup_ui(&mut app.out, &mut app.cmd, &mut app.modal_payload, song, ui);
+            let full_w = ui.available_width();
+            egui::Grid::new("timing_grid")
+                .num_columns(2)
+                .show(ui, |ui| {
+                    timing_popup_ui(
+                        &mut app.out,
+                        &mut app.cmd,
+                        &mut app.modal_payload,
+                        song,
+                        ui,
+                        full_w,
+                    );
+                });
         });
         ui.separator();
         let mut tab = |tab, label, on| {
@@ -217,18 +229,23 @@ fn timing_popup_ui(
     app_modal_payload: &mut Option<ModalPayload>,
     song: &mut SongState,
     ui: &mut egui::Ui,
+    full_w: f32,
 ) {
     ui.label("Ticks per beat")
         .on_hover_text("How many clock ticks happen during a beat");
     ui.add(egui::DragValue::new(&mut song.song.master.timing.ticks_per_beat).range(1..=65536));
+    ui.end_row();
     ui.label("BPM").on_hover_text("Beats per minute");
     ui.add(egui::DragValue::new(&mut song.song.master.timing.bpm));
+    ui.end_row();
     ui.label("Beats per meas");
     ui.add(egui::DragValue::new(&mut song.song.master.timing.beats_per_meas).range(1..=255));
-    ui.separator();
+    ui.end_row();
+    h_sep(ui, full_w);
     ui.label("Samples per tick");
     ui.add(egui::DragValue::new(&mut song.ins.samples_per_tick).speed(0.01));
-    ui.separator();
+    ui.end_row();
+    h_sep(ui, full_w);
     ui.label("Last meas");
     match &mut song.song.master.loop_points.last {
         Some(last) => {
@@ -240,11 +257,13 @@ fn timing_popup_ui(
             }
         }
     }
+    ui.end_row();
     ui.label("Repeat meas");
     ui.add(egui::DragValue::new(
         &mut song.song.master.loop_points.repeat,
     ));
-    ui.separator();
+    ui.end_row();
+    h_sep(ui, full_w);
     ui.label("Out rate");
     let prev_out_rate = app_out.rate;
     if ui
@@ -264,20 +283,37 @@ fn timing_popup_ui(
         app_cmd.push(Cmd::ReplaceAudioThread);
     }
     let prev_buf_size = app_out.buf_size;
+    ui.end_row();
+    ui.label("Buf size");
     ui.horizontal(|ui| {
-        ui.label("Buf size");
         ui.add(egui::DragValue::new(&mut app_out.buf_size).update_while_editing(false));
         ui.label(format!("{:.2}ms", app_out.latency_ms()));
     });
     if app_out.buf_size != prev_buf_size {
         app_cmd.push(Cmd::ReplaceAudioThread);
     }
-    ui.separator();
+    ui.end_row();
+    h_sep(ui, full_w);
     ui.label("Repeat sample");
     ui.add(egui::DragValue::new(&mut song.herd.smp_repeat));
+    ui.end_row();
     ui.label("End sample");
     ui.add(egui::DragValue::new(&mut song.herd.smp_end));
+    ui.end_row();
     if ui.button("Seek to sample...").clicked() {
         *app_modal_payload = Some(ModalPayload::SeekToSamplePrompt(song.herd.smp_count));
     }
+}
+
+// Awkward full width horizontal separator line for grid layouts
+fn h_sep(ui: &mut egui::Ui, full_w: f32) {
+    let (_id, rect) = ui.allocate_space(egui::vec2(1.0, 1.0));
+    ui.painter().line_segment(
+        [
+            rect.left_center(),
+            rect.left_center() + egui::vec2(full_w, 0.0),
+        ],
+        egui::Stroke::new(1.0, egui::Color32::DARK_GRAY),
+    );
+    ui.end_row();
 }
