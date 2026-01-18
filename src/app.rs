@@ -301,7 +301,7 @@ impl App {
                     eve.unit == target_ev.unit && matches!(eve.payload, EventPayload::Key(_))
                 };
                 let cont = |eve: &Event| eve.tick == target_ev.tick;
-                let mut indices = domain_expansion(eves, idx, cont, coll);
+                let mut indices = crate::util::domain_expansion(eves, idx, cont, coll);
                 indices.sort();
                 // Remove indices in reverse order to not invalidate indices
                 for idx in indices.iter().rev() {
@@ -369,48 +369,4 @@ fn do_tick0_events(song: &mut SongState) {
             _ => {}
         }
     }
-}
-
-/// 領域展開
-/// Finds indices of items matching the `Coll` predicate in both directions from `center`.
-/// Continues search while `Cont` predicate holds true.
-/// The returned `Vec` also contains `center`
-fn domain_expansion<T, Cont, Coll>(
-    slice: &[T],
-    center: usize,
-    mut p_continue: Cont,
-    mut p_collect: Coll,
-) -> Vec<usize>
-where
-    Cont: FnMut(&T) -> bool,
-    Coll: FnMut(&T) -> bool,
-{
-    let mut indices = vec![center];
-    let mut cursor = center;
-    loop {
-        if cursor == 0 {
-            break;
-        }
-        cursor -= 1;
-        if !p_continue(&slice[cursor]) {
-            break;
-        }
-        if p_collect(&slice[cursor]) {
-            indices.push(cursor);
-        }
-    }
-    cursor = center;
-    loop {
-        if cursor >= slice.len() {
-            break;
-        }
-        cursor += 1;
-        if !p_continue(&slice[cursor]) {
-            break;
-        }
-        if p_collect(&slice[cursor]) {
-            indices.push(cursor);
-        }
-    }
-    indices
 }

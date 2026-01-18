@@ -19,6 +19,7 @@ mod font_fallback;
 mod herd_ext;
 mod piyopiyo;
 mod pxtone_misc;
+mod util;
 
 #[derive(clap::Parser)]
 struct CliArgs {
