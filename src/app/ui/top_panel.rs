@@ -2,7 +2,7 @@ use {
     crate::{
         app::{
             FileOp, ModalPayload, SongState,
-            command_queue::Cmd,
+            command_queue::{Cmd, CommandQueue},
             ui::{
                 Tab,
                 file_ops::{FILT_MIDI, FILT_PIYOPIYO, FILT_PTCOP},
@@ -17,7 +17,7 @@ use {
         containers::menu::{MenuButton, MenuConfig},
     },
     egui_file_dialog::DialogState,
-    ptcow::{EventPayload, Unit, UnitIdx, timing::NonZeroMeas},
+    ptcow::{EventPayload, SampleRate, Unit, UnitIdx, timing::NonZeroMeas},
 };
 
 const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O);
@@ -131,69 +131,14 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
         );
         button.ui(ui, |ui| {
-            ui.label("Ticks per beat")
-                .on_hover_text("How many clock ticks happen during a beat");
-            ui.add(
-                egui::DragValue::new(&mut song.song.master.timing.ticks_per_beat).range(1..=65536),
+            timing_popup_ui(
+                &mut app.out_rate,
+                &mut app.out_buf_size,
+                &mut app.cmd,
+                &mut app.modal_payload,
+                song,
+                ui,
             );
-            ui.label("BPM").on_hover_text("Beats per minute");
-            ui.add(egui::DragValue::new(&mut song.song.master.timing.bpm));
-            ui.label("Beats per meas");
-            ui.add(
-                egui::DragValue::new(&mut song.song.master.timing.beats_per_meas).range(1..=255),
-            );
-            ui.separator();
-            ui.label("Samples per tick");
-            ui.add(egui::DragValue::new(&mut song.ins.samples_per_tick).speed(0.01));
-            ui.separator();
-            ui.label("Last meas");
-            match &mut song.song.master.loop_points.last {
-                Some(last) => {
-                    ui.add(egui::DragValue::new(last));
-                }
-                None => {
-                    if ui.button("Add").clicked() {
-                        song.song.master.loop_points.last = Some(NonZeroMeas::new(1).unwrap());
-                    }
-                }
-            }
-            ui.label("Repeat meas");
-            ui.add(egui::DragValue::new(
-                &mut song.song.master.loop_points.repeat,
-            ));
-            ui.separator();
-            ui.label("Out rate");
-            let prev_out_rate = app.out_rate;
-            if ui
-                .add(egui::DragValue::new(&mut app.out_rate).update_while_editing(false))
-                .changed()
-                && app.out_rate != prev_out_rate
-            {
-                song.ins.out_sample_rate = app.out_rate;
-                prepare_song(song);
-                ptcow::rebuild_tones(
-                    &mut song.ins,
-                    app.out_rate,
-                    &mut song.herd.delays,
-                    &mut song.herd.overdrives,
-                    &song.song.master,
-                );
-                app.cmd.push(Cmd::ReplaceAudioThread);
-            }
-            ui.label("Buf size");
-            let prev_buf_size = app.out_buf_size;
-            ui.add(egui::DragValue::new(&mut app.out_buf_size).update_while_editing(false));
-            if app.out_buf_size != prev_buf_size {
-                app.cmd.push(Cmd::ReplaceAudioThread);
-            }
-            ui.separator();
-            ui.label("Repeat sample");
-            ui.add(egui::DragValue::new(&mut song.herd.smp_repeat));
-            ui.label("End sample");
-            ui.add(egui::DragValue::new(&mut song.herd.smp_end));
-            if ui.button("Seek to sample...").clicked() {
-                app.modal_payload = Some(ModalPayload::SeekToSamplePrompt(song.herd.smp_count));
-            }
         });
         ui.separator();
         let mut tab = |tab, label, on| {
@@ -270,5 +215,74 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
 
     if bt_save || sc_save {
         app.cmd.push(Cmd::SaveCurrentFile);
+    }
+}
+
+fn timing_popup_ui(
+    app_out_rate: &mut SampleRate,
+    app_out_buf_size: &mut usize,
+    app_cmd: &mut CommandQueue,
+    app_modal_payload: &mut Option<ModalPayload>,
+    song: &mut SongState,
+    ui: &mut egui::Ui,
+) {
+    ui.label("Ticks per beat")
+        .on_hover_text("How many clock ticks happen during a beat");
+    ui.add(egui::DragValue::new(&mut song.song.master.timing.ticks_per_beat).range(1..=65536));
+    ui.label("BPM").on_hover_text("Beats per minute");
+    ui.add(egui::DragValue::new(&mut song.song.master.timing.bpm));
+    ui.label("Beats per meas");
+    ui.add(egui::DragValue::new(&mut song.song.master.timing.beats_per_meas).range(1..=255));
+    ui.separator();
+    ui.label("Samples per tick");
+    ui.add(egui::DragValue::new(&mut song.ins.samples_per_tick).speed(0.01));
+    ui.separator();
+    ui.label("Last meas");
+    match &mut song.song.master.loop_points.last {
+        Some(last) => {
+            ui.add(egui::DragValue::new(last));
+        }
+        None => {
+            if ui.button("Add").clicked() {
+                song.song.master.loop_points.last = Some(NonZeroMeas::new(1).unwrap());
+            }
+        }
+    }
+    ui.label("Repeat meas");
+    ui.add(egui::DragValue::new(
+        &mut song.song.master.loop_points.repeat,
+    ));
+    ui.separator();
+    ui.label("Out rate");
+    let prev_out_rate = *app_out_rate;
+    if ui
+        .add(egui::DragValue::new(app_out_rate).update_while_editing(false))
+        .changed()
+        && *app_out_rate != prev_out_rate
+    {
+        song.ins.out_sample_rate = *app_out_rate;
+        prepare_song(song);
+        ptcow::rebuild_tones(
+            &mut song.ins,
+            *app_out_rate,
+            &mut song.herd.delays,
+            &mut song.herd.overdrives,
+            &song.song.master,
+        );
+        app_cmd.push(Cmd::ReplaceAudioThread);
+    }
+    ui.label("Buf size");
+    let prev_buf_size = *app_out_buf_size;
+    ui.add(egui::DragValue::new(app_out_buf_size).update_while_editing(false));
+    if *app_out_buf_size != prev_buf_size {
+        app_cmd.push(Cmd::ReplaceAudioThread);
+    }
+    ui.separator();
+    ui.label("Repeat sample");
+    ui.add(egui::DragValue::new(&mut song.herd.smp_repeat));
+    ui.label("End sample");
+    ui.add(egui::DragValue::new(&mut song.herd.smp_end));
+    if ui.button("Seek to sample...").clicked() {
+        *app_modal_payload = Some(ModalPayload::SeekToSamplePrompt(song.herd.smp_count));
     }
 }
