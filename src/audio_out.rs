@@ -25,6 +25,16 @@ impl Default for OutParams {
     }
 }
 
+impl OutParams {
+    pub fn latency_ms(self) -> f32 {
+        // Stereo output
+        let ch = 2.0;
+        // 16 bit samples
+        let samp = 2.0;
+        (self.buf_size as f32 * 1000.) / (ch * samp * self.rate as f32)
+    }
+}
+
 pub type SongStateHandle = Arc<Mutex<SongState>>;
 
 /// The state shared between the main thread and the audio output thread

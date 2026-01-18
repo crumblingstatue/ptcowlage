@@ -263,9 +263,12 @@ fn timing_popup_ui(
         );
         app_cmd.push(Cmd::ReplaceAudioThread);
     }
-    ui.label("Buf size");
     let prev_buf_size = app_out.buf_size;
-    ui.add(egui::DragValue::new(&mut app_out.buf_size).update_while_editing(false));
+    ui.horizontal(|ui| {
+        ui.label("Buf size");
+        ui.add(egui::DragValue::new(&mut app_out.buf_size).update_while_editing(false));
+        ui.label(format!("{:.2}ms", app_out.latency_ms()));
+    });
     if app_out.buf_size != prev_buf_size {
         app_cmd.push(Cmd::ReplaceAudioThread);
     }
