@@ -19,7 +19,7 @@ pub struct OutParams {
 impl Default for OutParams {
     fn default() -> Self {
         Self {
-            buf_size: 1024,
+            buf_size: 2048,
             rate: 44_100,
         }
     }
