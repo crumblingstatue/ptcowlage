@@ -267,7 +267,11 @@ fn timing_popup_ui(
     ui.label("Out rate");
     let prev_out_rate = app_out.rate;
     if ui
-        .add(egui::DragValue::new(&mut app_out.rate).update_while_editing(false))
+        .add(
+            egui::DragValue::new(&mut app_out.rate)
+                .update_while_editing(false)
+                .suffix(" Hz"),
+        )
         .changed()
         && app_out.rate != prev_out_rate
     {
@@ -287,7 +291,8 @@ fn timing_popup_ui(
     ui.label("Buf size");
     ui.horizontal(|ui| {
         ui.add(egui::DragValue::new(&mut app_out.buf_size).update_while_editing(false));
-        ui.label(format!("{:.2}ms", app_out.latency_ms()));
+        ui.label(format!("{:.2}ms", app_out.latency_ms()))
+            .on_hover_text("Latency");
     });
     if app_out.buf_size != prev_buf_size {
         app_cmd.push(Cmd::ReplaceAudioThread);
