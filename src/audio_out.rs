@@ -10,6 +10,21 @@ use {
     },
 };
 
+#[derive(Clone, Copy)]
+pub struct OutParams {
+    pub buf_size: usize,
+    pub rate: SampleRate,
+}
+
+impl Default for OutParams {
+    fn default() -> Self {
+        Self {
+            buf_size: 1024,
+            rate: 44_100,
+        }
+    }
+}
+
 pub type SongStateHandle = Arc<Mutex<SongState>>;
 
 /// The state shared between the main thread and the audio output thread
@@ -38,16 +53,15 @@ pub fn prepare_song(song: &mut SongState) {
 
 /// Main ptcow audio thread that handles the playback of the PxTone music
 pub fn spawn_ptcow_audio_thread(
-    out_rate: SampleRate,
-    out_buf_size: usize,
+    out_params: OutParams,
     song: SongStateHandle,
 ) -> tinyaudio::OutputDevice {
     let params = tinyaudio::OutputDeviceParameters {
-        sample_rate: out_rate as usize,
+        sample_rate: out_params.rate as usize,
         channels_count: 2,
-        channel_sample_count: out_buf_size / 2,
+        channel_sample_count: out_params.buf_size / 2,
     };
-    let mut out_buf_s16: Vec<i16> = vec![0; out_buf_size];
+    let mut out_buf_s16: Vec<i16> = vec![0; out_params.buf_size];
     tinyaudio::run_output_device(params, move |out| {
         // Critical section (should be kept as small as possible)
         let mut song_g = song.lock().unwrap();

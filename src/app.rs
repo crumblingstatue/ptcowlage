@@ -5,13 +5,15 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::file_ops::{FILT_MIDI, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
         },
-        audio_out::{self, AuxAudioState, SongState, SongStateHandle, spawn_ptcow_audio_thread},
+        audio_out::{
+            self, AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
+        },
         evilscript,
     },
     anyhow::Context,
     eframe::egui,
     egui_file_dialog::FileDialog,
-    ptcow::{Event, EventPayload, Herd, MooInstructions, SampleRate, SampleT, Song, UnitIdx},
+    ptcow::{Event, EventPayload, Herd, MooInstructions, SampleT, Song, UnitIdx},
     std::{
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
@@ -26,8 +28,7 @@ pub struct App {
     song: SongStateHandle,
     file_dia: FileDialog,
     pt_audio_dev: OutputDevice,
-    out_rate: SampleRate,
-    out_buf_size: usize,
+    out: OutParams,
     ui_state: ui::UiState,
     /// Currently opened file
     open_file: Option<PathBuf>,
@@ -98,7 +99,7 @@ impl App {
             &song_state.song.master,
         );
         let song_state_handle = Arc::new(Mutex::new(song_state));
-        let out_buf_size = 1024;
+        let out_params = OutParams::default();
         let mut this = Self {
             song: song_state_handle.clone(),
             file_dia: FileDialog::new()
@@ -106,9 +107,8 @@ impl App {
                 .add_save_extension(FILT_PTCOP, "ptcop")
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
                 .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"]),
-            pt_audio_dev: spawn_ptcow_audio_thread(sample_rate, out_buf_size, song_state_handle),
-            out_rate: sample_rate,
-            out_buf_size,
+            pt_audio_dev: spawn_ptcow_audio_thread(out_params, song_state_handle),
+            out: out_params,
             ui_state: ui::UiState::default(),
             open_file: None,
             midi: MidiImportOpts { base_key: 32 },
@@ -198,7 +198,7 @@ impl eframe::App for App {
                         &mut song.herd,
                         &mut song.song,
                         &mut song.ins,
-                        self.out_rate,
+                        self.out.rate,
                     );
                 }
                 FileOp::SaveProjAs => {
@@ -258,7 +258,7 @@ impl App {
     // INVARIANT: Locks the song
     pub fn load_song(&mut self, path: PathBuf) -> anyhow::Result<()> {
         let data = std::fs::read(&path).context("Failed to read file")?;
-        let (song, herd, ins) = ptcow::read_song(&data, self.out_rate)?;
+        let (song, herd, ins) = ptcow::read_song(&data, self.out.rate)?;
         let mut song_g = self.song.lock().unwrap();
         let song_ref = &mut *song_g;
         song_ref.song = song;
@@ -269,7 +269,7 @@ impl App {
         crate::audio_out::prepare_song(song_ref);
         ptcow::rebuild_tones(
             &mut song_ref.ins,
-            self.out_rate,
+            self.out.rate,
             &mut song_ref.herd.delays,
             &mut song_ref.herd.overdrives,
             &song_ref.song.master,
@@ -309,12 +309,7 @@ impl App {
                 }
             }
             Cmd::ReplaceAudioThread => {
-                Self::replace_pt_audio_thread(
-                    &mut self.pt_audio_dev,
-                    self.out_rate,
-                    self.out_buf_size,
-                    self.song.clone(),
-                );
+                Self::replace_pt_audio_thread(&mut self.pt_audio_dev, self.out, self.song.clone());
             }
         }
     }
@@ -340,15 +335,14 @@ impl App {
     /// You should probably be sending [crate::app::command_queue::Cmd::ReplaceAudioThread] instead.
     fn replace_pt_audio_thread(
         app_pt_audio_dev: &mut OutputDevice,
-        app_out_rate: SampleRate,
-        app_out_buf_size: usize,
+        app_out: OutParams,
         app_song: SongStateHandle,
     ) {
         replace_with::replace_with_or_abort(app_pt_audio_dev, |dev| {
             // Drop the old handle, so the thread can join, and we avoid a deadlock.
             drop(dev);
             // Now we can spawn the new thread
-            spawn_ptcow_audio_thread(app_out_rate, app_out_buf_size, app_song)
+            spawn_ptcow_audio_thread(app_out, app_song)
         });
     }
 }

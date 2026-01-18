@@ -311,7 +311,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut song,
             &mut app.ui_state.playback,
             &mut app.ui_state.freeplay_piano,
-            app.out_rate,
+            app.out.rate,
             &app.aux_state,
             &mut app.ui_state.voices,
         ),
@@ -324,7 +324,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
                 &mut song,
                 &mut app.ui_state.piano_roll,
                 &mut app.cmd,
-                app.out_rate,
+                app.out.rate,
                 &mut app.ui_state.freeplay_piano,
             );
         }
@@ -332,7 +332,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             ui,
             &mut song,
             &mut app.ui_state.raw_events,
-            app.out_rate,
+            app.out.rate,
             &app.aux_state,
             &mut app.ui_state.voices,
         ),
@@ -341,11 +341,11 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut song,
             &mut app.file_dia,
             &mut app.ui_state.voices,
-            app.out_rate,
+            app.out.rate,
             &app.aux_state,
         ),
         Tab::Units => units_ui(ui, &mut song),
-        Tab::Effects => tabs::effects::ui(ui, &mut song, app.out_rate),
+        Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
     }
     drop(song);
 }

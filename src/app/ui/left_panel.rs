@@ -39,7 +39,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             for (i, unit) in song.herd.units.iter_mut().enumerate() {
                 unit_ui(
-                    app.out_rate,
+                    app.out.rate,
                     &mut app.ui_state,
                     &app.aux_state,
                     ui,

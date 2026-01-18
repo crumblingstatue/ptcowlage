@@ -9,7 +9,7 @@ use {
                 piano_freeplay_ui,
             },
         },
-        audio_out::prepare_song,
+        audio_out::{OutParams, prepare_song},
         pxtone_misc::poly_migrate_units,
     },
     eframe::egui::{
@@ -17,7 +17,7 @@ use {
         containers::menu::{MenuButton, MenuConfig},
     },
     egui_file_dialog::DialogState,
-    ptcow::{EventPayload, SampleRate, Unit, UnitIdx, timing::NonZeroMeas},
+    ptcow::{EventPayload, Unit, UnitIdx, timing::NonZeroMeas},
 };
 
 const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O);
@@ -131,14 +131,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
         );
         button.ui(ui, |ui| {
-            timing_popup_ui(
-                &mut app.out_rate,
-                &mut app.out_buf_size,
-                &mut app.cmd,
-                &mut app.modal_payload,
-                song,
-                ui,
-            );
+            timing_popup_ui(&mut app.out, &mut app.cmd, &mut app.modal_payload, song, ui);
         });
         ui.separator();
         let mut tab = |tab, label, on| {
@@ -191,7 +184,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         ui.separator();
         piano_freeplay_ui(
             &mut song_g,
-            app.out_rate,
+            app.out.rate,
             ui,
             &mut app.ui_state.freeplay_piano,
             app.file_dia.state() == &DialogState::Open,
@@ -219,8 +212,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
 }
 
 fn timing_popup_ui(
-    app_out_rate: &mut SampleRate,
-    app_out_buf_size: &mut usize,
+    app_out: &mut OutParams,
     app_cmd: &mut CommandQueue,
     app_modal_payload: &mut Option<ModalPayload>,
     song: &mut SongState,
@@ -254,17 +246,17 @@ fn timing_popup_ui(
     ));
     ui.separator();
     ui.label("Out rate");
-    let prev_out_rate = *app_out_rate;
+    let prev_out_rate = app_out.rate;
     if ui
-        .add(egui::DragValue::new(app_out_rate).update_while_editing(false))
+        .add(egui::DragValue::new(&mut app_out.rate).update_while_editing(false))
         .changed()
-        && *app_out_rate != prev_out_rate
+        && app_out.rate != prev_out_rate
     {
-        song.ins.out_sample_rate = *app_out_rate;
+        song.ins.out_sample_rate = app_out.rate;
         prepare_song(song);
         ptcow::rebuild_tones(
             &mut song.ins,
-            *app_out_rate,
+            app_out.rate,
             &mut song.herd.delays,
             &mut song.herd.overdrives,
             &song.song.master,
@@ -272,9 +264,9 @@ fn timing_popup_ui(
         app_cmd.push(Cmd::ReplaceAudioThread);
     }
     ui.label("Buf size");
-    let prev_buf_size = *app_out_buf_size;
-    ui.add(egui::DragValue::new(app_out_buf_size).update_while_editing(false));
-    if *app_out_buf_size != prev_buf_size {
+    let prev_buf_size = app_out.buf_size;
+    ui.add(egui::DragValue::new(&mut app_out.buf_size).update_while_editing(false));
+    if app_out.buf_size != prev_buf_size {
         app_cmd.push(Cmd::ReplaceAudioThread);
     }
     ui.separator();
