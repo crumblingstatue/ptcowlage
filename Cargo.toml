@@ -22,6 +22,8 @@ bitflags.version = "2.10"
 mid2ptcop.git = "https://github.com/crumblingstatue/mid2ptcop.git"
 # For PiyoPiyo conversion
 piyopiyo.git = "https://github.com/crumblingstatue/piyopiyo-rs.git"
+# For Organya conversion
+organyacat.git = "https://github.com/crumblingstatue/organyacat.git"
 arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
