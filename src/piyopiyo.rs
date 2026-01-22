@@ -31,6 +31,9 @@ pub fn import(
     out_sample_rate: SampleRate,
 ) {
     song.events.eves.clear();
+    // We assume this default timing is good for all PiyoPiyo songs, which might not be true(?)
+    song.master.timing.ticks_per_beat = 480;
+    song.master.timing.bpm = 125.;
     herd.units.clear();
     ins.voices.clear();
     for (m_i, tr) in piyo.melody_tracks.iter().enumerate() {
