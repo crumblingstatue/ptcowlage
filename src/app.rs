@@ -3,7 +3,7 @@ use {
         CliArgs,
         app::{
             command_queue::{Cmd, CommandQueue},
-            ui::file_ops::{FILT_MIDI, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
+            ui::file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
         },
         audio_out::{
             self, AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
@@ -85,6 +85,18 @@ impl App {
                 sample_rate,
             );
         }
+        if let Some(path) = args.org_import {
+            let data = std::fs::read(&path).unwrap();
+            let mut org = organyacat::Song::default();
+            org.read(&data).unwrap();
+            crate::organya::import(
+                &org,
+                &mut song_state.herd,
+                &mut song_state.song,
+                &mut song_state.ins,
+                sample_rate,
+            );
+        }
         if let Some(ptcop_path) = args.voice_import {
             import_voices(&ptcop_path, &mut song_state);
         }
@@ -106,7 +118,8 @@ impl App {
                 .add_file_filter_extensions(FILT_PTCOP, vec!["ptcop"])
                 .add_save_extension(FILT_PTCOP, "ptcop")
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
-                .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"]),
+                .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"])
+                .add_file_filter_extensions(FILT_ORGANYA, vec!["org"]),
             pt_audio_dev: spawn_ptcow_audio_thread(out_params, song_state_handle),
             out: out_params,
             ui_state: ui::UiState::default(),
@@ -195,6 +208,20 @@ impl eframe::App for App {
                     let song = &mut *song;
                     crate::piyopiyo::import(
                         &piyo,
+                        &mut song.herd,
+                        &mut song.song,
+                        &mut song.ins,
+                        self.out.rate,
+                    );
+                }
+                FileOp::ImportOrganya => {
+                    let data = std::fs::read(&path).unwrap();
+                    let mut org = organyacat::Song::default();
+                    org.read(&data).unwrap();
+                    let mut song = self.song.lock().unwrap();
+                    let song = &mut *song;
+                    crate::organya::import(
+                        &org,
                         &mut song.herd,
                         &mut song.song,
                         &mut song.ins,

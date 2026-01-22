@@ -17,6 +17,7 @@ mod egui_ext;
 mod evilscript;
 mod font_fallback;
 mod herd_ext;
+mod organya;
 mod piyopiyo;
 mod pxtone_misc;
 mod util;
@@ -27,6 +28,8 @@ struct CliArgs {
     midi_import: Option<PathBuf>,
     #[arg(long)]
     piyo_import: Option<PathBuf>,
+    #[arg(long)]
+    org_import: Option<PathBuf>,
     #[arg(long)]
     voice_import: Option<PathBuf>,
     /// Optionally open a PxTone collage (.ptcop) file on startup

@@ -5,7 +5,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 Tab,
-                file_ops::{FILT_MIDI, FILT_PIYOPIYO, FILT_PTCOP},
+                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP},
                 piano_freeplay_ui,
             },
         },
@@ -87,6 +87,11 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             if ui.button("Import PiyoPiyo").clicked() {
                 app.file_dia.set_user_data(FileOp::ImportPiyoPiyo);
                 app.file_dia.config_mut().default_file_filter = Some(FILT_PIYOPIYO.into());
+                app.file_dia.pick_file();
+            }
+            if ui.button("Import Organya").clicked() {
+                app.file_dia.set_user_data(FileOp::ImportOrganya);
+                app.file_dia.config_mut().default_file_filter = Some(FILT_ORGANYA.into());
                 app.file_dia.pick_file();
             }
             ui.separator();
