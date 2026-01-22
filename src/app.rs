@@ -169,8 +169,28 @@ impl eframe::App for App {
             }
         }
 
-        if let Some(path) = self.file_dia.take_picked()
-            && let Some(op) = self.file_dia.user_data::<FileOp>()
+        let mut picked_path = self.file_dia.take_picked();
+        let mut file_op = self.file_dia.user_data::<FileOp>().copied();
+
+        ctx.input(|inp| {
+            for dropfile in &inp.raw.dropped_files {
+                if let Some(path) = &dropfile.path {
+                    picked_path = Some(path.clone());
+                    if let Some(ext) = path.extension().map(|ext| ext.to_str().unwrap()) {
+                        file_op = match ext {
+                            "ptcop" | "pttune" => Some(FileOp::OpenProj),
+                            "mid" | "midi" => Some(FileOp::ImportMidi),
+                            "pmd" => Some(FileOp::ImportPiyoPiyo),
+                            "org" => Some(FileOp::ImportOrganya),
+                            _ => None,
+                        };
+                    }
+                }
+            }
+        });
+
+        if let Some(path) = picked_path
+            && let Some(op) = file_op
         {
             match op {
                 FileOp::OpenProj => {
