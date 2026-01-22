@@ -131,7 +131,7 @@ impl App {
         };
         #[expect(clippy::collapsible_if)]
         if let Some(path) = args.open {
-            if let Err(e) = this.load_song(path) {
+            if let Err(e) = this.load_song_from_path(path) {
                 this.modal_payload =
                     Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
             }
@@ -194,7 +194,7 @@ impl eframe::App for App {
         {
             match op {
                 FileOp::OpenProj => {
-                    if let Err(e) = self.load_song(path) {
+                    if let Err(e) = self.load_song_from_path(path) {
                         self.modal_payload =
                             Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
                     }
@@ -303,15 +303,20 @@ fn import_voices(path: &Path, song: &mut SongState) {
 
 impl App {
     // INVARIANT: Locks the song
-    pub fn load_song(&mut self, path: PathBuf) -> anyhow::Result<()> {
+    pub fn load_song_from_path(&mut self, path: PathBuf) -> anyhow::Result<()> {
         let data = std::fs::read(&path).context("Failed to read file")?;
-        let (song, herd, ins) = ptcow::read_song(&data, self.out.rate)?;
+        self.load_song_from_bytes(&data)?;
+        self.open_file = Some(path);
+        Ok(())
+    }
+    // INVARIANT: Locks the song
+    pub fn load_song_from_bytes(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let (song, herd, ins) = ptcow::read_song(data, self.out.rate)?;
         let mut song_g = self.song.lock().unwrap();
         let song_ref = &mut *song_g;
         song_ref.song = song;
         song_ref.herd = herd;
         song_ref.ins = ins;
-        self.open_file = Some(path);
         // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
         crate::audio_out::prepare_song(song_ref);
         ptcow::rebuild_tones(
@@ -362,7 +367,7 @@ impl App {
     }
     fn reload_current_file(&mut self) {
         if let Some(path) = &self.open_file
-            && let Err(e) = self.load_song(path.clone())
+            && let Err(e) = self.load_song_from_path(path.clone())
         {
             self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
         }
