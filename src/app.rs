@@ -144,6 +144,51 @@ impl App {
         }
         this
     }
+
+    fn import_midi_from_bytes(&mut self, mid_data: &[u8]) {
+        let mut song = self.song.lock().unwrap();
+        let song = &mut *song;
+        match mid2ptcop::write_midi_to_pxtone(
+            mid_data,
+            &mut song.herd,
+            &mut song.song,
+            self.midi.base_key,
+        ) {
+            Ok(_) => {
+                song.song.recalculate_length();
+            }
+            Err(e) => {
+                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+            }
+        }
+    }
+
+    fn import_piyopiyo_from_bytes(&mut self, data: &[u8]) {
+        let piyo = piyopiyo::Song::load(data).unwrap();
+        let mut song = self.song.lock().unwrap();
+        let song = &mut *song;
+        crate::piyopiyo::import(
+            &piyo,
+            &mut song.herd,
+            &mut song.song,
+            &mut song.ins,
+            self.out.rate,
+        );
+    }
+
+    fn import_organya_from_bytes(&mut self, data: &[u8]) {
+        let mut org = organyacat::Song::default();
+        org.read(data).unwrap();
+        let mut song = self.song.lock().unwrap();
+        let song = &mut *song;
+        crate::organya::import(
+            &org,
+            &mut song.herd,
+            &mut song.song,
+            &mut song.ins,
+            self.out.rate,
+        );
+    }
 }
 
 impl eframe::App for App {
@@ -205,48 +250,15 @@ impl eframe::App for App {
                 }
                 FileOp::ImportMidi => {
                     let mid_data = std::fs::read(&path).unwrap();
-                    let mut song = self.song.lock().unwrap();
-                    let song = &mut *song;
-                    match mid2ptcop::write_midi_to_pxtone(
-                        &mid_data,
-                        &mut song.herd,
-                        &mut song.song,
-                        self.midi.base_key,
-                    ) {
-                        Ok(_) => {
-                            song.song.recalculate_length();
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
+                    self.import_midi_from_bytes(&mid_data);
                 }
                 FileOp::ImportPiyoPiyo => {
                     let data = std::fs::read(&path).unwrap();
-                    let piyo = piyopiyo::Song::load(&data).unwrap();
-                    let mut song = self.song.lock().unwrap();
-                    let song = &mut *song;
-                    crate::piyopiyo::import(
-                        &piyo,
-                        &mut song.herd,
-                        &mut song.song,
-                        &mut song.ins,
-                        self.out.rate,
-                    );
+                    self.import_piyopiyo_from_bytes(&data);
                 }
                 FileOp::ImportOrganya => {
                     let data = std::fs::read(&path).unwrap();
-                    let mut org = organyacat::Song::default();
-                    org.read(&data).unwrap();
-                    let mut song = self.song.lock().unwrap();
-                    let song = &mut *song;
-                    crate::organya::import(
-                        &org,
-                        &mut song.herd,
-                        &mut song.song,
-                        &mut song.ins,
-                        self.out.rate,
-                    );
+                    self.import_organya_from_bytes(&data);
                 }
                 FileOp::SaveProjAs => {
                     let song = self.song.lock().unwrap();
