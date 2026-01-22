@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
 
+[features]
+default = ["oggv"]
+# Ogg/Vorbis for now is optional due to Ogg/Vorbis not working on wasm32-unknown target
+oggv = ["ptcow/oggv"]
+
 [dependencies]
 eframe.version = "0.33"
 eframe.default-features = false
@@ -12,7 +17,8 @@ egui_extras.version = "0.33"
 egui_extras.features = ["image"]
 egui-file-dialog = "0.12"
 egui-toast = "0.19"
-ptcow = "0.4.0"
+ptcow.version = "0.4.0"
+ptcow.default-features = false
 tinyaudio = "2"
 anyhow = "1"
 clap.version = "4.5"
