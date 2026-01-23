@@ -22,7 +22,7 @@ mod piyopiyo;
 mod pxtone_misc;
 mod util;
 
-#[derive(clap::Parser)]
+#[derive(clap::Parser, Default)]
 struct CliArgs {
     #[arg(long)]
     midi_import: Option<PathBuf>,
@@ -39,6 +39,7 @@ struct CliArgs {
     evil: Option<String>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let opts = eframe::NativeOptions::default();
     let args = CliArgs::parse();
@@ -57,4 +58,54 @@ fn main() {
         }),
     )
     .unwrap();
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    use eframe::wasm_bindgen::JsCast as _;
+
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async {
+        let document = web_sys::window()
+            .expect("No window")
+            .document()
+            .expect("No document");
+
+        let canvas = document
+            .get_element_by_id("the_canvas_id")
+            .expect("Failed to find the_canvas_id")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("the_canvas_id was not a HtmlCanvasElement");
+
+        let start_result = eframe::WebRunner::new()
+            .start(
+                canvas,
+                web_options,
+                Box::new(|cc| {
+                    egui_extras::install_image_loaders(&cc.egui_ctx);
+                    font_fallback::install_ja_fallback_font(&cc.egui_ctx);
+                    let app = app::App::new(CliArgs::default());
+                    // Enforce dark theme, as we don't support light theme for our custom colors
+                    cc.egui_ctx.set_theme(egui::Theme::Dark);
+                    Ok(Box::new(app))
+                }),
+            )
+            .await;
+
+        // Remove the loading text and spinner:
+        if let Some(loading_text) = document.get_element_by_id("loading_text") {
+            match start_result {
+                Ok(_) => {
+                    loading_text.remove();
+                }
+                Err(e) => {
+                    loading_text.set_inner_html(
+                        "<p> The app has crashed. See the developer console for details. </p>",
+                    );
+                    panic!("Failed to start eframe: {e:?}");
+                }
+            }
+        }
+    });
 }

@@ -16,7 +16,7 @@ use {
         self, KeyboardShortcut,
         containers::menu::{MenuButton, MenuConfig},
     },
-    egui_file_dialog::DialogState,
+    egui_file_dialog::{DialogState, FileDialog},
     ptcow::{EventPayload, Unit, UnitIdx, timing::NonZeroMeas},
 };
 
@@ -55,49 +55,16 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     let mut song_g = app.song.lock().unwrap();
     egui::MenuBar::new().ui(ui, |ui| {
         ui.menu_button("File", |ui| {
-            bt_open = ui
-                .add(
-                    egui::Button::new("Open")
-                        .shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)),
-                )
-                .clicked();
-            bt_reload = ui
-                .add(
-                    egui::Button::new("Reload")
-                        .shortcut_text(ui.ctx().format_shortcut(&RELOAD_SHORTCUT)),
-                )
-                .clicked();
-            bt_save = ui
-                .add(
-                    egui::Button::new("Save")
-                        .shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)),
-                )
-                .clicked();
-            if ui.button("Save as").clicked() {
-                app.file_dia.set_user_data(FileOp::SaveProjAs);
-                app.file_dia.config_mut().default_save_extension = Some(FILT_PTCOP.into());
-                app.file_dia.save_file();
-            }
-            ui.separator();
-            if ui.button("Import midi").clicked() {
-                app.file_dia.set_user_data(FileOp::ImportMidi);
-                app.file_dia.config_mut().default_file_filter = Some(FILT_MIDI.into());
-                app.file_dia.pick_file();
-            }
-            if ui.button("Import PiyoPiyo").clicked() {
-                app.file_dia.set_user_data(FileOp::ImportPiyoPiyo);
-                app.file_dia.config_mut().default_file_filter = Some(FILT_PIYOPIYO.into());
-                app.file_dia.pick_file();
-            }
-            if ui.button("Import Organya").clicked() {
-                app.file_dia.set_user_data(FileOp::ImportOrganya);
-                app.file_dia.config_mut().default_file_filter = Some(FILT_ORGANYA.into());
-                app.file_dia.pick_file();
-            }
-            ui.separator();
-            if ui.button("Quit").clicked() {
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-            }
+            #[cfg(not(target_arch = "wasm32"))]
+            file_menu_ui_desktop(
+                &mut app.file_dia,
+                &mut bt_open,
+                &mut bt_reload,
+                &mut bt_save,
+                ui,
+            );
+            #[cfg(target_arch = "wasm32")]
+            file_menu_ui_web(ui);
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
@@ -228,11 +195,63 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     }
 
     if app.pt_audio_dev.is_none() {
-        ui.colored_label(egui::Color32::RED, "Audio thread is not running.");
-        if ui.button("Restart audio thread").clicked() {
-            app.cmd.push(Cmd::ReplaceAudioThread);
-        }
+        ui.horizontal(|ui| {
+            ui.colored_label(egui::Color32::RED, "⚠ Audio thread is not running.");
+            if ui.button("Restart audio thread").clicked() {
+                app.cmd.push(Cmd::ReplaceAudioThread);
+            }
+        });
     }
+}
+
+fn file_menu_ui_desktop(
+    app_file_dia: &mut FileDialog,
+    bt_open: &mut bool,
+    bt_reload: &mut bool,
+    bt_save: &mut bool,
+    ui: &mut egui::Ui,
+) {
+    *bt_open = ui
+        .add(egui::Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)))
+        .clicked();
+    *bt_reload = ui
+        .add(egui::Button::new("Reload").shortcut_text(ui.ctx().format_shortcut(&RELOAD_SHORTCUT)))
+        .clicked();
+    *bt_save = ui
+        .add(egui::Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)))
+        .clicked();
+    if ui.button("Save as").clicked() {
+        app_file_dia.set_user_data(FileOp::SaveProjAs);
+        app_file_dia.config_mut().default_save_extension = Some(FILT_PTCOP.into());
+        app_file_dia.save_file();
+    }
+    ui.separator();
+    if ui.button("Import midi").clicked() {
+        app_file_dia.set_user_data(FileOp::ImportMidi);
+        app_file_dia.config_mut().default_file_filter = Some(FILT_MIDI.into());
+        app_file_dia.pick_file();
+    }
+    if ui.button("Import PiyoPiyo").clicked() {
+        app_file_dia.set_user_data(FileOp::ImportPiyoPiyo);
+        app_file_dia.config_mut().default_file_filter = Some(FILT_PIYOPIYO.into());
+        app_file_dia.pick_file();
+    }
+    if ui.button("Import Organya").clicked() {
+        app_file_dia.set_user_data(FileOp::ImportOrganya);
+        app_file_dia.config_mut().default_file_filter = Some(FILT_ORGANYA.into());
+        app_file_dia.pick_file();
+    }
+    ui.separator();
+    if ui.button("Quit").clicked() {
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn file_menu_ui_web(ui: &mut egui::Ui) {
+    ui.label("Drop files into this browser tab to load them.");
+    ui.separator();
+    ui.label("Save not implemented yet, sorry.");
 }
 
 fn timing_popup_ui(

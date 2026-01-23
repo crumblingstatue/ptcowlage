@@ -234,6 +234,30 @@ impl eframe::App for App {
                             _ => None,
                         };
                     }
+                } else if let Some(bytes) = &dropfile.bytes {
+                    if let Some((name, ext)) = dropfile.name.split_once(".") {
+                        match ext {
+                            "ptcop" | "pttune" => {
+                                // Web version loads dropped files directly as bytes
+                                if let Err(e) = self.load_song_from_bytes(bytes) {
+                                    self.modal_payload = Some(ModalPayload::Msg(format!(
+                                        "Error loading project:\n{e}"
+                                    )));
+                                }
+                            }
+                            "mid" => {
+                                self.import_midi_from_bytes(bytes);
+                            }
+                            "pmd" => {
+                                self.import_piyopiyo_from_bytes(bytes);
+                            }
+                            "org" => {
+                                self.import_organya_from_bytes(bytes);
+                            }
+                            _ => {}
+                        }
+                        self.open_file = Some(format!("{name}.{ext}").into());
+                    }
                 }
             }
         });

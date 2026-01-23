@@ -36,6 +36,10 @@ rustc-hash = "2.1.1"
 # For finding japanese fallback font
 fontique = "0.7.0"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4.50"
+web-sys = "0.3.70"              # to access the DOM (to hide the loading text)
+
 [profile.dev]
 debug = "line-tables-only"
 opt-level = 1
