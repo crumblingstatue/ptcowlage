@@ -52,3 +52,7 @@ opt-level = 1
 
 [profile.release]
 lto = "thin"
+
+# TODO: New ptcow release
+[patch.crates-io]
+ptcow.git = "https://github.com/crumblingstatue/ptcow.git"
