@@ -226,6 +226,13 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     if bt_save || sc_save {
         app.cmd.push(Cmd::SaveCurrentFile);
     }
+
+    if app.pt_audio_dev.is_none() {
+        ui.colored_label(egui::Color32::RED, "Audio thread is not running.");
+        if ui.button("Restart audio thread").clicked() {
+            app.cmd.push(Cmd::ReplaceAudioThread);
+        }
+    }
 }
 
 fn timing_popup_ui(

@@ -27,7 +27,8 @@ mod ui;
 pub struct App {
     song: SongStateHandle,
     file_dia: FileDialog,
-    pt_audio_dev: OutputDevice,
+    /// Main audio output for ptcow playback
+    pt_audio_dev: Option<OutputDevice>,
     out: OutParams,
     ui_state: ui::UiState,
     /// Currently opened file
@@ -120,7 +121,10 @@ impl App {
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
                 .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"])
                 .add_file_filter_extensions(FILT_ORGANYA, vec!["org"]),
-            pt_audio_dev: spawn_ptcow_audio_thread(out_params, song_state_handle),
+            #[cfg(not(target_arch = "wasm32"))]
+            pt_audio_dev: Some(spawn_ptcow_audio_thread(out_params, song_state_handle)),
+            #[cfg(target_arch = "wasm32")]
+            pt_audio_dev: None,
             out: out_params,
             ui_state: ui::UiState::default(),
             open_file: None,
@@ -398,16 +402,14 @@ impl App {
     ///
     /// You should probably be sending [crate::app::command_queue::Cmd::ReplaceAudioThread] instead.
     fn replace_pt_audio_thread(
-        app_pt_audio_dev: &mut OutputDevice,
+        app_pt_audio_dev: &mut Option<OutputDevice>,
         app_out: OutParams,
         app_song: SongStateHandle,
     ) {
-        replace_with::replace_with_or_abort(app_pt_audio_dev, |dev| {
-            // Drop the old handle, so the thread can join, and we avoid a deadlock.
-            drop(dev);
-            // Now we can spawn the new thread
-            spawn_ptcow_audio_thread(app_out, app_song)
-        });
+        // Drop the old handle, so the thread can join, and we avoid a deadlock.
+        *app_pt_audio_dev = None;
+        // Now we can spawn the new thread
+        *app_pt_audio_dev = Some(spawn_ptcow_audio_thread(app_out, app_song))
     }
 }
 

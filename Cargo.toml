@@ -33,7 +33,6 @@ organyacat.git = "https://github.com/crumblingstatue/organyacat.git"
 arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
-replace_with = "0.1.8"
 # For finding japanese fallback font
 fontique = "0.7.0"
 
