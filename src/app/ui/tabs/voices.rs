@@ -8,7 +8,6 @@ use {
     },
     bitflags::Flags as _,
     eframe::egui,
-    egui_file_dialog::FileDialog,
     ptcow::{
         Bps, ChNum, EnvPt, NoiseData, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
         NoiseTable, NoiseType, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags, VoiceIdx,
@@ -28,7 +27,7 @@ pub struct VoicesUiState {
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    file_dia: &mut FileDialog,
+    #[cfg(not(target_arch = "wasm32"))] file_dia: &mut egui_file_dialog::FileDialog,
     ui_state: &mut VoicesUiState,
     out_rate: SampleRate,
     aux: &AuxAudioState,
@@ -63,6 +62,7 @@ pub fn ui(
                 song.ins.voices.push(voice);
             }
         });
+        #[cfg(not(target_arch = "wasm32"))]
         if ui.button("Import...").clicked() {
             file_dia.config_mut().default_file_filter = Some(FILT_PTCOP.into());
             file_dia.set_user_data(FileOp::ImportVoices);

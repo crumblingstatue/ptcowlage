@@ -15,14 +15,11 @@ eframe.default-features = false
 eframe.features = ["default_fonts", "glow", "x11", "wayland"]
 egui_extras.version = "0.33"
 egui_extras.features = ["image"]
-egui-file-dialog = "0.12"
 egui-toast = "0.19"
 ptcow.version = "0.4.0"
 ptcow.default-features = false
 tinyaudio = "2"
 anyhow = "1"
-clap.version = "4.5"
-clap.features = ["derive"]
 bitflags.version = "2.10"
 # For midi conversion
 mid2ptcop.git = "https://github.com/crumblingstatue/mid2ptcop.git"
@@ -33,12 +30,20 @@ organyacat.git = "https://github.com/crumblingstatue/organyacat.git"
 arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
-# For finding japanese fallback font
-fontique = "0.7.0"
 
+# Web-only dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.50"
 web-sys = "0.3.70"              # to access the DOM (to hide the loading text)
+
+# Desktop-only dependencies
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+
+# For finding japanese fallback font
+fontique = "0.7.0"
+egui-file-dialog = "0.12"
+clap.version = "4.5"
+clap.features = ["derive"]
 
 [profile.dev]
 debug = "line-tables-only"

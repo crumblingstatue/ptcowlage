@@ -9,12 +9,13 @@
     clippy::too_many_arguments
 )]
 
-use {clap::Parser, eframe::egui, std::path::PathBuf};
+use std::path::PathBuf;
 
 mod app;
 mod audio_out;
 mod egui_ext;
 mod evilscript;
+#[cfg(not(target_arch = "wasm32"))]
 mod font_fallback;
 mod herd_ext;
 mod organya;
@@ -22,7 +23,8 @@ mod piyopiyo;
 mod pxtone_misc;
 mod util;
 
-#[derive(clap::Parser, Default)]
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(clap::Parser)]
 struct CliArgs {
     #[arg(long)]
     midi_import: Option<PathBuf>,
@@ -39,8 +41,23 @@ struct CliArgs {
     evil: Option<String>,
 }
 
+// TODO: This is a hack, find a better solution
+#[cfg(target_arch = "wasm32")]
+#[derive(Default)]
+struct CliArgs {
+    midi_import: Option<PathBuf>,
+    piyo_import: Option<PathBuf>,
+    org_import: Option<PathBuf>,
+    voice_import: Option<PathBuf>,
+    /// Optionally open a PxTone collage (.ptcop) file on startup
+    open: Option<PathBuf>,
+    /// Execute EvilScript after loading the initial song
+    evil: Option<String>,
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
+    use {clap::Parser as _, eframe::egui};
     let opts = eframe::NativeOptions::default();
     let args = CliArgs::parse();
     eframe::run_native(
@@ -84,10 +101,9 @@ fn main() {
                 web_options,
                 Box::new(|cc| {
                     egui_extras::install_image_loaders(&cc.egui_ctx);
-                    font_fallback::install_ja_fallback_font(&cc.egui_ctx);
                     let app = app::App::new(CliArgs::default());
                     // Enforce dark theme, as we don't support light theme for our custom colors
-                    cc.egui_ctx.set_theme(egui::Theme::Dark);
+                    cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
                     Ok(Box::new(app))
                 }),
             )

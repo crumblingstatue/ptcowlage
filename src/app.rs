@@ -12,7 +12,6 @@ use {
     },
     anyhow::Context,
     eframe::egui,
-    egui_file_dialog::FileDialog,
     ptcow::{Event, EventPayload, Herd, MooInstructions, SampleT, Song, UnitIdx},
     std::{
         path::{Path, PathBuf},
@@ -26,7 +25,8 @@ mod ui;
 
 pub struct App {
     song: SongStateHandle,
-    file_dia: FileDialog,
+    #[cfg(not(target_arch = "wasm32"))]
+    file_dia: egui_file_dialog::FileDialog,
     /// Main audio output for ptcow playback
     pt_audio_dev: Option<OutputDevice>,
     out: OutParams,
@@ -115,7 +115,8 @@ impl App {
         let out_params = OutParams::default();
         let mut this = Self {
             song: song_state_handle.clone(),
-            file_dia: FileDialog::new()
+            #[cfg(not(target_arch = "wasm32"))]
+            file_dia: egui_file_dialog::FileDialog::new()
                 .add_file_filter_extensions(FILT_PTCOP, vec!["ptcop"])
                 .add_save_extension(FILT_PTCOP, "ptcop")
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
@@ -193,17 +194,8 @@ impl App {
             self.out.rate,
         );
     }
-}
-
-impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint();
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| ui::top_panel::top_panel(self, ui));
-        if self.ui_state.show_left_panel() {
-            egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));
-        }
-        egui::CentralPanel::default().show(ctx, |ui| ui::central_panel(self, ui));
-
+    #[cfg(not(target_arch = "wasm32"))]
+    fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
         match self.file_dia.user_data::<FileOp>() {
             Some(FileOp::ImportMidi) => {
                 self.file_dia
@@ -218,8 +210,25 @@ impl eframe::App for App {
             }
         }
 
-        let mut picked_path = self.file_dia.take_picked();
-        let mut file_op = self.file_dia.user_data::<FileOp>().copied();
+        let picked_path = self.file_dia.take_picked();
+        let file_op = self.file_dia.user_data::<FileOp>().copied();
+        (picked_path, file_op)
+    }
+}
+
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| ui::top_panel::top_panel(self, ui));
+        if self.ui_state.show_left_panel() {
+            egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));
+        }
+        egui::CentralPanel::default().show(ctx, |ui| ui::central_panel(self, ui));
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let (mut picked_path, mut file_op) = self.handle_file_dia_update(ctx);
+        #[cfg(target_arch = "wasm32")]
+        let (mut picked_path, mut file_op) = (None, None);
 
         ctx.input(|inp| {
             for dropfile in &inp.raw.dropped_files {

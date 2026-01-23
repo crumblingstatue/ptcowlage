@@ -21,7 +21,6 @@ use {
         audio_out::AuxAudioState,
     },
     eframe::egui::{self},
-    egui_file_dialog::DialogState,
     ptcow::{
         Event, EventPayload, GroupIdx, MooInstructions, SampleRate, Unit, UnitIdx, Voice, VoiceData,
     },
@@ -286,7 +285,10 @@ pub enum Tab {
 pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
     // Check whether space key is pressed
     // We ignore it if a popup is open, also if file dialog is open, or egui wants input, etc.
-    let file_dia_open = app.file_dia.state() == &DialogState::Open;
+    #[cfg(not(target_arch = "wasm32"))]
+    let file_dia_open = app.file_dia.state() == &egui_file_dialog::DialogState::Open;
+    #[cfg(target_arch = "wasm32")]
+    let file_dia_open = false;
     let [k_space, m_ctrl] = ui.input(|inp| [inp.key_pressed(egui::Key::Space), inp.modifiers.ctrl]);
     let mut song = app.song.lock().unwrap();
     if k_space {
@@ -339,6 +341,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
         Tab::Voices => tabs::voices::ui(
             ui,
             &mut song,
+            #[cfg(not(target_arch = "wasm32"))]
             &mut app.file_dia,
             &mut app.ui_state.voices,
             app.out.rate,

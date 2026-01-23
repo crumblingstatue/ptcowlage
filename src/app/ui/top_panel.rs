@@ -16,7 +16,6 @@ use {
         self, KeyboardShortcut,
         containers::menu::{MenuButton, MenuConfig},
     },
-    egui_file_dialog::{DialogState, FileDialog},
     ptcow::{EventPayload, Unit, UnitIdx, timing::NonZeroMeas},
 };
 
@@ -171,12 +170,16 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             app.out.rate,
             ui,
             &mut app.ui_state.freeplay_piano,
-            app.file_dia.state() == &DialogState::Open,
+            #[cfg(not(target_arch = "wasm32"))]
+            (app.file_dia.state() == &egui_file_dialog::DialogState::Open),
+            #[cfg(target_arch = "wasm32")]
+            false,
         );
     });
     drop(song_g);
     ui.add_space(2.0);
 
+    #[cfg(not(target_arch = "wasm32"))]
     if bt_open || sc_open {
         if let Some(path) = &app.open_file {
             app.file_dia.config_mut().initial_directory = path.parent().unwrap().to_path_buf();
@@ -204,8 +207,9 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn file_menu_ui_desktop(
-    app_file_dia: &mut FileDialog,
+    app_file_dia: &mut egui_file_dialog::FileDialog,
     bt_open: &mut bool,
     bt_reload: &mut bool,
     bt_save: &mut bool,
