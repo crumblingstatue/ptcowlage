@@ -20,7 +20,7 @@ use {
         },
         audio_out::AuxAudioState,
     },
-    eframe::egui::{self},
+    eframe::egui::{self, AtomExt},
     ptcow::{
         Event, EventPayload, GroupIdx, MooInstructions, SampleRate, Unit, UnitIdx, Voice, VoiceData,
     },
@@ -87,11 +87,14 @@ fn piano_freeplay_ui(
         .show_ui(ui, |ui| {
             ui.selectable_value(&mut state.toot, None, "None");
             for unit_idx in 0..song.herd.units.len() {
+                let unit = &song.herd.units[unit_idx];
                 ui.selectable_value(
                     &mut state.toot,
                     Some(UnitIdx(unit_idx as u8)),
-                    egui::RichText::new(&song.herd.units[unit_idx].name)
-                        .color(unit_color(unit_idx)),
+                    (
+                        unit_voice_img(&song.ins, unit).atom_size(egui::vec2(14.0, 14.0)),
+                        egui::RichText::new(&unit.name).color(unit_color(unit_idx)),
+                    ),
                 );
             }
         });
