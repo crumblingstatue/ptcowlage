@@ -1,7 +1,9 @@
-export function open_file_dialog() {
+// Opens a file dialog with the filter `accept`
+export function open_file_dialog(accept) {
     return new Promise((resolve) => {
         const input = document.createElement("input");
         input.type = "file";
+        input.accept = accept;
         input.onchange = () => {
             const file = input.files[0];
             const reader = new FileReader();

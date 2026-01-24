@@ -271,22 +271,22 @@ fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle, 
     use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
     if ui.button("Open file").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file().await;
+            let bytes = crate::web_glue::open_file(".ptcop,.pttune").await;
             cmd.push(WebCmd::OpenFile { data: bytes });
         });
     } else if ui.button("Import midi").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file().await;
+            let bytes = crate::web_glue::open_file(".mid").await;
             cmd.push(WebCmd::ImportMidi { data: bytes });
         });
     } else if ui.button("Import PiyoPiyo").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file().await;
+            let bytes = crate::web_glue::open_file(".pmd").await;
             cmd.push(WebCmd::ImportPiyo { data: bytes });
         });
     } else if ui.button("Import Organya").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file().await;
+            let bytes = crate::web_glue::open_file(".org").await;
             cmd.push(WebCmd::ImportOrganya { data: bytes });
         });
     }
