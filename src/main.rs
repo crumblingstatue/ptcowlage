@@ -64,13 +64,15 @@ fn main() {
         "ptcowlage",
         opts,
         Box::new(|cc| {
+            use crate::audio_out::OutParams;
+
             egui_extras::install_image_loaders(&cc.egui_ctx);
             cc.egui_ctx
                 .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(1280., 720.)));
             cc.egui_ctx
                 .send_viewport_cmd(egui::ViewportCommand::Title("pxtone Cowlage".into()));
             font_fallback::install_ja_fallback_font(&cc.egui_ctx);
-            let app = app::App::new(args, &[]);
+            let app = app::App::new(args, OutParams::default(), &[]);
             Ok(Box::new(app))
         }),
     )
@@ -107,8 +109,19 @@ fn main() {
                 canvas,
                 web_options,
                 Box::new(|cc| {
+                    use crate::audio_out::OutParams;
+
                     egui_extras::install_image_loaders(&cc.egui_ctx);
-                    let app = app::App::new(CliArgs::default(), BUNDLED_SONGS);
+                    let app = app::App::new(
+                        CliArgs::default(),
+                        OutParams {
+                            // Web version is a bit slower, so let's use a bigger buf size
+                            // in order to reduce audio glitching
+                            buf_size: 4096,
+                            rate: 44_100,
+                        },
+                        BUNDLED_SONGS,
+                    );
                     // Enforce dark theme, as we don't support light theme for our custom colors
                     cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
                     Ok(Box::new(app))

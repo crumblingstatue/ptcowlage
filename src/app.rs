@@ -51,7 +51,7 @@ pub struct MidiImportOpts {
 pub type BundledSongs = &'static [(&'static str, &'static [u8])];
 
 impl App {
-    pub fn new(args: CliArgs, bundled_songs: BundledSongs) -> Self {
+    pub fn new(args: CliArgs, out_params: OutParams, bundled_songs: BundledSongs) -> Self {
         let sample_rate = 44_100;
         let mut song_state = SongState {
             herd: Herd::default(),
@@ -114,7 +114,6 @@ impl App {
             &song_state.song.master,
         );
         let song_state_handle = Arc::new(Mutex::new(song_state));
-        let out_params = OutParams::default();
         let mut this = Self {
             song: song_state_handle.clone(),
             #[cfg(not(target_arch = "wasm32"))]
