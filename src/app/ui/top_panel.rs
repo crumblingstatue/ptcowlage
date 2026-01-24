@@ -16,7 +16,7 @@ use {
         self, KeyboardShortcut,
         containers::menu::{MenuButton, MenuConfig},
     },
-    ptcow::{EventPayload, Unit, UnitIdx, timing::NonZeroMeas},
+    ptcow::{EventPayload, MooPlan, Unit, UnitIdx, timing::NonZeroMeas},
 };
 
 const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O);
@@ -281,21 +281,54 @@ fn timing_popup_ui(
     ui: &mut egui::Ui,
     full_w: f32,
 ) {
+    let mut timing_changed = false;
+
+    ui.label("BPM").on_hover_text("Beats per minute");
+    timing_changed ^= ui
+        .add(
+            egui::DragValue::new(&mut song.song.master.timing.bpm)
+                .range(1.0..=99_999.0)
+                .update_while_editing(false),
+        )
+        .changed();
+    ui.end_row();
     ui.label("Ticks per beat")
         .on_hover_text("How many clock ticks happen during a beat");
-    ui.add(egui::DragValue::new(&mut song.song.master.timing.ticks_per_beat).range(1..=65536));
-    ui.end_row();
-    ui.label("BPM").on_hover_text("Beats per minute");
-    ui.add(egui::DragValue::new(&mut song.song.master.timing.bpm));
-    ui.end_row();
-    ui.label("Beats per meas");
-    ui.add(egui::DragValue::new(&mut song.song.master.timing.beats_per_meas).range(1..=255));
+    timing_changed ^= ui
+        .add(
+            egui::DragValue::new(&mut song.song.master.timing.ticks_per_beat)
+                .range(1..=65536)
+                .update_while_editing(false),
+        )
+        .changed();
+    // Let ptcow reconfigure the timing after we changed the timing parameters
+    if timing_changed {
+        let last_played_sample = song.herd.smp_count;
+        ptcow::moo_prepare(
+            &mut song.ins,
+            &mut song.herd,
+            &song.song,
+            &MooPlan {
+                start_pos: ptcow::StartPosPlan::Sample(last_played_sample),
+                meas_end: None,
+                meas_repeat: None,
+                loop_: true,
+            },
+        );
+    }
     ui.end_row();
     h_sep(ui, full_w);
     ui.label("Samples per tick");
     ui.add(egui::DragValue::new(&mut song.ins.samples_per_tick).speed(0.01));
     ui.end_row();
     h_sep(ui, full_w);
+    ui.label("Beats per meas");
+    ui.add(
+        egui::DragValue::new(&mut song.song.master.timing.beats_per_meas)
+            .range(1..=255)
+            .update_while_editing(false),
+    );
+    ui.end_row();
     ui.label("Last meas");
     match &mut song.song.master.loop_points.last {
         Some(last) => {
