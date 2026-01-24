@@ -1,3 +1,5 @@
+#[cfg(target_arch = "wasm32")]
+use tinyaudio::OutputDevice;
 use {
     crate::{
         app::{
@@ -63,7 +65,13 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 ui,
             );
             #[cfg(target_arch = "wasm32")]
-            file_menu_ui_web(ui, app.web_cmd.clone(), &song_g);
+            file_menu_ui_web(
+                ui,
+                app.web_cmd.clone(),
+                &mut app.cmd,
+                &mut song_g,
+                &mut app.pt_audio_dev,
+            );
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
@@ -173,7 +181,8 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 song_g.pause ^= true;
             }
         } else if ui.button("▶ Play").clicked() {
-            prepare_song(&mut song_g);
+            prepare_song(&mut song_g, true);
+            song_g.herd.moo_end = false;
             song_g.pause = false;
         }
         ui.label("🔉");
@@ -265,39 +274,69 @@ fn file_menu_ui_desktop(
         app_file_dia.pick_file();
     }
     ui.separator();
+    if ui.button("Export wav").clicked() {
+        use crate::app::ui::file_ops::FILT_WAV;
+
+        app_file_dia.set_user_data(FileOp::ExportWav);
+        app_file_dia.config_mut().default_save_extension = Some(FILT_WAV.into());
+        app_file_dia.save_file();
+    }
+    ui.separator();
     if ui.button("Quit").clicked() {
         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle, song: &SongState) {
+fn file_menu_ui_web(
+    ui: &mut egui::Ui,
+    web_cmd: crate::web_glue::WebCmdQueueHandle,
+    app_cmd: &mut CommandQueue,
+    song: &mut SongState,
+    ptcow_audio: &mut Option<OutputDevice>,
+) {
     use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
     if ui.button("Open").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
             let bytes = crate::web_glue::open_file(".ptcop,.pttune").await;
-            cmd.push(WebCmd::OpenFile { data: bytes });
+            web_cmd.push(WebCmd::OpenFile { data: bytes });
         });
     } else if ui.button("Import midi").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
             let bytes = crate::web_glue::open_file(".mid").await;
-            cmd.push(WebCmd::ImportMidi { data: bytes });
+            web_cmd.push(WebCmd::ImportMidi { data: bytes });
         });
     } else if ui.button("Import PiyoPiyo").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
             let bytes = crate::web_glue::open_file(".pmd").await;
-            cmd.push(WebCmd::ImportPiyo { data: bytes });
+            web_cmd.push(WebCmd::ImportPiyo { data: bytes });
         });
     } else if ui.button("Import Organya").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
             let bytes = crate::web_glue::open_file(".org").await;
-            cmd.push(WebCmd::ImportOrganya { data: bytes });
+            web_cmd.push(WebCmd::ImportOrganya { data: bytes });
         });
     }
     ui.separator();
     if ui.button("Save as").clicked() {
         let bytes = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
         crate::web_glue::save_file(&bytes, "out.ptcop");
+    }
+    if ui.button("Export .wav").clicked() {
+        // Kill audio thread
+        *ptcow_audio = None;
+        match crate::util::export_wav(song) {
+            Ok(data) => {
+                crate::web_glue::save_file(&data, "out.wav");
+            }
+            Err(e) => {
+                eprintln!(".wav export error: {e}");
+            }
+        }
+        // Now we can resume playback
+        prepare_song(song, true);
+        song.herd.moo_end = false;
+        app_cmd.push(Cmd::ReplaceAudioThread);
     }
 }
 
@@ -388,7 +427,7 @@ fn timing_popup_ui(
         && app_out.rate != prev_out_rate
     {
         song.ins.out_sample_rate = app_out.rate;
-        prepare_song(song);
+        prepare_song(song, true);
         ptcow::rebuild_tones(
             &mut song.ins,
             app_out.rate,

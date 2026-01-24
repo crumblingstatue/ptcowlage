@@ -1,3 +1,5 @@
+#[cfg(not(target_arch = "wasm32"))]
+use crate::app::ui::file_ops::FILT_WAV;
 use {
     crate::{
         CliArgs,
@@ -109,7 +111,7 @@ impl App {
             import_voices(&ptcop_path, &mut song_state);
         }
         // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
-        crate::audio_out::prepare_song(&mut song_state);
+        crate::audio_out::prepare_song(&mut song_state, true);
         ptcow::rebuild_tones(
             &mut song_state.ins,
             sample_rate,
@@ -124,6 +126,7 @@ impl App {
             file_dia: egui_file_dialog::FileDialog::new()
                 .add_file_filter_extensions(FILT_PTCOP, vec!["ptcop"])
                 .add_save_extension(FILT_PTCOP, "ptcop")
+                .add_save_extension(FILT_WAV, "wav")
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
                 .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"])
                 .add_file_filter_extensions(FILT_ORGANYA, vec!["org"]),
@@ -327,6 +330,28 @@ impl eframe::App for App {
                     }
                     drop(song);
                 }
+                FileOp::ExportWav => {
+                    // Disable audio device for export duration
+                    self.pt_audio_dev = None;
+                    let mut song = self.song.lock().unwrap();
+                    match crate::util::export_wav(&mut song) {
+                        Ok(data) => {
+                            if let Err(e) = std::fs::write(path, data) {
+                                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                            }
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                    // We can restart audio thread now
+                    self.cmd.push(Cmd::ReplaceAudioThread);
+                    post_load_prep(
+                        &mut song,
+                        self.out.rate,
+                        &mut self.ui_state.freeplay_piano.toot,
+                    );
+                }
             }
         }
         if let Some(payload) = &mut self.modal_payload {
@@ -489,7 +514,7 @@ fn post_load_prep(
     freeplay_toot: &mut Option<UnitIdx>,
 ) {
     // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
-    crate::audio_out::prepare_song(song_ref);
+    crate::audio_out::prepare_song(song_ref, true);
     ptcow::rebuild_tones(
         &mut song_ref.ins,
         out_rate,
@@ -504,6 +529,8 @@ fn post_load_prep(
         // Set initial voices, etc.
         do_tick0_events(song_ref);
     }
+    // Make sure `moo_end` is not set, so mooing does something
+    song_ref.herd.moo_end = false;
 }
 
 // Apply things like setting initial voices for units on tick 0

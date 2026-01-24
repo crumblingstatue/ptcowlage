@@ -54,7 +54,7 @@ pub struct SongState {
     pub master_vol: f32,
 }
 
-pub fn prepare_song(song: &mut SongState) {
+pub fn prepare_song(song: &mut SongState, loop_: bool) {
     ptcow::moo_prepare(
         &mut song.ins,
         &mut song.herd,
@@ -63,7 +63,7 @@ pub fn prepare_song(song: &mut SongState) {
             start_pos: ptcow::StartPosPlan::Sample(0),
             meas_end: None,
             meas_repeat: None,
-            loop_: true,
+            loop_,
         },
     );
 }
