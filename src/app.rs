@@ -12,7 +12,7 @@ use {
     },
     anyhow::Context,
     eframe::egui,
-    ptcow::{Event, EventPayload, Herd, MooInstructions, SampleT, Song, UnitIdx},
+    ptcow::{Event, EventPayload, Herd, MooInstructions, SampleRate, SampleT, Song, UnitIdx},
     std::{
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
@@ -175,6 +175,7 @@ impl App {
                 self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
             }
         }
+        post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
     }
 
     fn import_piyopiyo_from_bytes(&mut self, data: &[u8]) {
@@ -188,6 +189,7 @@ impl App {
             &mut song.ins,
             self.out.rate,
         );
+        post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
     }
 
     fn import_organya_from_bytes(&mut self, data: &[u8]) {
@@ -202,6 +204,7 @@ impl App {
             &mut song.ins,
             self.out.rate,
         );
+        post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
@@ -375,24 +378,14 @@ impl App {
         song_ref.song = song;
         song_ref.herd = herd;
         song_ref.ins = ins;
-        // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
-        crate::audio_out::prepare_song(song_ref);
-        ptcow::rebuild_tones(
-            &mut song_ref.ins,
+        post_load_prep(
+            song_ref,
             self.out.rate,
-            &mut song_ref.herd.delays,
-            &mut song_ref.herd.overdrives,
-            &song_ref.song.master,
+            &mut self.ui_state.freeplay_piano.toot,
         );
-        // Set a default toot unit if units aren't empty
-        let has_units = !song_ref.herd.units.is_empty();
-        if has_units {
-            self.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
-            // Set initial voices, etc.
-            do_tick0_events(song_ref);
-        }
         Ok(())
     }
+
     /// INVARIANT: Call this outside of any critical section, because it locks the song handle
     fn do_cmd(&mut self, cmd: Cmd) {
         match cmd {
@@ -452,6 +445,29 @@ impl App {
         *app_pt_audio_dev = None;
         // Now we can spawn the new thread
         *app_pt_audio_dev = Some(spawn_ptcow_audio_thread(app_out, app_song))
+    }
+}
+
+fn post_load_prep(
+    song_ref: &mut SongState,
+    out_rate: SampleRate,
+    freeplay_toot: &mut Option<UnitIdx>,
+) {
+    // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
+    crate::audio_out::prepare_song(song_ref);
+    ptcow::rebuild_tones(
+        &mut song_ref.ins,
+        out_rate,
+        &mut song_ref.herd.delays,
+        &mut song_ref.herd.overdrives,
+        &song_ref.song.master,
+    );
+    // Set a default toot unit if units aren't empty
+    let has_units = !song_ref.herd.units.is_empty();
+    if has_units {
+        *freeplay_toot = Some(UnitIdx(0));
+        // Set initial voices, etc.
+        do_tick0_events(song_ref);
     }
 }
 
