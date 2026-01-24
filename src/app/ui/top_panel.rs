@@ -129,6 +129,10 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     env!("CARGO_PKG_VERSION")
                 ));
                 ui.hyperlink_to(" Github", "https://github.com/crumblingstatue/ptcowlage");
+                ui.separator();
+                ui.label("Community");
+                ui.hyperlink_to("▶ pxtone web", "https://ptweb.me/");
+                ui.hyperlink_to("🐷 Discord", "https://discord.gg/2uQjHu8");
             });
         });
         ui.separator();
