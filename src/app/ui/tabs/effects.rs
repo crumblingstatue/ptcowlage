@@ -20,7 +20,16 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
 
             if ui.button("+ Add delay").clicked() {
                 ui.separator();
-                song.herd.delays.push(Delay::default());
+                let mut delay = Delay::default();
+                // Set some not too terrible sounding defaults
+                delay.rate = 30;
+                delay.freq = 2.0;
+                delay.rebuild(
+                    song.song.master.timing.beats_per_meas,
+                    song.song.master.timing.bpm,
+                    out_rate,
+                );
+                song.herd.delays.push(delay);
             }
             for (i, ovr) in song.herd.overdrives.iter_mut().enumerate() {
                 ovr_ui(ui, i, ovr, &mut msg);
