@@ -20,7 +20,7 @@ pub fn ui(
     ui_state: &mut PlaybackUiState,
     piano_state: &mut FreeplayPianoState,
     dst_sps: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
 ) {
     if !song.song.text.name.is_empty() {
@@ -77,7 +77,7 @@ fn playback_cows_ui(
     ui_state: &mut PlaybackUiState,
     piano_state: &mut FreeplayPianoState,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
 ) {
     let mut cmd = None;

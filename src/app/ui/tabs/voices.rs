@@ -30,7 +30,7 @@ pub fn ui(
     #[cfg(not(target_arch = "wasm32"))] file_dia: &mut egui_file_dialog::FileDialog,
     ui_state: &mut VoicesUiState,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
 ) {
     ui.horizontal_wrapped(|ui| {
         ui.menu_button("+ Add", |ui| {
@@ -136,7 +136,7 @@ fn voice_ui(
     idx: usize,
     op: &mut Option<VoiceUiOp>,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     ui_state: &mut VoicesUiState,
 ) {
     ui.horizontal(|ui| {
@@ -175,9 +175,10 @@ pub fn voice_ui_inner(
     voice: &mut Voice,
     voice_idx: VoiceIdx,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     ui_state: &mut VoicesUiState,
 ) {
+    let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     for (unit, inst) in zip(&mut voice.units, &mut voice.insts) {
         ui.strong("v-unit");
         ui.indent("vu", |ui| {

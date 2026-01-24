@@ -6,7 +6,7 @@ use {
             ui::file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
         },
         audio_out::{
-            self, AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
+            AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
         },
         evilscript,
     },
@@ -36,7 +36,10 @@ pub struct App {
     midi: MidiImportOpts,
     modal_payload: Option<ModalPayload>,
     pub(crate) cmd: CommandQueue,
-    aux_state: AuxAudioState,
+    /// Auxiliary audio output (for example playing voice samples in voice UI)
+    ///
+    /// Spawned on-demand, mainly due to web needing interaction before spawning audio context.
+    aux_state: Option<AuxAudioState>,
 }
 
 enum ModalPayload {
@@ -103,7 +106,6 @@ impl App {
         if let Some(ptcop_path) = args.voice_import {
             import_voices(&ptcop_path, &mut song_state);
         }
-        let aux_state = audio_out::spawn_aux_audio_thread(sample_rate, 1024);
         // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
         crate::audio_out::prepare_song(&mut song_state);
         ptcow::rebuild_tones(
@@ -133,7 +135,7 @@ impl App {
             midi: MidiImportOpts { base_key: 32 },
             modal_payload,
             cmd: CommandQueue::default(),
-            aux_state,
+            aux_state: None,
         };
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {

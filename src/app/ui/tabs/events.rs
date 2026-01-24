@@ -63,7 +63,7 @@ pub fn ui(
     song: &mut SongState,
     ui_state: &mut RawEventsUiState,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
 ) {
     ui_state.toasts.show(ui.ctx());

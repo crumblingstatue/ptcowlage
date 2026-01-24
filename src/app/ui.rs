@@ -314,7 +314,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.playback,
             &mut app.ui_state.freeplay_piano,
             app.out.rate,
-            &app.aux_state,
+            &mut app.aux_state,
             &mut app.ui_state.voices,
         ),
         Tab::Map => {
@@ -335,7 +335,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut song,
             &mut app.ui_state.raw_events,
             app.out.rate,
-            &app.aux_state,
+            &mut app.aux_state,
             &mut app.ui_state.voices,
         ),
         Tab::Voices => tabs::voices::ui(
@@ -345,7 +345,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.file_dia,
             &mut app.ui_state.voices,
             app.out.rate,
-            &app.aux_state,
+            &mut app.aux_state,
         ),
         Tab::Units => units_ui(ui, &mut song),
         Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
@@ -672,7 +672,7 @@ fn unit_popup_ctx_menu(
     cmd: &mut Option<UnitsCmd>,
     tab: &mut UnitPopupTab,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
 ) {
     egui::Popup::context_menu(re)
@@ -688,7 +688,7 @@ fn unit_popup_ui(
     cmd: &mut Option<UnitsCmd>,
     tab: &mut UnitPopupTab,
     out_rate: SampleRate,
-    aux: &AuxAudioState,
+    aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
 ) {
     ui.horizontal(|ui| {

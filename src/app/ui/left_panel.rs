@@ -41,7 +41,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 unit_ui(
                     app.out.rate,
                     &mut app.ui_state,
-                    &app.aux_state,
+                    &mut app.aux_state,
                     ui,
                     &mut song.ins,
                     &mut cmd,
@@ -63,7 +63,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
 fn unit_ui(
     out_rate: SampleRate,
     ui_state: &mut UiState,
-    aux_state: &AuxAudioState,
+    aux_state: &mut Option<AuxAudioState>,
     ui: &mut egui::Ui,
     ins: &mut MooInstructions,
     cmd: &mut Option<UnitsCmd>,
