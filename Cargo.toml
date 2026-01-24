@@ -33,7 +33,9 @@ rustc-hash = "2.1.1"
 
 # Web-only dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4.50"
+js-sys = "0.3"
 # to access the DOM (to hide the loading text)
 web-sys = "0.3.70"
 

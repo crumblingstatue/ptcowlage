@@ -22,6 +22,8 @@ mod organya;
 mod piyopiyo;
 mod pxtone_misc;
 mod util;
+#[cfg(target_arch = "wasm32")]
+mod web_glue;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(clap::Parser)]

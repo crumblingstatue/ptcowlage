@@ -40,6 +40,8 @@ pub struct App {
     ///
     /// Spawned on-demand, mainly due to web needing interaction before spawning audio context.
     aux_state: Option<AuxAudioState>,
+    #[cfg(target_arch = "wasm32")]
+    web_cmd: crate::web_glue::WebCmdQueueHandle,
 }
 
 enum ModalPayload {
@@ -136,6 +138,8 @@ impl App {
             modal_payload,
             cmd: CommandQueue::default(),
             aux_state: None,
+            #[cfg(target_arch = "wasm32")]
+            web_cmd: Default::default(),
         };
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
@@ -350,8 +354,20 @@ impl eframe::App for App {
                 self.modal_payload = None;
             }
         }
+        // Do queue commands
         while let Some(cmd) = self.cmd.pop() {
             self.do_cmd(cmd);
+        }
+        // Do web commands as well
+        #[cfg(target_arch = "wasm32")]
+        {
+            loop {
+                let cmd = self.web_cmd.borrow_mut().pop();
+                match cmd {
+                    Some(cmd) => self.do_web_cmd(cmd),
+                    None => break,
+                }
+            }
         }
     }
 }
@@ -414,6 +430,15 @@ impl App {
             }
             Cmd::ReplaceAudioThread => {
                 Self::replace_pt_audio_thread(&mut self.pt_audio_dev, self.out, self.song.clone());
+            }
+        }
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn do_web_cmd(&mut self, cmd: crate::web_glue::WebCmd) {
+        use crate::web_glue::WebCmd;
+        match cmd {
+            WebCmd::OpenFile { data } => {
+                self.load_song_from_bytes(&data);
             }
         }
     }

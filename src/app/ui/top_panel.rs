@@ -63,7 +63,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 ui,
             );
             #[cfg(target_arch = "wasm32")]
-            file_menu_ui_web(ui);
+            file_menu_ui_web(ui, app.web_cmd.clone());
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
@@ -267,7 +267,14 @@ fn file_menu_ui_desktop(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn file_menu_ui_web(ui: &mut egui::Ui) {
+fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle) {
+    use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
+    if ui.button("Open file").clicked() {
+        wasm_bindgen_futures::spawn_local(async move {
+            let bytes = crate::web_glue::open_file().await;
+            cmd.push(WebCmd::OpenFile { data: bytes });
+        });
+    }
     ui.label("Drop files into this browser tab to load them.");
     ui.separator();
     ui.label("Save not implemented yet, sorry.");
