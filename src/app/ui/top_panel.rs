@@ -96,6 +96,12 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                         migrate_from = migrate_to.0;
                     }
                 }
+                // Doesn't seem to sound right until we restart the song
+                crate::app::post_load_prep(
+                    song,
+                    app.out.rate,
+                    &mut app.ui_state.freeplay_piano.toot,
+                );
             }
         });
         let button = MenuButton::new("Timing").config(
