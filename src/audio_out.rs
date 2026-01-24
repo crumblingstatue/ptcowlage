@@ -29,7 +29,10 @@ impl OutParams {
     /// A buffer size outside of this range doesn't make sense
     pub const SANE_BUF_SIZE_RANGE: RangeInclusive<usize> = 32..=65536;
     /// An output rate outside of this range doesn't make sense
-    pub const SANE_RATE_RANGE: RangeInclusive<SampleRate> = 1000..=65535;
+    ///
+    /// On Firefox browser, 8000 seems to be the minimum supported sample rate.
+    /// Trying to set below that causes a crash, which we want to avoid
+    pub const SANE_RATE_RANGE: RangeInclusive<SampleRate> = 8000..=65535;
     pub fn latency_ms(self) -> f32 {
         // Stereo output
         let ch = 2.0;
