@@ -12,6 +12,10 @@ Includes among other things:
 
 Powered by the [ptcow](<https://github.com/crumblingstatue/ptcow/>) PxTone playback library.
 
+## Web version
+
+There is a web version that lives at <https://crumblingstatue.github.io/ptcowlage/>.
+
 ## Building
 
 You need [Rust](<https://rust-lang.org/>) 1.92 or later to build the project.
