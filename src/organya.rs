@@ -123,9 +123,6 @@ fn wave_voice(ch: &organyacat::Channel) -> Voice {
 }
 
 fn drum_voice(ch: &organyacat::Channel) -> Voice {
-    if ch.instrument > 8 {
-        panic!("{}", ch.instrument);
-    }
     let mut voice = Voice::default();
     voice.allocate::<false>();
     let smp = find_drum_sample(ch.instrument).to_vec();
