@@ -5,6 +5,11 @@ use {
 };
 
 pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
+    if ui.button("Clear effects").clicked() {
+        song.herd.delays.clear();
+        song.herd.overdrives.clear();
+    }
+    ui.separator();
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
@@ -13,30 +18,35 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
                 delay_ui(ui, &song.song, out_rate, i, dela, &mut msg);
             }
 
-            if let Some(msg) = msg {
-                match msg {
-                    DelayUiMsg::Remove { idx } => {
-                        song.herd.delays.remove(idx);
-                    }
-                }
-            }
-
             if ui.button("+ Add delay").clicked() {
                 ui.separator();
                 song.herd.delays.push(Delay::default());
             }
             for (i, ovr) in song.herd.overdrives.iter_mut().enumerate() {
-                ovr_ui(ui, i, ovr);
+                ovr_ui(ui, i, ovr, &mut msg);
             }
             if ui.button("+ Add overdrive").clicked() {
                 song.herd.overdrives.push(Overdrive::default());
             }
+            if let Some(msg) = msg {
+                match msg {
+                    EffectsUiMsg::RemoveDelay { idx } => {
+                        song.herd.delays.remove(idx);
+                    }
+                    EffectsUiMsg::RemoveOvr { idx } => {
+                        let _ = song.herd.overdrives.remove(idx);
+                    }
+                }
+            }
         });
 }
 
-fn ovr_ui(ui: &mut egui::Ui, i: usize, ovr: &mut Overdrive) {
+fn ovr_ui(ui: &mut egui::Ui, i: usize, ovr: &mut Overdrive, msg: &mut Option<EffectsUiMsg>) {
     ui.horizontal(|ui| {
         ui.heading(format!("Overdrive {i}"));
+        if ui.button("-").clicked() {
+            *msg = Some(EffectsUiMsg::RemoveOvr { idx: i });
+        }
         ui.add(egui::Checkbox::new(&mut ovr.on, "on"));
         ui.label(egui::RichText::new("⚠").color(egui::Color32::YELLOW))
             .on_hover_text("Careful, too large amplitude can be an eardrum massaging experience");
@@ -66,8 +76,9 @@ fn ovr_ui(ui: &mut egui::Ui, i: usize, ovr: &mut Overdrive) {
     });
 }
 
-enum DelayUiMsg {
-    Remove { idx: usize },
+enum EffectsUiMsg {
+    RemoveDelay { idx: usize },
+    RemoveOvr { idx: usize },
 }
 
 fn delay_ui(
@@ -76,12 +87,12 @@ fn delay_ui(
     out_rate: u16,
     i: usize,
     dela: &mut Delay,
-    msg: &mut Option<DelayUiMsg>,
+    msg: &mut Option<EffectsUiMsg>,
 ) {
     ui.horizontal(|ui| {
         ui.heading(format!("Delay {i}"));
         if ui.button("-").clicked() {
-            *msg = Some(DelayUiMsg::Remove { idx: i });
+            *msg = Some(EffectsUiMsg::RemoveDelay { idx: i });
         }
     });
 
