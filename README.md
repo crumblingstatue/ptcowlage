@@ -9,6 +9,7 @@ Includes among other things:
 - You can play units on your (qwerty) keyboard (maybe one day MIDI keyboard support)
 - MIDI (`.mid`) import
 - PiyoPiyo (`.pmd`) import
+- Organya (`.org`) import
 
 Powered by the [ptcow](<https://github.com/crumblingstatue/ptcow/>) PxTone playback library.
 
