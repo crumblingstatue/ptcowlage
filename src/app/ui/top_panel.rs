@@ -116,6 +116,15 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     );
                 });
         });
+        ui.menu_button("Help", |ui| {
+            ui.menu_button("About", |ui| {
+                ui.label(concat!(
+                    "🐄 Pxtone Cowlage version ",
+                    env!("CARGO_PKG_VERSION")
+                ));
+                ui.hyperlink_to(" Github", "https://github.com/crumblingstatue/ptcowlage");
+            });
+        });
         ui.separator();
         let mut tab = |tab, label, on| {
             ui.selectable_value(&mut app.ui_state.tab, tab, label);
