@@ -10,7 +10,7 @@ extern "C" {
 
 #[wasm_bindgen(module = "/web_glue.js")]
 unsafe extern "C" {
-    fn save_file(data: &[u8], filename: &str);
+    pub fn save_file(data: &[u8], filename: &str);
 }
 
 pub async fn open_file() -> Vec<u8> {

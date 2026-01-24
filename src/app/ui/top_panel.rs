@@ -63,7 +63,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 ui,
             );
             #[cfg(target_arch = "wasm32")]
-            file_menu_ui_web(ui, app.web_cmd.clone());
+            file_menu_ui_web(ui, app.web_cmd.clone(), &song_g);
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
@@ -267,7 +267,7 @@ fn file_menu_ui_desktop(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle) {
+fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle, song: &SongState) {
     use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
     if ui.button("Open file").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
@@ -275,9 +275,11 @@ fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle) 
             cmd.push(WebCmd::OpenFile { data: bytes });
         });
     }
-    ui.label("Drop files into this browser tab to load them.");
     ui.separator();
-    ui.label("Save not implemented yet, sorry.");
+    if ui.button("Save as").clicked() {
+        let bytes = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
+        crate::web_glue::save_file(&bytes, "out.ptcop");
+    }
 }
 
 fn timing_popup_ui(
