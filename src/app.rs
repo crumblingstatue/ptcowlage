@@ -440,6 +440,15 @@ impl App {
             WebCmd::OpenFile { data } => {
                 self.load_song_from_bytes(&data);
             }
+            WebCmd::ImportMidi { data } => {
+                self.import_midi_from_bytes(&data);
+            }
+            WebCmd::ImportPiyo { data } => {
+                self.import_piyopiyo_from_bytes(&data);
+            }
+            WebCmd::ImportOrganya { data } => {
+                self.import_organya_from_bytes(&data);
+            }
         }
     }
     fn reload_current_file(&mut self) {

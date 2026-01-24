@@ -274,6 +274,21 @@ fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle, 
             let bytes = crate::web_glue::open_file().await;
             cmd.push(WebCmd::OpenFile { data: bytes });
         });
+    } else if ui.button("Import midi").clicked() {
+        wasm_bindgen_futures::spawn_local(async move {
+            let bytes = crate::web_glue::open_file().await;
+            cmd.push(WebCmd::ImportMidi { data: bytes });
+        });
+    } else if ui.button("Import PiyoPiyo").clicked() {
+        wasm_bindgen_futures::spawn_local(async move {
+            let bytes = crate::web_glue::open_file().await;
+            cmd.push(WebCmd::ImportPiyo { data: bytes });
+        });
+    } else if ui.button("Import Organya").clicked() {
+        wasm_bindgen_futures::spawn_local(async move {
+            let bytes = crate::web_glue::open_file().await;
+            cmd.push(WebCmd::ImportOrganya { data: bytes });
+        });
     }
     ui.separator();
     if ui.button("Save as").clicked() {

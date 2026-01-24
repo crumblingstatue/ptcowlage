@@ -45,4 +45,7 @@ impl WebCmdQueueHandleExt for WebCmdQueueHandle {
 
 pub enum WebCmd {
     OpenFile { data: Vec<u8> },
+    ImportMidi { data: Vec<u8> },
+    ImportPiyo { data: Vec<u8> },
+    ImportOrganya { data: Vec<u8> },
 }
