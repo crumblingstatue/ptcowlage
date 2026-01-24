@@ -6,7 +6,6 @@ use {
         collections::hash_map::Entry,
         iter::zip,
         ops::RangeInclusive,
-        panic::AssertUnwindSafe,
         sync::{Arc, Mutex},
     },
 };
@@ -83,15 +82,9 @@ pub fn spawn_ptcow_audio_thread(
         let song: &mut SongState = &mut song_g;
         let master_vol = song.master_vol;
         let out_buf_mut_ref = &mut out_buf_s16;
-        if let Err(e) = std::panic::catch_unwind(AssertUnwindSafe(move || {
-            song.herd
-                .moo(&song.ins, &song.song, out_buf_mut_ref, !song.pause);
-        })) {
-            eprintln!("Audio playback panicked: {e:?}");
-            reset_song(&mut song_g);
-            song_g.pause = true;
-            return;
-        }
+        // INVARIANT: We assume `moo` never panics. Panicking is a bug.
+        song.herd
+            .moo(&song.ins, &song.song, out_buf_mut_ref, !song.pause);
         drop(song_g);
         // End critical section
 
@@ -101,21 +94,6 @@ pub fn spawn_ptcow_audio_thread(
         }
     })
     .unwrap()
-}
-
-/// Put the song in a sane state so it won't panic when trying to moo
-fn reset_song(song: &mut SongState) {
-    ptcow::moo_prepare(
-        &mut song.ins,
-        &mut song.herd,
-        &song.song,
-        &MooPlan {
-            start_pos: ptcow::StartPosPlan::Sample(0),
-            meas_end: None,
-            meas_repeat: None,
-            loop_: true,
-        },
-    );
 }
 
 fn s16_to_f32(src: i16) -> f32 {
