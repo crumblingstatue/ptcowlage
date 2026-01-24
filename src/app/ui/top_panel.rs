@@ -269,7 +269,7 @@ fn file_menu_ui_desktop(
 #[cfg(target_arch = "wasm32")]
 fn file_menu_ui_web(ui: &mut egui::Ui, cmd: crate::web_glue::WebCmdQueueHandle, song: &SongState) {
     use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
-    if ui.button("Open file").clicked() {
+    if ui.button("Open").clicked() {
         wasm_bindgen_futures::spawn_local(async move {
             let bytes = crate::web_glue::open_file(".ptcop,.pttune").await;
             cmd.push(WebCmd::OpenFile { data: bytes });
