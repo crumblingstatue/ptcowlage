@@ -48,8 +48,10 @@ pub struct MidiImportOpts {
     base_key: u8,
 }
 
+pub type BundledSongs = &'static [(&'static str, &'static [u8])];
+
 impl App {
-    pub fn new(args: CliArgs) -> Self {
+    pub fn new(args: CliArgs, bundled_songs: BundledSongs) -> Self {
         let sample_rate = 44_100;
         let mut song_state = SongState {
             herd: Herd::default(),
@@ -134,11 +136,18 @@ impl App {
             cmd: CommandQueue::default(),
             aux_state,
         };
-        #[expect(clippy::collapsible_if)]
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
                 this.modal_payload =
                     Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+            }
+        } else if let Some(song) = bundled_songs.first() {
+            // Load a bundled song if no song was requested to open
+            if let Err(e) = this.load_song_from_bytes(song.1) {
+                this.modal_payload =
+                    Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+            } else {
+                this.open_file = Some(song.0.into())
             }
         }
         // Do some EvilScript on the final state before running the app

@@ -70,7 +70,7 @@ fn main() {
             cc.egui_ctx
                 .send_viewport_cmd(egui::ViewportCommand::Title("pxtone Cowlage".into()));
             font_fallback::install_ja_fallback_font(&cc.egui_ctx);
-            let app = app::App::new(args);
+            let app = app::App::new(args, &[]);
             Ok(Box::new(app))
         }),
     )
@@ -84,6 +84,8 @@ fn main() {
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {
+        use crate::app::BundledSongs;
+
         let document = web_sys::window()
             .expect("No window")
             .document()
@@ -95,13 +97,18 @@ fn main() {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("the_canvas_id was not a HtmlCanvasElement");
 
+        #[rustfmt::skip]
+        static BUNDLED_SONGS: BundledSongs = &[
+            ("The_Watcher_From_Afar.ptcop", include_bytes!("../bundled-songs/The_Watcher_From_Afar.ptcop")),
+        ];
+
         let start_result = eframe::WebRunner::new()
             .start(
                 canvas,
                 web_options,
                 Box::new(|cc| {
                     egui_extras::install_image_loaders(&cc.egui_ctx);
-                    let app = app::App::new(CliArgs::default());
+                    let app = app::App::new(CliArgs::default(), BUNDLED_SONGS);
                     // Enforce dark theme, as we don't support light theme for our custom colors
                     cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
                     Ok(Box::new(app))
