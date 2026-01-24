@@ -357,7 +357,9 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
 /// `samples` are u8 values (0..255) representing the waveform.
 /// `height` is the display height of the waveform rectangle.
 pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, id: egui::Id) {
-    if samples.len() > 256_000 {
+    // We avoid rendering huge waveforms, which can tank performance, and cause audio glitching
+    // due to lock contention
+    if samples.len() > 32_768 {
         ui.label("Sample data too large to display");
         return;
     }
