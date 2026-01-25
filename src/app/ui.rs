@@ -20,6 +20,7 @@ use {
             },
         },
         audio_out::AuxAudioState,
+        egui_ext::ImageExt,
     },
     eframe::egui::{self, AtomExt},
     ptcow::{Event, EventPayload, GroupIdx, MooInstructions, SampleRate, Unit, UnitIdx, Voice},
@@ -558,7 +559,8 @@ fn unit_ui(
     app_cmd: &mut CommandQueue,
 ) {
     ui.horizontal(|ui| {
-        ui.heading(format!("Unit {} {:?}", idx.0, unit.name));
+        ui.add(egui::Image::new(img::COW).hflip());
+        ui.heading(format!("{} {}", idx.0, unit.name));
         ui.text_edit_singleline(&mut unit.name);
         if ui
             .button(
@@ -576,10 +578,10 @@ fn unit_ui(
         if ui.button("Solo").clicked() {
             *cmd = Some(UnitsCmd::ToggleSolo { idx });
         }
-        if ui.button("First On event").clicked() {
+        if ui.button("▶ First On event").clicked() {
             *cmd = Some(UnitsCmd::SeekFirstOnEvent { idx });
         }
-        if ui.button("Next On event").clicked() {
+        if ui.button("▶ Next On event").clicked() {
             *cmd = Some(UnitsCmd::SeekNextOnEvent { idx });
         }
     });
