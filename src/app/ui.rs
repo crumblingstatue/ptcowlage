@@ -551,14 +551,14 @@ enum UnitsCmd {
 
 fn unit_ui(
     ui: &mut egui::Ui,
-    i: UnitIdx,
+    idx: UnitIdx,
     unit: &mut Unit,
     ins: &MooInstructions,
     cmd: &mut Option<UnitsCmd>,
     app_cmd: &mut CommandQueue,
 ) {
     ui.horizontal(|ui| {
-        ui.heading(format!("Unit {} {:?}", i.0, unit.name));
+        ui.heading(format!("Unit {} {:?}", idx.0, unit.name));
         ui.text_edit_singleline(&mut unit.name);
         if ui
             .button(
@@ -568,9 +568,23 @@ fn unit_ui(
             )
             .clicked()
         {
-            *cmd = Some(UnitsCmd::DeleteUnit { idx: i });
+            *cmd = Some(UnitsCmd::DeleteUnit { idx });
         }
     });
+    ui.horizontal(|ui| {
+        ui.checkbox(&mut unit.mute, "Mute");
+        if ui.button("Solo").clicked() {
+            *cmd = Some(UnitsCmd::ToggleSolo { idx });
+        }
+        if ui.button("First On event").clicked() {
+            *cmd = Some(UnitsCmd::SeekFirstOnEvent { idx });
+        }
+        if ui.button("Next On event").clicked() {
+            *cmd = Some(UnitsCmd::SeekNextOnEvent { idx });
+        }
+    });
+
+    ui.separator();
 
     ui.horizontal_wrapped(|ui| {
         ui.label("key now");
@@ -702,11 +716,6 @@ fn unit_popup_ui(
             ui.close();
         }
         ui.separator();
-        ui.checkbox(&mut unit.mute, "Mute");
-        if ui.button("Solo").clicked() {
-            *cmd = Some(UnitsCmd::ToggleSolo { idx });
-        }
-        ui.separator();
         ui.selectable_value(tab, UnitPopupTab::Unit, "Unit");
         let voice_label = format!(
             "Voice ({})",
@@ -715,15 +724,6 @@ fn unit_popup_ui(
                 .map_or("<invalid>", |v| &v.name)
         );
         ui.selectable_value(tab, UnitPopupTab::Voice, voice_label);
-        ui.separator();
-        ui.menu_button("Seek", |ui| {
-            if ui.button("First On event").clicked() {
-                *cmd = Some(UnitsCmd::SeekFirstOnEvent { idx });
-            }
-            if ui.button("Next On event").clicked() {
-                *cmd = Some(UnitsCmd::SeekNextOnEvent { idx });
-            }
-        });
     });
     ui.separator();
     match tab {
