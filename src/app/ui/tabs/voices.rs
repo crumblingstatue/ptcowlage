@@ -19,7 +19,7 @@ use {
 
 #[derive(Default)]
 pub struct VoicesUiState {
-    selected_idx: usize,
+    pub selected_idx: usize,
     // Keep track of (preview) sounds playing for each voice
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
 }

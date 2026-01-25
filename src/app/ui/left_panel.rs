@@ -2,6 +2,7 @@ use {
     crate::{
         app::{
             App,
+            command_queue::CommandQueue,
             ui::{
                 UiState, UnitPopupTab, UnitsCmd, handle_units_command, unit_color,
                 unit_mute_unmute_all_ui, unit_popup_ctx_menu, unit_voice_img,
@@ -59,6 +60,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     n_units,
                     i,
                     unit,
+                    &mut app.cmd,
                 );
             }
         });
@@ -81,6 +83,7 @@ fn unit_ui(
     n_units: usize,
     i: usize,
     unit: &mut ptcow::Unit,
+    app_cmd: &mut CommandQueue,
 ) {
     let c = unit_color(i);
     let n: i32 = unit.pan_time_bufs.iter().flatten().copied().sum();
@@ -125,6 +128,7 @@ fn unit_ui(
             out_rate,
             aux_state,
             &mut ui_state.voices,
+            app_cmd,
         );
         any_hovered |= re.contains_pointer();
         if any_hovered {

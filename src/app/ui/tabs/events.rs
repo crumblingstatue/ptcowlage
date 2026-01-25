@@ -1,8 +1,11 @@
 use {
     crate::{
-        app::ui::{
-            UnitPopupTab, handle_units_command, tabs::voices::VoicesUiState, unit_color,
-            unit_popup_ui,
+        app::{
+            command_queue::CommandQueue,
+            ui::{
+                UnitPopupTab, handle_units_command, tabs::voices::VoicesUiState, unit_color,
+                unit_popup_ui,
+            },
         },
         audio_out::{AuxAudioState, SongState},
         evilscript,
@@ -65,6 +68,7 @@ pub fn ui(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
+    app_cmd: &mut CommandQueue,
 ) {
     ui_state.toasts.show(ui.ctx());
     top_ui(ui, song, ui_state);
@@ -227,6 +231,7 @@ pub fn ui(
                                             out_rate,
                                             aux,
                                             voices_ui_state,
+                                            app_cmd,
                                         );
                                     }
                                     PopupKind::Right => {

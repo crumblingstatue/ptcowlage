@@ -5,7 +5,10 @@ use {
         CliArgs,
         app::{
             command_queue::{Cmd, CommandQueue},
-            ui::file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
+            ui::{
+                Tab,
+                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
+            },
         },
         audio_out::{
             AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
@@ -455,6 +458,10 @@ impl App {
             }
             Cmd::ReplaceAudioThread => {
                 Self::replace_pt_audio_thread(&mut self.pt_audio_dev, self.out, self.song.clone());
+            }
+            Cmd::OpenVoice(idx) => {
+                self.ui_state.tab = Tab::Voices;
+                self.ui_state.voices.selected_idx = idx.usize();
             }
         }
     }

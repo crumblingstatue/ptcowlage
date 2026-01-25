@@ -2,6 +2,7 @@ use {
     crate::{
         app::{
             SongState,
+            command_queue::CommandQueue,
             ui::{
                 FreeplayPianoState, UnitPopupTab, UnitsCmd, handle_units_command, img,
                 tabs::voices::VoicesUiState, unit_color, unit_mute_unmute_all_ui,
@@ -22,6 +23,7 @@ pub fn ui(
     dst_sps: SampleRate,
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
+    app_cmd: &mut CommandQueue,
 ) {
     if !song.song.text.name.is_empty() {
         ui.label(&song.song.text.name);
@@ -61,6 +63,7 @@ pub fn ui(
                 dst_sps,
                 aux,
                 voices_ui_state,
+                app_cmd,
             );
         });
     ui.label("Cows are interactive. m: mute, s: solo");
@@ -79,6 +82,7 @@ fn playback_cows_ui(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
+    app_cmd: &mut CommandQueue,
 ) {
     let mut cmd = None;
     for (i, unit) in song.herd.units.iter_mut().enumerate() {
@@ -123,6 +127,7 @@ fn playback_cows_ui(
                 out_rate,
                 aux,
                 voices_ui_state,
+                app_cmd,
             );
 
             macro_rules! inst_img {
@@ -157,6 +162,7 @@ fn playback_cows_ui(
                 out_rate,
                 aux,
                 voices_ui_state,
+                app_cmd,
             );
         });
     }

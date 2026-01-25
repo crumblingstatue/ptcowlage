@@ -7,6 +7,7 @@ use {
     crate::{
         app::{
             SongState,
+            command_queue::{Cmd, CommandQueue},
             ui::{
                 left_panel::LeftPanelState,
                 tabs::{
@@ -21,9 +22,7 @@ use {
         audio_out::AuxAudioState,
     },
     eframe::egui::{self, AtomExt},
-    ptcow::{
-        Event, EventPayload, GroupIdx, MooInstructions, SampleRate, Unit, UnitIdx, Voice, VoiceData,
-    },
+    ptcow::{Event, EventPayload, GroupIdx, MooInstructions, SampleRate, Unit, UnitIdx, Voice},
 };
 
 mod tabs {
@@ -331,6 +330,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             app.out.rate,
             &mut app.aux_state,
             &mut app.ui_state.voices,
+            &mut app.cmd,
         ),
         Tab::Map => {
             tabs::map::ui(ui, &mut song, &mut app.ui_state.map, &mut app.cmd);
@@ -353,6 +353,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             app.out.rate,
             &mut app.aux_state,
             &mut app.ui_state.voices,
+            &mut app.cmd,
         ),
         Tab::Voices => tabs::voices::ui(
             ui,
@@ -363,7 +364,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             app.out.rate,
             &mut app.aux_state,
         ),
-        Tab::Unit => tabs::unit::ui(ui, &mut app.ui_state.shared, &mut song),
+        Tab::Unit => tabs::unit::ui(ui, &mut app.ui_state.shared, &mut song, &mut app.cmd),
         Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
     }
     drop(song);
@@ -554,6 +555,7 @@ fn unit_ui(
     unit: &mut Unit,
     ins: &MooInstructions,
     cmd: &mut Option<UnitsCmd>,
+    app_cmd: &mut CommandQueue,
 ) {
     ui.horizontal(|ui| {
         ui.heading(format!("Unit {} {:?}", i.0, unit.name));
@@ -609,7 +611,10 @@ fn unit_ui(
                 0..=ins.voices.len().saturating_sub(1).try_into().unwrap(),
             ));
             if let Some(voice) = ins.voices.get(unit.voice_idx.usize()) {
-                voice_badge(ui, voice);
+                ui.image(voice_img(voice));
+                if ui.link(&voice.name).clicked() {
+                    app_cmd.push(Cmd::OpenVoice(unit.voice_idx));
+                }
             } else {
                 ui.label("<invalid voice>");
             }
@@ -645,16 +650,6 @@ fn group_idx_slider(ui: &mut egui::Ui, group_idx: &mut GroupIdx) {
     ui.add(egui::Slider::new(&mut group_idx.0, 0..=GroupIdx::MAX.0));
 }
 
-fn voice_badge(ui: &mut egui::Ui, voice: &Voice) {
-    ui.label(&voice.name);
-    match &voice.units[0].data {
-        VoiceData::Noise(..) => ui.label("[ptn]"),
-        VoiceData::Pcm(..) => ui.label("[pcm]"),
-        VoiceData::Wave(..) => ui.label("[wave]"),
-        VoiceData::OggV(..) => ui.label("[oggv]"),
-    };
-}
-
 #[derive(PartialEq)]
 enum UnitPopupTab {
     Unit,
@@ -671,10 +666,24 @@ fn unit_popup_ctx_menu(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
+    app_cmd: &mut CommandQueue,
 ) {
     egui::Popup::context_menu(re)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| unit_popup_ui(ui, idx, unit, ins, cmd, tab, out_rate, aux, voices_ui_state));
+        .show(|ui| {
+            unit_popup_ui(
+                ui,
+                idx,
+                unit,
+                ins,
+                cmd,
+                tab,
+                out_rate,
+                aux,
+                voices_ui_state,
+                app_cmd,
+            )
+        });
 }
 
 fn unit_popup_ui(
@@ -687,6 +696,7 @@ fn unit_popup_ui(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
+    app_cmd: &mut CommandQueue,
 ) {
     ui.horizontal(|ui| {
         if ui.button("ｘ").clicked() {
@@ -718,7 +728,7 @@ fn unit_popup_ui(
     });
     ui.separator();
     match tab {
-        UnitPopupTab::Unit => unit_ui(ui, idx, unit, ins, cmd),
+        UnitPopupTab::Unit => unit_ui(ui, idx, unit, ins, cmd, app_cmd),
         UnitPopupTab::Voice => {
             if let Some(voice) = ins.voices.get_mut(unit.voice_idx.usize()) {
                 voice_ui_inner(ui, voice, unit.voice_idx, out_rate, aux, voices_ui_state);

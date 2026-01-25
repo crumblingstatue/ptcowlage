@@ -7,6 +7,7 @@ pub enum Cmd {
     // Replace the current audio thread (should be called after the audio output is reconfigured)
     ReplaceAudioThread,
     SaveCurrentFile,
+    OpenVoice(ptcow::VoiceIdx),
 }
 
 #[derive(Default)]
