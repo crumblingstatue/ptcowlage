@@ -20,7 +20,10 @@ pub fn ui(
         .auto_shrink(false)
         .show(ui, |ui| {
             if let Some(unit_idx) = shared.active_unit {
-                let unit = &mut song.herd.units[unit_idx.usize()];
+                let Some(unit) = song.herd.units.get_mut(unit_idx.usize()) else {
+                    ui.label("Invalid selected unit");
+                    return;
+                };
                 unit_ui(ui, unit_idx, unit, &song.ins, &mut cmd, app_cmd);
             }
         });
