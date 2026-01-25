@@ -246,8 +246,7 @@ fn roll_ui_inner(
             inp.pointer.primary_released(),
         )
     });
-    let ui_contains_ptr = ui.ui_contains_pointer();
-    if lmb_pressed && ui_contains_ptr && state.interact_mode != InteractMode::View {
+    if lmb_pressed && re.hovered() && state.interact_mode != InteractMode::View {
         state.lmb_drag_origin = mouse_screen_pos;
         // Shift to expand selection rather than replace
         if !mod_shift {
@@ -422,7 +421,7 @@ fn roll_ui_inner(
     // Left click popup
     if let Some(mp) = mouse_screen_pos
         && state.interact_mode == InteractMode::View
-        && ui_contains_ptr
+        && re.hovered()
         && lmb_clicked
     {
         if !hovered_events.is_empty() {
@@ -582,7 +581,7 @@ fn roll_ui_inner(
         let scaled = mx * state.tick_div;
         let sample = scaled * song.ins.samples_per_tick;
         let sample = sample as SampleT;
-        if lmb_pressed && ui_contains_ptr {
+        if lmb_pressed && re.hovered() {
             match state.interact_mode {
                 InteractMode::View | InteractMode::Edit => {
                     if mod_shift {
