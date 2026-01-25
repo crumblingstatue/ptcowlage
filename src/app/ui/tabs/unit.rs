@@ -4,18 +4,10 @@ use {
         audio_out::SongState,
     },
     eframe::egui,
-    ptcow::Unit,
 };
 
 pub fn ui(ui: &mut egui::Ui, shared: &mut SharedUiState, song: &mut SongState) {
     let mut cmd = None;
-    if ui.button("+ Add").clicked() {
-        let unit = Unit {
-            name: format!("New unit ({})", song.herd.units.len()),
-            ..Default::default()
-        };
-        song.herd.units.push(unit);
-    }
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {

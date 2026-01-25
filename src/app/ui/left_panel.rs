@@ -11,7 +11,7 @@ use {
         egui_ext::ImageExt,
     },
     eframe::egui,
-    ptcow::{MooInstructions, SampleRate, UnitIdx},
+    ptcow::{MooInstructions, SampleRate, Unit, UnitIdx},
 };
 
 pub struct LeftPanelState {
@@ -32,7 +32,18 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
     let song = &mut *song;
     let mut cmd = None;
     let n_units = song.herd.units.len();
-    ui.heading(format!("Units ({n_units})"));
+    ui.horizontal(|ui| {
+        ui.heading(format!("Units ({n_units})"));
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui.button("+ New").clicked() {
+                let unit = Unit {
+                    name: format!("New unit ({})", song.herd.units.len()),
+                    ..Default::default()
+                };
+                song.herd.units.push(unit);
+            }
+        });
+    });
     egui::ScrollArea::vertical()
         .max_height(ui.available_height() - 96.0)
         .auto_shrink(false)
