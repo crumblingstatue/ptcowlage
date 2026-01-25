@@ -528,6 +528,17 @@ fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
                     ));
                 }
             }
+            UnitsCmd::SeekPrevOnEvent { idx } => {
+                if let Some(ev) = song.song.events[..song.herd.evt_idx]
+                    .iter()
+                    .rfind(|ev| ev.unit == idx && matches!(&ev.payload, EventPayload::On { .. }))
+                {
+                    song.herd.seek_to_sample(ptcow::timing::tick_to_sample(
+                        ev.tick,
+                        song.ins.samples_per_tick,
+                    ));
+                }
+            }
             UnitsCmd::DeleteUnit { idx } => {
                 song.song.events.retain_mut(|eve| {
                     let retain = eve.unit != idx;
@@ -548,6 +559,7 @@ enum UnitsCmd {
     SeekFirstOnEvent { idx: UnitIdx },
     SeekNextOnEvent { idx: UnitIdx },
     DeleteUnit { idx: UnitIdx },
+    SeekPrevOnEvent { idx: UnitIdx },
 }
 
 fn unit_ui(
@@ -578,8 +590,11 @@ fn unit_ui(
         if ui.button("Solo").clicked() {
             *cmd = Some(UnitsCmd::ToggleSolo { idx });
         }
-        if ui.button("▶ First On event").clicked() {
+        if ui.button("⏮ First On event").clicked() {
             *cmd = Some(UnitsCmd::SeekFirstOnEvent { idx });
+        }
+        if ui.button("◀ Prev On event").clicked() {
+            *cmd = Some(UnitsCmd::SeekPrevOnEvent { idx });
         }
         if ui.button("▶ Next On event").clicked() {
             *cmd = Some(UnitsCmd::SeekNextOnEvent { idx });
