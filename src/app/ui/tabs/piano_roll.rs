@@ -193,6 +193,11 @@ fn roll_ui(
     dst_sps: SampleRate,
     piano_state: &mut FreeplayPianoState,
 ) {
+    // We make the scroll bars be outside of the ScrollArea to resolve a conundrum of
+    // `Response::contains_pointer` being true when dragging the scroll bars, and
+    // `Response::hovered` being false on click when the ScrollArea is scrollable with
+    // the mouse.
+    ui.style_mut().spacing.scroll.floating = false;
     // We don't want dragging to scroll when editing
     let scroll_source = if state.interact_mode == InteractMode::View {
         egui::scroll_area::ScrollSource::ALL
@@ -586,7 +591,7 @@ fn roll_ui_inner(
         let scaled = mx * state.tick_div;
         let sample = scaled * song.ins.samples_per_tick;
         let sample = sample as SampleT;
-        if lmb_pressed && re.hovered() {
+        if lmb_pressed && re.contains_pointer() {
             match state.interact_mode {
                 InteractMode::View | InteractMode::Edit => {
                     if mod_shift {
