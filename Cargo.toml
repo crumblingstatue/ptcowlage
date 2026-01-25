@@ -54,6 +54,7 @@ opt-level = 1
 
 [profile.release]
 lto = "thin"
+panic = "abort"
 
 # TODO: New ptcow release
 [patch.crates-io]
