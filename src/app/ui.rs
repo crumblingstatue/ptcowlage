@@ -571,78 +571,77 @@ fn unit_ui(
             *cmd = Some(UnitsCmd::DeleteUnit { idx: i });
         }
     });
-    ui.indent("unit", |ui| {
-        ui.horizontal_wrapped(|ui| {
-            ui.label("key now");
-            ui.add(egui::DragValue::new(&mut unit.key_now));
-            ui.label("key start");
-            ui.add(egui::DragValue::new(&mut unit.key_start));
-            ui.label("key margin");
-            ui.add(egui::DragValue::new(&mut unit.key_margin));
-            ui.end_row();
-            ui.label("portament sample pos");
-            ui.add(egui::DragValue::new(&mut unit.porta_pos));
-            ui.label("portament sample num");
-            ui.add(egui::DragValue::new(&mut unit.porta_destination));
-            ui.end_row();
-            ui.label("Pan vol l");
-            ui.add(egui::DragValue::new(&mut unit.pan_vols[0]));
-            ui.label("r");
-            ui.add(egui::DragValue::new(&mut unit.pan_vols[1]));
-            ui.label("Pan time l");
-            ui.add(egui::DragValue::new(&mut unit.pan_time_offs[0]));
-            ui.label("r");
-            ui.add(egui::DragValue::new(&mut unit.pan_time_offs[1]));
-            ui.end_row();
-            ui.label("volume");
-            ui.add(egui::DragValue::new(&mut unit.volume));
-            ui.label("velocity");
-            ui.add(egui::DragValue::new(&mut unit.velocity));
-            ui.end_row();
-            ui.label("group");
-            group_idx_slider(ui, &mut unit.group);
-            ui.end_row();
-            ui.label("tuning");
-            ui.add(egui::DragValue::new(&mut unit.tuning).speed(0.001));
-            ui.end_row();
-            ui.label("voice index");
-            ui.add(egui::Slider::new(
-                &mut unit.voice_idx.0,
-                0..=ins.voices.len().saturating_sub(1).try_into().unwrap(),
-            ));
-            if let Some(voice) = ins.voices.get(unit.voice_idx.usize()) {
-                ui.image(voice_img(voice));
-                if ui.link(&voice.name).clicked() {
-                    app_cmd.push(Cmd::OpenVoice(unit.voice_idx));
-                }
-            } else {
-                ui.label("<invalid voice>");
+
+    ui.horizontal_wrapped(|ui| {
+        ui.label("key now");
+        ui.add(egui::DragValue::new(&mut unit.key_now));
+        ui.label("key start");
+        ui.add(egui::DragValue::new(&mut unit.key_start));
+        ui.label("key margin");
+        ui.add(egui::DragValue::new(&mut unit.key_margin));
+        ui.end_row();
+        ui.label("portament sample pos");
+        ui.add(egui::DragValue::new(&mut unit.porta_pos));
+        ui.label("portament sample num");
+        ui.add(egui::DragValue::new(&mut unit.porta_destination));
+        ui.end_row();
+        ui.label("Pan vol l");
+        ui.add(egui::DragValue::new(&mut unit.pan_vols[0]));
+        ui.label("r");
+        ui.add(egui::DragValue::new(&mut unit.pan_vols[1]));
+        ui.label("Pan time l");
+        ui.add(egui::DragValue::new(&mut unit.pan_time_offs[0]));
+        ui.label("r");
+        ui.add(egui::DragValue::new(&mut unit.pan_time_offs[1]));
+        ui.end_row();
+        ui.label("volume");
+        ui.add(egui::DragValue::new(&mut unit.volume));
+        ui.label("velocity");
+        ui.add(egui::DragValue::new(&mut unit.velocity));
+        ui.end_row();
+        ui.label("group");
+        group_idx_slider(ui, &mut unit.group);
+        ui.end_row();
+        ui.label("tuning");
+        ui.add(egui::DragValue::new(&mut unit.tuning).speed(0.001));
+        ui.end_row();
+        ui.label("voice index");
+        ui.add(egui::Slider::new(
+            &mut unit.voice_idx.0,
+            0..=ins.voices.len().saturating_sub(1).try_into().unwrap(),
+        ));
+        if let Some(voice) = ins.voices.get(unit.voice_idx.usize()) {
+            ui.image(voice_img(voice));
+            if ui.link(&voice.name).clicked() {
+                app_cmd.push(Cmd::OpenVoice(unit.voice_idx));
             }
+        } else {
+            ui.label("<invalid voice>");
+        }
+        ui.end_row();
+        ui.heading("Tones");
+        ui.end_row();
+        for tone in &mut unit.tones {
+            ui.label("Tone");
             ui.end_row();
-            ui.heading("Tones");
+            ui.label("smp_pos");
+            ui.add(egui::DragValue::new(&mut tone.smp_pos));
+            ui.label("offset_freq");
+            ui.add(egui::DragValue::new(&mut tone.offset_freq).speed(0.001));
+            ui.label("env_volume");
+            ui.add(egui::DragValue::new(&mut tone.env_volume));
+            ui.label("life_count");
+            ui.add(egui::DragValue::new(&mut tone.life_count));
+            ui.label("on_count");
+            ui.add(egui::DragValue::new(&mut tone.on_count));
+            ui.label("env_start");
+            ui.add(egui::DragValue::new(&mut tone.env_start));
+            ui.label("env_pos");
+            ui.add(egui::DragValue::new(&mut tone.env_pos));
+            ui.label("env_release_clock");
+            ui.add(egui::DragValue::new(&mut tone.env_release_clock));
             ui.end_row();
-            for tone in &mut unit.tones {
-                ui.label("Tone");
-                ui.end_row();
-                ui.label("smp_pos");
-                ui.add(egui::DragValue::new(&mut tone.smp_pos));
-                ui.label("offset_freq");
-                ui.add(egui::DragValue::new(&mut tone.offset_freq).speed(0.001));
-                ui.label("env_volume");
-                ui.add(egui::DragValue::new(&mut tone.env_volume));
-                ui.label("life_count");
-                ui.add(egui::DragValue::new(&mut tone.life_count));
-                ui.label("on_count");
-                ui.add(egui::DragValue::new(&mut tone.on_count));
-                ui.label("env_start");
-                ui.add(egui::DragValue::new(&mut tone.env_start));
-                ui.label("env_pos");
-                ui.add(egui::DragValue::new(&mut tone.env_pos));
-                ui.label("env_release_clock");
-                ui.add(egui::DragValue::new(&mut tone.env_release_clock));
-                ui.end_row();
-            }
-        });
+        }
     });
 }
 
