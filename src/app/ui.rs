@@ -265,6 +265,17 @@ pub struct UiState {
     pub raw_events: RawEventsUiState,
     pub voices: VoicesUiState,
     pub left_panel: LeftPanelState,
+    pub shared: SharedUiState,
+}
+
+/// Ui state shared among different uis
+#[derive(Default)]
+pub struct SharedUiState {
+    /// The active unit is the one that is:
+    /// - Used to place notes in the piano roll
+    /// - Shows up in the unit UI
+    /// - Is highlighted in the left side units panel
+    pub active_unit: Option<UnitIdx>,
 }
 
 impl UiState {
@@ -280,7 +291,7 @@ pub enum Tab {
     Map,
     PianoRoll,
     Voices,
-    Units,
+    Unit,
     Effects,
     Events,
 }
@@ -328,6 +339,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
                 ui,
                 &mut song,
                 &mut app.ui_state.piano_roll,
+                &mut app.ui_state.shared,
                 &mut app.cmd,
                 app.out.rate,
                 &mut app.ui_state.freeplay_piano,
@@ -350,7 +362,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             app.out.rate,
             &mut app.aux_state,
         ),
-        Tab::Units => units_ui(ui, &mut song),
+        Tab::Unit => unit_tab_ui(ui, &mut app.ui_state.shared, &mut song),
         Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
     }
     drop(song);
@@ -463,7 +475,7 @@ fn line_points_between(a: egui::Pos2, b: egui::Pos2) -> impl Iterator<Item = egu
     })
 }
 
-fn units_ui(ui: &mut egui::Ui, song: &mut SongState) {
+fn unit_tab_ui(ui: &mut egui::Ui, shared: &mut SharedUiState, song: &mut SongState) {
     let mut cmd = None;
     if ui.button("+ Add").clicked() {
         let unit = Unit {
@@ -475,8 +487,9 @@ fn units_ui(ui: &mut egui::Ui, song: &mut SongState) {
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
-            for (i, unit) in song.herd.units.iter_mut().enumerate() {
-                unit_ui(ui, UnitIdx(i as u8), unit, &song.ins, &mut cmd);
+            if let Some(unit_idx) = shared.active_unit {
+                let unit = &mut song.herd.units[unit_idx.usize()];
+                unit_ui(ui, unit_idx, unit, &song.ins, &mut cmd);
             }
         });
     handle_units_command(cmd, song);

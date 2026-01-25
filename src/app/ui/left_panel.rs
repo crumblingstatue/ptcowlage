@@ -92,13 +92,17 @@ fn unit_ui(
             .contains_pointer();
 
         let re = ui.label(egui::RichText::new(&unit.name).color(c));
-        if let Some(idx) = ui_state.piano_roll.place_unit
+        if let Some(idx) = ui_state.shared.active_unit
             && idx.usize() == i
         {
             ui.painter().debug_rect(re.rect, egui::Color32::YELLOW, "");
         }
         if re.clicked() {
-            ui_state.piano_roll.place_unit = Some(UnitIdx(i as u8));
+            ui_state.shared.active_unit = Some(UnitIdx(i as u8));
+        }
+        // Got to "Unit" tab on double click
+        if re.double_clicked() {
+            ui_state.tab = super::Tab::Unit;
         }
         unit_popup_ctx_menu(
             &re,

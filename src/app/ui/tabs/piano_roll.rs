@@ -3,8 +3,8 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                FreeplayPianoState, piano_freeplay_play_note, tabs::events::invert_color,
-                unit_color,
+                FreeplayPianoState, SharedUiState, piano_freeplay_play_note,
+                tabs::events::invert_color, unit_color,
             },
         },
         audio_out::SongState,
@@ -29,8 +29,6 @@ pub struct PianoRollState {
     shift_all_offset: i32,
     prev_frame_piano_roll_y_offset: f32,
     interact_mode: InteractMode,
-    /// Which unit to place notes, etc. of
-    pub place_unit: Option<UnitIdx>,
     draw_debug_info: bool,
     // TODO: Implement Hash for `UnitIdx`
     pub hidden_units: FxHashSet<u8>,
@@ -82,7 +80,6 @@ impl Default for PianoRollState {
             shift_all_offset: 0,
             prev_frame_piano_roll_y_offset: 0.,
             interact_mode: InteractMode::View,
-            place_unit: None,
             draw_debug_info: false,
             hidden_units: FxHashSet::default(),
             draw_meas_lines: true,
@@ -96,7 +93,12 @@ impl Default for PianoRollState {
     }
 }
 
-fn top_ui(ui: &mut egui::Ui, song: &mut SongState, state: &mut PianoRollState) {
+fn top_ui(
+    ui: &mut egui::Ui,
+    song: &mut SongState,
+    state: &mut PianoRollState,
+    shared: &mut SharedUiState,
+) {
     ui.horizontal(|ui| {
         let [key_f1, key_f2, key_f3] = ui.input(|inp| {
             [
@@ -119,8 +121,8 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, state: &mut PianoRollState) {
             || key_f3
         {
             state.interact_mode = InteractMode::Place;
-            if state.place_unit.is_none() && !song.herd.units.is_empty() {
-                state.place_unit = Some(UnitIdx(0));
+            if shared.active_unit.is_none() && !song.herd.units.is_empty() {
+                shared.active_unit = Some(UnitIdx(0));
             }
         }
         let re = ui
@@ -162,11 +164,12 @@ pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
     state: &mut PianoRollState,
+    shared: &mut SharedUiState,
     cmd: &mut CommandQueue,
     dst_sps: SampleRate,
     piano_state: &mut FreeplayPianoState,
 ) {
-    top_ui(ui, song, state);
+    top_ui(ui, song, state, shared);
     ui.horizontal_top(|ui| {
         ui.style_mut().spacing.item_spacing = egui::Vec2::ZERO;
         piano_ui(
@@ -177,13 +180,14 @@ pub fn ui(
             piano_state,
             dst_sps,
         );
-        roll_ui(song, state, ui, cmd, dst_sps, piano_state);
+        roll_ui(song, state, shared, ui, cmd, dst_sps, piano_state);
     });
 }
 
 fn roll_ui(
     song: &mut SongState,
     state: &mut PianoRollState,
+    shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
     dst_sps: SampleRate,
@@ -202,7 +206,7 @@ fn roll_ui(
     let out = egui::ScrollArea::both()
         .scroll_source(scroll_source)
         .show(ui, |ui| {
-            roll_ui_inner(song, state, ui, cmd, dst_sps, piano_state);
+            roll_ui_inner(song, state, shared, ui, cmd, dst_sps, piano_state);
         });
     state.prev_frame_piano_roll_y_offset = out.state.offset.y;
 }
@@ -212,6 +216,7 @@ fn roll_ui(
 fn roll_ui_inner(
     song: &mut SongState,
     state: &mut PianoRollState,
+    shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
     dst_sps: SampleRate,
@@ -594,7 +599,7 @@ fn roll_ui_inner(
                         break 'block;
                     }
                     // Place note
-                    let Some(unit) = state.place_unit else {
+                    let Some(unit) = shared.active_unit else {
                         return;
                     };
                     let Some(piano_key) = piano_key_from_y(pos, &re, rect, state) else {
@@ -660,7 +665,7 @@ fn roll_ui_inner(
         }
     }
     // Toot the current row with backtick key
-    let toot_unit = state.place_unit.or(piano_state.toot);
+    let toot_unit = shared.active_unit.or(piano_state.toot);
     if let Some(mp) = mouse_screen_pos
         && let Some(unit) = toot_unit
     {
