@@ -3,9 +3,9 @@ use ptcow::{EventPayload, Song, UnitIdx};
 /// Migrate overlapping 'on' events from one unit to another
 pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song) -> bool {
     let mut has_overlap = false;
-    let n_events = song.events.eves.len();
+    let n_events = song.events.len();
     for i in 0..n_events {
-        let eve1 = &song.events.eves[i];
+        let eve1 = &song.events[i];
         if eve1.unit != src_unit {
             continue;
         }
@@ -14,7 +14,7 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
         };
         let range1 = eve1.tick..eve1.tick + dur1;
         for j in i + 1..n_events {
-            let eve2 = &mut song.events.eves[j];
+            let eve2 = &mut song.events[j];
             let eve2_tick = eve2.tick;
             if eve2.unit != src_unit {
                 continue;
@@ -31,7 +31,7 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
                 // and we migrate these as well
                 if j >= 3 {
                     for k in j - 3..j {
-                        if let Some(eve3) = song.events.eves.get_mut(k)
+                        if let Some(eve3) = song.events.get_mut(k)
                             && eve3.tick == eve2_tick
                             && let EventPayload::Key(_)
                             | EventPayload::Velocity(_)

@@ -219,7 +219,7 @@ fn roll_ui_inner(
 ) {
     // We make up a value for number of ticks if there are no events in the song (empty song)
     // TODO: Maybe we can do something more clever here
-    let last_tick = song.song.events.eves.last().map_or(5000, |ev| ev.tick);
+    let last_tick = song.song.events.last().map_or(5000, |ev| ev.tick);
     let mut approx_end = last_tick as f32 / state.tick_div;
     // Safety for ui alloc
     if !approx_end.is_finite() {
@@ -313,7 +313,7 @@ fn roll_ui_inner(
     let mut unit_key_ys = vec![default_y; song.herd.units.len()];
     let [mut rects_drawn, mut circles_drawn, mut lines_drawn] = [0; _];
     let mut hovered_events = Vec::new();
-    for (ev_idx, ev) in song.song.events.eves.iter().enumerate() {
+    for (ev_idx, ev) in song.song.events.iter().enumerate() {
         if state.hidden_units.contains(&ev.unit.0) {
             continue;
         }
@@ -332,7 +332,7 @@ fn roll_ui_inner(
                 // Sometimes, key events are after on in the event buffer,
                 // but at the same tick. Look ahead to find such events, and correct
                 // the y position
-                for eve_ahead in &song.song.events.eves[ev_idx..] {
+                for eve_ahead in &song.song.events[ev_idx..] {
                     if eve_ahead.tick != ev.tick {
                         break;
                     }
@@ -446,7 +446,7 @@ fn roll_ui_inner(
         .show(|ui| {
             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
             for ev_idx in hovered_events {
-                let ev = &song.song.events.eves[ev_idx];
+                let ev = &song.song.events[ev_idx];
                 let payload_text = match ev.payload {
                     EventPayload::On { duration } => {
                         format!("On event for {duration} ticks")
@@ -482,7 +482,7 @@ fn roll_ui_inner(
             .show(ui.ctx(), |ui| {
                 if ui.button("Up 1 key").clicked() {
                     for &idx in &popup.indices {
-                        let ev = &mut song.song.events.eves[idx];
+                        let ev = &mut song.song.events[idx];
                         if let EventPayload::Key(key) = &mut ev.payload {
                             *key += 256;
                         }
@@ -490,7 +490,7 @@ fn roll_ui_inner(
                 }
                 if ui.button("Down 1 key").clicked() {
                     for &idx in &popup.indices {
-                        let ev = &mut song.song.events.eves[idx];
+                        let ev = &mut song.song.events[idx];
                         if let EventPayload::Key(key) = &mut ev.payload {
                             *key -= 256;
                         }
@@ -639,17 +639,17 @@ fn roll_ui_inner(
                 pnt.debug_rect(rect, unit_color(placed.unit.usize()), "Just placed");
                 // "Finalize" note when lmb is released
                 if lmb_released {
-                    song.song.events.eves.push(ptcow::Event {
+                    song.song.events.push(ptcow::Event {
                         payload: EventPayload::Key(placed.key),
                         unit: placed.unit,
                         tick: placed.tick,
                     });
-                    song.song.events.eves.push(ptcow::Event {
+                    song.song.events.push(ptcow::Event {
                         payload: EventPayload::On { duration },
                         unit: placed.unit,
                         tick: placed.tick,
                     });
-                    song.song.events.eves.sort_by_key(|eve| eve.tick);
+                    song.song.events.sort();
                     song.song.recalculate_length();
                     state.just_placed_note = None;
                 }
@@ -689,7 +689,7 @@ fn roll_ui_inner(
     // Delete selected notes with Del
     if ui.input(|inp| inp.key_pressed(egui::Key::Delete)) {
         let mut idx: usize = 0;
-        song.song.events.eves.retain(|_| {
+        song.song.events.retain(|_| {
             let retain = !state.selected_event_indices.contains(&idx);
             idx += 1;
             retain
@@ -722,7 +722,7 @@ fn events_window_inner_ui(
     popup: &EventsPopup,
 ) {
     for &ev_idx in &popup.indices {
-        let Some(ev) = song.song.events.eves.get_mut(ev_idx) else {
+        let Some(ev) = song.song.events.get_mut(ev_idx) else {
             ui.label("<unresolved event (oob)>");
             continue;
         };
@@ -1074,7 +1074,7 @@ fn loop_points_popup_button(ui: &mut egui::Ui, song: &mut SongState) {
                     song.herd.seek_to_meas(meas.get(), &song.song, &song.ins);
                 }
                 if ui.button("🔚").clicked()
-                    && let Some(last) = song.song.events.eves.last()
+                    && let Some(last) = song.song.events.last()
                 {
                     let last_tick = last.tick;
                     song.song.master.loop_points.last = NonZeroMeas::new(
@@ -1116,7 +1116,7 @@ fn experimental_popup_button(ui: &mut egui::Ui, song: &mut SongState, state: &mu
             ui.label("Shift all notes");
             let re = ui.add(egui::DragValue::new(&mut state.shift_all_offset).range(-48..=48));
             if re.dragged() {
-                for ev in &mut song.song.events.eves {
+                for ev in &mut *song.song.events {
                     ev.tick = ev.tick.saturating_add_signed(state.shift_all_offset);
                 }
             }

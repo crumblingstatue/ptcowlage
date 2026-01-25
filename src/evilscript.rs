@@ -57,7 +57,7 @@ help - Show this help (duh)
 pub fn exec(cmd: EvilCmd, song: &mut SongState) -> Option<String> {
     match cmd {
         EvilCmd::RemoveMatchingEvent { mut predicate } => {
-            song.song.events.eves.retain(|eve| !predicate(eve));
+            song.song.events.retain(|eve| !predicate(eve));
         }
         EvilCmd::Help => return Some(HELP_STRING.into()),
     }

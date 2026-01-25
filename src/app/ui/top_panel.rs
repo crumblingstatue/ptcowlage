@@ -77,12 +77,12 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         ui.menu_button("Song", |ui| {
             ui.menu_button("Clear events", |ui| {
                 if ui.button("Key and on events").clicked() {
-                    song.song.events.eves.retain(|eve| {
+                    song.song.events.retain(|eve| {
                         !matches!(eve.payload, EventPayload::Key(_) | EventPayload::On { .. })
                     });
                 }
                 if ui.button("All events").clicked() {
-                    song.song.events.eves.clear();
+                    song.song.events.clear();
                 }
             });
             ui.separator();

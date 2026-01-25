@@ -45,7 +45,7 @@ pub fn ui(
         ui.label(format!(
             "Event: {}/{}",
             song.herd.evt_idx,
-            song.song.events.eves.len().saturating_sub(1)
+            song.song.events.len().saturating_sub(1)
         ));
     });
 

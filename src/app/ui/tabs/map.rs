@@ -97,7 +97,7 @@ fn roll_ui_inner(
 ) {
     // We make up a value for number of ticks if there are no events in the song (empty song)
     // TODO: Maybe we can do something more clever here
-    let last_tick = song.song.events.eves.last().map_or(5000, |ev| ev.tick);
+    let last_tick = song.song.events.last().map_or(5000, |ev| ev.tick);
     let mut approx_end = last_tick as f32 / state.tick_div;
     // Safety for ui alloc
     if !approx_end.is_finite() {
@@ -140,7 +140,7 @@ fn roll_ui_inner(
     let [mut rects_drawn, mut lines_drawn] = [0; _];
     let mut hovered_events = Vec::new();
     let mouse_screen_pos = ui.input(|inp| inp.pointer.latest_pos());
-    for (ev_idx, ev) in song.song.events.eves.iter().enumerate() {
+    for (ev_idx, ev) in song.song.events.iter().enumerate() {
         if state.hidden_units.contains(&ev.unit.0) {
             continue;
         }
@@ -435,7 +435,7 @@ fn loop_points_popup_button(ui: &mut egui::Ui, song: &mut SongState) {
                     song.herd.seek_to_meas(meas.get(), &song.song, &song.ins);
                 }
                 if ui.button("🔚").clicked()
-                    && let Some(last) = song.song.events.eves.last()
+                    && let Some(last) = song.song.events.last()
                 {
                     let last_tick = last.tick;
                     song.song.master.loop_points.last = NonZeroMeas::new(
@@ -477,7 +477,7 @@ fn experimental_popup_button(ui: &mut egui::Ui, song: &mut SongState, state: &mu
             ui.label("Shift all notes");
             let re = ui.add(egui::DragValue::new(&mut state.shift_all_offset).range(-48..=48));
             if re.dragged() {
-                for ev in &mut song.song.events.eves {
+                for ev in &mut *song.song.events {
                     ev.tick = ev.tick.saturating_add_signed(state.shift_all_offset);
                 }
             }

@@ -30,7 +30,7 @@ pub fn import(
     ins: &mut MooInstructions,
     out_sample_rate: SampleRate,
 ) {
-    song.events.eves.clear();
+    song.events.clear();
     // We assume this default timing is good for all PiyoPiyo songs, which might not be true(?)
     song.master.timing.ticks_per_beat = 480;
     song.master.timing.bpm = 125.;
@@ -97,17 +97,17 @@ pub fn import(
                     } else {
                         64
                     };
-                    song.events.eves.push(Event {
+                    song.events.push(Event {
                         payload: EventPayload::PanVol(pan),
                         unit: UnitIdx(n_units + unit_counter),
                         tick: time_ms,
                     });
-                    song.events.eves.push(Event {
+                    song.events.push(Event {
                         payload: ptcow::EventPayload::Key(ev_key),
                         unit: UnitIdx(n_units + unit_counter),
                         tick: time_ms,
                     });
-                    song.events.eves.push(Event {
+                    song.events.push(Event {
                         payload: ptcow::EventPayload::On {
                             duration: note_duration,
                         },
@@ -140,12 +140,12 @@ pub fn import(
                 tones: Default::default(),
                 mute: Default::default(),
             });
-            song.events.eves.push(Event {
+            song.events.push(Event {
                 payload: EventPayload::SetVoice(ptcow::VoiceIdx(m_i.try_into().unwrap())),
                 unit: UnitIdx(n_units + i),
                 tick: 0,
             });
-            song.events.eves.push(Event {
+            song.events.push(Event {
                 payload: EventPayload::Volume(tr.base.vol as i16),
                 unit: UnitIdx(n_units + i),
                 tick: 0,
@@ -159,13 +159,13 @@ pub fn import(
         let mut unit_counter = 0;
         for key in piano_keys() {
             if ev.key_down(key) {
-                song.events.eves.push(Event {
+                song.events.push(Event {
                     payload: ptcow::EventPayload::SetVoice(VoiceIdx(3 + key)),
                     unit: UnitIdx(n_units + unit_counter),
                     tick: time_ms,
                 });
                 let duration = DRUM_SAMPLES[key as usize].len() as u32 / 12;
-                song.events.eves.push(Event {
+                song.events.push(Event {
                     payload: ptcow::EventPayload::On { duration },
                     unit: UnitIdx(n_units + unit_counter),
                     tick: time_ms,
@@ -201,7 +201,7 @@ pub fn import(
         // TODO: Figure this out properly.
         // For now, we just clamp the volume to a reasonable(?) range.
         vol = vol.clamp(32, 96);
-        song.events.eves.push(Event {
+        song.events.push(Event {
             payload: EventPayload::Volume(vol),
             unit: UnitIdx(n_units + i),
             tick: 0,
@@ -226,7 +226,7 @@ pub fn import(
         ptcow::timing::tick_to_meas(piyo.repeat_range.start * 114, song.master.timing);
     song.master.loop_points.last = None;
     song.recalculate_length();
-    song.events.eves.sort_by_key(|ev| ev.tick);
+    song.events.sort();
     ptcow::rebuild_tones(
         ins,
         out_sample_rate,

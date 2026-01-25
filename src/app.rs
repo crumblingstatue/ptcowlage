@@ -439,7 +439,7 @@ impl App {
             }
             Cmd::RemoveNoteAtIdx { idx } => {
                 let mut song = self.song.lock().unwrap();
-                let eves = &mut song.song.events.eves;
+                let eves = &mut song.song.events;
                 let target_ev = eves[idx];
                 // Remove this event and all key events for this unit on the same tick
                 let coll = |eve: &Event| {
@@ -535,7 +535,7 @@ fn post_load_prep(
 
 // Apply things like setting initial voices for units on tick 0
 fn do_tick0_events(song: &mut SongState) {
-    for ev in song.song.events.eves.iter().take_while(|ev| ev.tick == 0) {
+    for ev in song.song.events.iter().take_while(|ev| ev.tick == 0) {
         let Some(unit) = song.herd.units.get_mut(ev.unit.usize()) else {
             continue;
         };

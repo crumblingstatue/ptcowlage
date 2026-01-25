@@ -220,7 +220,7 @@ fn piano_freeplay_play_note(
         // If the song is paused, unpause it
         song.pause = false;
         // Push the event
-        song.song.events.eves.push(ev);
+        song.song.events.push(ev);
     }
     let _ = ptcow::do_event(
         &mut song.herd,
@@ -239,7 +239,7 @@ fn piano_freeplay_play_note(
         tick,
     };
     if state.record {
-        song.song.events.eves.push(ev);
+        song.song.events.push(ev);
     }
     let _ = ptcow::do_event(
         &mut song.herd,
@@ -251,7 +251,7 @@ fn piano_freeplay_play_note(
         &ev,
     );
     if state.record {
-        song.song.events.eves.sort_by_key(|eve| eve.tick);
+        song.song.events.sort();
     }
 }
 
@@ -522,7 +522,7 @@ fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
                 }
             }
             UnitsCmd::SeekNextOnEvent { idx } => {
-                if let Some(ev) = song.song.events.eves[song.herd.evt_idx..]
+                if let Some(ev) = song.song.events[song.herd.evt_idx..]
                     .iter()
                     .find(|ev| ev.unit == idx && matches!(&ev.payload, EventPayload::On { .. }))
                 {
@@ -533,7 +533,7 @@ fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
                 }
             }
             UnitsCmd::DeleteUnit { idx } => {
-                song.song.events.eves.retain_mut(|eve| {
+                song.song.events.retain_mut(|eve| {
                     let retain = eve.unit != idx;
                     // If we removed a unit below this unit index, then we need to decrement it
                     if eve.unit.0 > idx.0 {

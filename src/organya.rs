@@ -24,7 +24,7 @@ pub fn import(
     let time_div = org.beats_per_measure as u32 * org.steps_per_beat as u32;
     song.master.loop_points.repeat = org.repeat_start / time_div;
     song.master.loop_points.last = NonZeroU32::new(org.repeat_end / time_div);
-    let out_ev = &mut song.events.eves;
+    let out_ev = &mut song.events;
     out_ev.clear();
     herd.units.clear();
     ins.voices.clear();

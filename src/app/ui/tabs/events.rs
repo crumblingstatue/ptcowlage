@@ -124,7 +124,7 @@ pub fn ui(
             let rows_len = if ui_state.filter.is_active() {
                 ui_state.filtered_events.len()
             } else {
-                song.song.events.eves.len()
+                song.song.events.len()
             };
             body.rows(16.0, rows_len, |mut row| {
                 let mut idx = row.index();
@@ -140,7 +140,7 @@ pub fn ui(
                 {
                     row.set_selected(true);
                 }
-                let Some(ev) = song.song.events.eves.get_mut(idx) else {
+                let Some(ev) = song.song.events.get_mut(idx) else {
                     row.col(|ui| {
                         ui.label("<out of bounds>");
                     });
@@ -360,10 +360,10 @@ pub fn ui(
     if let Some(cmd) = ev_list_cmd {
         match cmd {
             EventListCmd::Remove { idx } => {
-                song.song.events.eves.remove(idx);
+                song.song.events.remove(idx);
             }
             EventListCmd::Insert { idx, event } => {
-                song.song.events.eves.insert(idx, event);
+                song.song.events.insert(idx, event);
             }
         }
     }
