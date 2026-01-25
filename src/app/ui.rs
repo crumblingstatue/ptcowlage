@@ -32,6 +32,7 @@ mod tabs {
     pub mod map;
     pub mod piano_roll;
     pub mod playback;
+    pub mod unit;
     pub mod voices;
 }
 
@@ -362,7 +363,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             app.out.rate,
             &mut app.aux_state,
         ),
-        Tab::Unit => unit_tab_ui(ui, &mut app.ui_state.shared, &mut song),
+        Tab::Unit => tabs::unit::ui(ui, &mut app.ui_state.shared, &mut song),
         Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
     }
     drop(song);
@@ -473,26 +474,6 @@ fn line_points_between(a: egui::Pos2, b: egui::Pos2) -> impl Iterator<Item = egu
         }
         Some(p)
     })
-}
-
-fn unit_tab_ui(ui: &mut egui::Ui, shared: &mut SharedUiState, song: &mut SongState) {
-    let mut cmd = None;
-    if ui.button("+ Add").clicked() {
-        let unit = Unit {
-            name: format!("New unit ({})", song.herd.units.len()),
-            ..Default::default()
-        };
-        song.herd.units.push(unit);
-    }
-    egui::ScrollArea::vertical()
-        .auto_shrink(false)
-        .show(ui, |ui| {
-            if let Some(unit_idx) = shared.active_unit {
-                let unit = &mut song.herd.units[unit_idx.usize()];
-                unit_ui(ui, unit_idx, unit, &song.ins, &mut cmd);
-            }
-        });
-    handle_units_command(cmd, song);
 }
 
 fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
