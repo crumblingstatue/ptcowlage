@@ -139,8 +139,12 @@ fn voice_ui(
     aux: &mut Option<AuxAudioState>,
     ui_state: &mut VoicesUiState,
 ) {
+    let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut voice.name);
+        for inst in voice.insts.iter() {
+            play_sound_ui(ui, aux, ui_state, VoiceIdx(idx as u8), &inst.sample_buf);
+        }
         if ui.button("⬆").clicked() {
             *op = Some(VoiceUiOp::MoveUp(idx));
         }
@@ -175,10 +179,9 @@ pub fn voice_ui_inner(
     voice: &mut Voice,
     voice_idx: VoiceIdx,
     out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
+    aux: &mut AuxAudioState,
     ui_state: &mut VoicesUiState,
 ) {
-    let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     for (unit, inst) in zip(&mut voice.units, &mut voice.insts) {
         ui.strong("v-unit");
         ui.indent("vu", |ui| {
@@ -190,26 +193,7 @@ pub fn voice_ui_inner(
         ui.indent("vi", |ui| {
             ui.horizontal(|ui| {
                 ui.label("Sample buf");
-                if let Some(sound_key) = ui_state.playing_sounds.get(&voice_idx) {
-                    if ui.button("Stop").clicked() {
-                        aux.send
-                            .send(AuxMsg::StopAudio { key: *sound_key })
-                            .unwrap();
-                        ui_state.playing_sounds.remove(&voice_idx);
-                    }
-                } else {
-                    if ui.button("Play").clicked() {
-                        let key = aux.next_key();
-                        ui_state.playing_sounds.insert(voice_idx, key);
-                        aux.send
-                            .send(AuxMsg::PlaySamples16 {
-                                key,
-                                sample_data: bytemuck::pod_collect_to_vec(&inst.sample_buf),
-                            })
-                            .unwrap();
-                    }
-                }
-
+                play_sound_ui(ui, aux, ui_state, voice_idx, &inst.sample_buf);
                 let mut len = inst.sample_buf.len();
                 if ui
                     .add(egui::DragValue::new(&mut len).update_while_editing(false))
@@ -247,6 +231,34 @@ pub fn voice_ui_inner(
         if ui.button("pop").clicked() {
             voice.insts.pop();
             voice.units.pop();
+        }
+    }
+}
+
+fn play_sound_ui(
+    ui: &mut egui::Ui,
+    aux: &AuxAudioState,
+    ui_state: &mut VoicesUiState,
+    voice_idx: VoiceIdx,
+    data: &[u8],
+) {
+    if let Some(sound_key) = ui_state.playing_sounds.get(&voice_idx) {
+        if ui.button("Stop").clicked() {
+            aux.send
+                .send(AuxMsg::StopAudio { key: *sound_key })
+                .unwrap();
+            ui_state.playing_sounds.remove(&voice_idx);
+        }
+    } else {
+        if ui.button("▶ Play").clicked() {
+            let key = aux.next_key();
+            ui_state.playing_sounds.insert(voice_idx, key);
+            aux.send
+                .send(AuxMsg::PlaySamples16 {
+                    key,
+                    sample_data: bytemuck::pod_collect_to_vec(data),
+                })
+                .unwrap();
         }
     }
 }

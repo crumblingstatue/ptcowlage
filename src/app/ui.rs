@@ -747,6 +747,9 @@ fn unit_popup_ui(
         UnitPopupTab::Unit => unit_ui(ui, idx, unit, ins, cmd, app_cmd),
         UnitPopupTab::Voice => {
             if let Some(voice) = ins.voices.get_mut(unit.voice_idx.usize()) {
+                let aux = aux.get_or_insert_with(|| {
+                    crate::audio_out::spawn_aux_audio_thread(out_rate, 1024)
+                });
                 voice_ui_inner(ui, voice, unit.voice_idx, out_rate, aux, voices_ui_state);
             } else {
                 ui.label("Invalid voice index");
