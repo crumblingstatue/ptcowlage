@@ -891,10 +891,13 @@ pub(crate) fn sf2_import_ui(
                     voice.allocate::<false>();
                     let vu = &mut voice.units[0];
                     vu.data = data;
+                    // The way basic key works, the lower the basic key, the higher the pitch
+                    // So if we want to increase the pitch by 1 semitone, we need to subtract 256.
+                    // So we subtract the fine tune values, rather than adding
                     // Coarse tune (semitone)
-                    vu.basic_key += region.get_coarse_tune() * 256;
+                    vu.basic_key -= region.get_coarse_tune() * 256;
                     // Fine tune (cent)
-                    vu.basic_key += (region.get_fine_tune() as f64 * 2.56) as i32;
+                    vu.basic_key -= (region.get_fine_tune() as f64 * 2.56) as i32;
                     let mut song = song.lock().unwrap();
                     let song = &mut *song;
                     if let Some(target_idx) = sf2.target_voice_idx {
