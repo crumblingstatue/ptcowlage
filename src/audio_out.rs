@@ -127,6 +127,9 @@ pub fn spawn_aux_audio_thread(out_rate: SampleRate, out_buf_size: usize) -> AuxA
                 AuxMsg::StopAudio { key } => {
                     playing.remove(&key);
                 }
+                AuxMsg::StopAll => {
+                    playing.clear();
+                }
             },
             Err(e) => match e {
                 std::sync::mpsc::TryRecvError::Empty => {}
@@ -186,6 +189,7 @@ pub enum AuxMsg {
     StopAudio {
         key: AuxAudioKey,
     },
+    StopAll,
 }
 
 struct SamplePlayer {

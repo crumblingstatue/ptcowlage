@@ -63,11 +63,32 @@ pub fn ui(
             }
         });
         #[cfg(not(target_arch = "wasm32"))]
-        if ui.button("Import...").clicked() {
-            file_dia.config_mut().default_file_filter = Some(FILT_PTCOP.into());
-            file_dia.set_user_data(FileOp::ImportVoices);
-            file_dia.pick_file();
-        }
+        ui.menu_button("Import ->", |ui| {
+            if ui.button("Single from .sf2").clicked() {
+                use crate::app::ui::file_ops::FILT_SF2;
+
+                file_dia.config_mut().default_file_filter = Some(FILT_SF2.into());
+                file_dia.set_user_data(FileOp::ImportSf2Single);
+                file_dia.pick_file();
+            }
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        ui.menu_button("Replace ->", |ui| {
+            if ui.button("All from .ptcop...").clicked() {
+                file_dia.config_mut().default_file_filter = Some(FILT_PTCOP.into());
+                file_dia.set_user_data(FileOp::ReplaceVoicesPtcop);
+                file_dia.pick_file();
+            }
+            if ui.button("Current from .sf2").clicked() {
+                use crate::app::ui::file_ops::FILT_SF2;
+
+                file_dia.config_mut().default_file_filter = Some(FILT_SF2.into());
+                file_dia.set_user_data(FileOp::ReplaceSf2Single(VoiceIdx(
+                    ui_state.selected_idx as u8,
+                )));
+                file_dia.pick_file();
+            }
+        });
         for (i, voice) in song.ins.voices.iter().enumerate() {
             let img = voice_img(voice);
             if ui

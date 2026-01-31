@@ -7,7 +7,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 Tab,
-                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FileOp},
+                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileOp},
             },
         },
         audio_out::{
@@ -18,7 +18,9 @@ use {
     anyhow::Context,
     eframe::egui,
     ptcow::{Event, EventPayload, Herd, MooInstructions, SampleRate, SampleT, Song, UnitIdx},
+    rustysynth::SoundFont,
     std::{
+        fs::File,
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
     },
@@ -126,7 +128,8 @@ impl App {
                 .add_save_extension(FILT_WAV, "wav")
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
                 .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"])
-                .add_file_filter_extensions(FILT_ORGANYA, vec!["org"]),
+                .add_file_filter_extensions(FILT_ORGANYA, vec!["org"])
+                .add_file_filter_extensions(FILT_SF2, vec!["sf2"]),
             #[cfg(not(target_arch = "wasm32"))]
             pt_audio_dev: Some(spawn_ptcow_audio_thread(out_params, song_state_handle)),
             #[cfg(target_arch = "wasm32")]
@@ -279,9 +282,33 @@ impl eframe::App for App {
                             Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
                     }
                 }
-                FileOp::ImportVoices => {
+                FileOp::ReplaceVoicesPtcop => {
                     let mut song = self.song.lock().unwrap();
                     import_voices(&path, &mut song);
+                }
+                FileOp::ReplaceSf2Single(voice_idx) => {
+                    let mut sf2_file = File::open(path).unwrap();
+                    match SoundFont::new(&mut sf2_file) {
+                        Ok(soundfont) => {
+                            self.ui_state.sf2_import =
+                                Some(ui::Sf2ImportDialog::new(soundfont, Some(voice_idx)));
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                }
+                FileOp::ImportSf2Single => {
+                    let mut sf2_file = File::open(path).unwrap();
+                    match SoundFont::new(&mut sf2_file) {
+                        Ok(soundfont) => {
+                            self.ui_state.sf2_import =
+                                Some(ui::Sf2ImportDialog::new(soundfont, None));
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
                 }
                 FileOp::ImportMidi => {
                     let mid_data = std::fs::read(&path).unwrap();
@@ -355,6 +382,15 @@ impl eframe::App for App {
             });
             if close {
                 self.modal_payload = None;
+            }
+        }
+        if let Some(sf2) = &mut self.ui_state.sf2_import {
+            let mut close = false;
+            egui::Modal::new("sf2_import_popup".into()).show(ctx, |ui| {
+                close = ui::sf2_import_ui(ui, sf2, &mut self.aux_state, &self.song, self.out.rate);
+            });
+            if close {
+                self.ui_state.sf2_import = None;
             }
         }
         // Do queue commands

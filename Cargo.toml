@@ -27,6 +27,8 @@ mid2ptcop.git = "https://github.com/crumblingstatue/mid2ptcop.git"
 piyopiyo.git = "https://github.com/crumblingstatue/piyopiyo-rs.git"
 # For Organya conversion
 organyacat.git = "https://github.com/crumblingstatue/organyacat.git"
+# For soundfont (sf2) voice import
+rustysynth = "1.3.6"
 arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
