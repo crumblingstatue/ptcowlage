@@ -96,6 +96,16 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     while let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap())
                         && poly_migrate_units(UnitIdx(migrate_from), migrate_to, &mut song.song)
                     {
+                        // Find the first voice event of the migrated from unit,
+                        // and insert a duplicate voice event for the migrated to unit
+                        if let Some(idx) = song.song.events.eves.iter().position(|eve| {
+                            eve.unit == UnitIdx(migrate_from)
+                                && matches!(eve.payload, EventPayload::SetVoice(_))
+                        }) {
+                            let mut dup = song.song.events.eves[idx];
+                            dup.unit = migrate_to;
+                            song.song.events.eves.insert(idx + 1, dup);
+                        }
                         let from_name = &song.herd.units[migrate_from as usize].name;
                         let unit = Unit {
                             name: format!("{from_name}-p"),
