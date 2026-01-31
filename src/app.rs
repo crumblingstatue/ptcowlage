@@ -38,7 +38,6 @@ pub struct App {
     ui_state: ui::UiState,
     /// Currently opened file
     open_file: Option<PathBuf>,
-    midi: MidiImportOpts,
     modal_payload: Option<ModalPayload>,
     pub(crate) cmd: CommandQueue,
     /// Auxiliary audio output (for example playing voice samples in voice UI)
@@ -52,10 +51,6 @@ pub struct App {
 enum ModalPayload {
     Msg(String),
     SeekToSamplePrompt(SampleT),
-}
-
-pub struct MidiImportOpts {
-    base_key: u8,
 }
 
 pub type BundledSongs = &'static [(&'static str, &'static [u8])];
@@ -77,7 +72,6 @@ impl App {
                 &mid_data,
                 &mut song_state.herd,
                 &mut song_state.song,
-                32,
             ) {
                 Ok(_) => {
                     song_state.song.recalculate_length();
@@ -140,7 +134,6 @@ impl App {
             out: out_params,
             ui_state: ui::UiState::default(),
             open_file: None,
-            midi: MidiImportOpts { base_key: 32 },
             modal_payload,
             cmd: CommandQueue::default(),
             aux_state: None,
@@ -173,12 +166,7 @@ impl App {
     fn import_midi_from_bytes(&mut self, mid_data: &[u8]) {
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
-        match mid2ptcop::write_midi_to_pxtone(
-            mid_data,
-            &mut song.herd,
-            &mut song.song,
-            self.midi.base_key,
-        ) {
+        match mid2ptcop::write_midi_to_pxtone(mid_data, &mut song.herd, &mut song.song) {
             Ok(_) => {
                 song.song.recalculate_length();
             }
@@ -219,20 +207,7 @@ impl App {
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
-        match self.file_dia.user_data::<FileOp>() {
-            Some(FileOp::ImportMidi) => {
-                self.file_dia
-                    .update_with_right_panel_ui(ctx, &mut |ui, _dia| {
-                        ui.heading("Midi import");
-                        ui.label("Base key");
-                        ui.add(egui::DragValue::new(&mut self.midi.base_key));
-                    });
-            }
-            _ => {
-                self.file_dia.update(ctx);
-            }
-        }
-
+        self.file_dia.update(ctx);
         let picked_path = self.file_dia.take_picked();
         let file_op = self.file_dia.user_data::<FileOp>().copied();
         (picked_path, file_op)

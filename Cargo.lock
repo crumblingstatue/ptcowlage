@@ -1527,7 +1527,7 @@ dependencies = [
 [[package]]
 name = "mid2ptcop"
 version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/mid2ptcop.git#d64e6c9572a58c941dab3662bc7efa197bfc65e1"
+source = "git+https://github.com/crumblingstatue/mid2ptcop.git#53c203a982a16e1f139b806bf87e5824c459ea60"
 dependencies = [
  "midly",
  "ptcow",
