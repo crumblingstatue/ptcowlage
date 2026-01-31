@@ -96,8 +96,9 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     while let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap())
                         && poly_migrate_units(UnitIdx(migrate_from), migrate_to, &mut song.song)
                     {
+                        let from_name = &song.herd.units[migrate_from as usize].name;
                         let unit = Unit {
-                            name: format!("Poly{}", migrate_to.0),
+                            name: format!("{from_name}-p"),
                             ..Default::default()
                         };
                         song.herd.units.push(unit);
