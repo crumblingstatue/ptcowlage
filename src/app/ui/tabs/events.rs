@@ -330,6 +330,9 @@ pub fn ui(
                                 },
                             );
                             *v_idx = VoiceIdx(num_usize.try_into().unwrap());
+                            if ui.button("⮩").clicked() {
+                                app_cmd.push(crate::app::command_queue::Cmd::OpenVoice(*v_idx));
+                            }
                         });
                     }
                     EventPayload::SetGroup(group_idx) => {
