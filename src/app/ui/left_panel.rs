@@ -36,7 +36,10 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.heading(format!("Units ({n_units})"));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.button("+ New").clicked() {
+            if ui
+                .add_enabled(!song.herd.units.is_full(), egui::Button::new("+ New"))
+                .clicked()
+            {
                 let unit = Unit {
                     name: format!("New unit ({})", song.herd.units.len()),
                     ..Default::default()

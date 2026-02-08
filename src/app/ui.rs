@@ -523,7 +523,7 @@ fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
                 song.herd.units[idx.usize()].mute = false;
                 // Unmute all units if we were already solo
                 if already_solo {
-                    for unit in &mut song.herd.units {
+                    for unit in &mut *song.herd.units {
                         unit.mute = false;
                     }
                 }

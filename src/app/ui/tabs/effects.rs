@@ -18,7 +18,13 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
                 delay_ui(ui, &song.song, out_rate, i, dela, &mut msg);
             }
 
-            if ui.button("+ Add delay").clicked() {
+            if ui
+                .add_enabled(
+                    !song.herd.delays.is_full(),
+                    egui::Button::new("+ Add delay"),
+                )
+                .clicked()
+            {
                 ui.separator();
                 let mut delay = Delay::default();
                 // Set some not too terrible sounding defaults
@@ -34,7 +40,13 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
             for (i, ovr) in song.herd.overdrives.iter_mut().enumerate() {
                 ovr_ui(ui, i, ovr, &mut msg);
             }
-            if ui.button("+ Add overdrive").clicked() {
+            if ui
+                .add_enabled(
+                    !song.herd.overdrives.is_full(),
+                    egui::Button::new("+ Add overdrive"),
+                )
+                .clicked()
+            {
                 song.herd.overdrives.push(Overdrive::default());
             }
             if let Some(msg) = msg {

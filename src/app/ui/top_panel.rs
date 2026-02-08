@@ -93,9 +93,17 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     if song.herd.units[migrate_from as usize].mute {
                         continue;
                     }
-                    while let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap())
-                        && poly_migrate_units(UnitIdx(migrate_from), migrate_to, &mut song.song)
-                    {
+                    loop {
+                        let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap());
+                        if migrate_to.0 >= 50 {
+                            app.modal_payload = Some(ModalPayload::Msg(
+                                "Error: Cannot create more units than 50".to_string(),
+                            ));
+                            break;
+                        }
+                        if !poly_migrate_units(UnitIdx(migrate_from), migrate_to, &mut song.song) {
+                            break;
+                        }
                         // Find the first voice event of the migrated from unit,
                         // and insert a duplicate voice event for the migrated to unit
                         if let Some(idx) = song.song.events.eves.iter().position(|eve| {
