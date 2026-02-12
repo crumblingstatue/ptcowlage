@@ -187,20 +187,15 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         if ui.button("⏮").clicked() {
             song_g.herd.seek_to_sample(0);
         }
+        if ui.button("⏹ Stop").clicked() {
+            prepare_song(&mut song_g, true);
+            song_g.pause = true;
+        }
         if !song_g.pause {
-            if ui.button("⏹ Stop").clicked() {
+            if ui.button("⏸ Pause").clicked() {
                 song_g.pause = true;
             }
-            let label = if song_g.pause {
-                "▶ Resume"
-            } else {
-                "⏸ Pause"
-            };
-            if ui.button(label).clicked() {
-                song_g.pause ^= true;
-            }
         } else if ui.button("▶ Play").clicked() {
-            prepare_song(&mut song_g, true);
             song_g.herd.moo_end = false;
             song_g.pause = false;
         }
