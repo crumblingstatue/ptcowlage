@@ -13,7 +13,7 @@ use {
     eframe::egui,
     egui_extras::Column,
     egui_toast::{Toast, ToastKind, ToastOptions, Toasts},
-    ptcow::{Event, EventPayload, SampleRate, UnitIdx, VoiceIdx},
+    ptcow::{Event, EventPayload, GroupIdx, SampleRate, UnitIdx, VoiceIdx},
 };
 
 pub struct RawEventsUiState {
@@ -163,6 +163,9 @@ pub fn ui(
                                 }
                                 if ui.button("Voice").clicked() {
                                     payload = Some(EventPayload::SetVoice(VoiceIdx(0)));
+                                }
+                                if ui.button("Group").clicked() {
+                                    payload = Some(EventPayload::SetGroup(GroupIdx(0)));
                                 }
                                 if let Some(payload) = payload {
                                     let event = Event {
