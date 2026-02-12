@@ -20,6 +20,7 @@ use {
 #[derive(Default)]
 pub struct VoicesUiState {
     pub selected_idx: usize,
+    dragged_idx: Option<usize>,
     // Keep track of (preview) sounds playing for each voice
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
 }
@@ -32,6 +33,7 @@ pub fn ui(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
 ) {
+    let mut op = None;
     ui.horizontal_wrapped(|ui| {
         ui.menu_button("+ Add", |ui| {
             if ui.button("Wave").clicked() {
@@ -91,16 +93,32 @@ pub fn ui(
         });
         for (i, voice) in song.ins.voices.iter().enumerate() {
             let img = voice_img(voice);
-            if ui
-                .selectable_value(&mut ui_state.selected_idx, i, (img, &voice.name))
-                .clicked()
-            {
+            let button = egui::Button::selectable(ui_state.selected_idx == i, (img, &voice.name))
+                .sense(egui::Sense::click_and_drag());
+            let re = ui.add(button);
+            if re.clicked() {
                 ui_state.selected_idx = i;
+            }
+            if re.drag_started() {
+                ui_state.dragged_idx = Some(i);
+            }
+            if let Some(dragged_idx) = ui_state.dragged_idx
+                && re.contains_pointer()
+            {
+                ui.painter().rect_stroke(
+                    re.rect,
+                    2.0,
+                    egui::Stroke::new(1.0, egui::Color32::YELLOW),
+                    egui::StrokeKind::Outside,
+                );
+                if ui.input(|inp| inp.pointer.primary_released()) {
+                    ui_state.dragged_idx = None;
+                    op = Some(VoiceUiOp::Swap(dragged_idx, i));
+                }
             }
         }
     });
     ui.separator();
-    let mut op = None;
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
@@ -136,6 +154,9 @@ pub fn ui(
                     .voices
                     .insert(song.ins.voices.len().saturating_sub(1), voice);
             }
+            VoiceUiOp::Swap(a, b) => {
+                song.ins.voices.swap(a, b);
+            }
             VoiceUiOp::Delete(idx) => {
                 song.ins.voices.remove(idx);
             }
@@ -149,6 +170,7 @@ enum VoiceUiOp {
     MoveBegin(usize),
     MoveEnd(usize),
     Delete(usize),
+    Swap(usize, usize),
 }
 
 fn voice_ui(
