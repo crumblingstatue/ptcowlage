@@ -1,8 +1,9 @@
 use {
     crate::{
         app::ui::{
+            FreeplayPianoState,
             file_ops::{FILT_PTCOP, FileOp},
-            voice_img, waveform_edit_widget,
+            unit_color, voice_img, waveform_edit_widget,
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
     },
@@ -32,6 +33,7 @@ pub fn ui(
     ui_state: &mut VoicesUiState,
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
+    piano_state: &FreeplayPianoState,
 ) {
     let mut op = None;
     ui.horizontal_wrapped(|ui| {
@@ -136,6 +138,8 @@ pub fn ui(
                     out_rate,
                     aux,
                     ui_state,
+                    piano_state,
+                    &mut song.herd,
                 );
             }
         });
@@ -191,6 +195,8 @@ fn voice_ui(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     ui_state: &mut VoicesUiState,
+    piano_state: &FreeplayPianoState,
+    herd: &mut ptcow::Herd,
 ) {
     let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
@@ -212,6 +218,14 @@ fn voice_ui(
         }
         if ui.button("del").clicked() {
             *op = Some(VoiceUiOp::Delete(idx));
+        }
+        if let Some(unit_idx) = piano_state.toot {
+            let unit = &mut herd.units[unit_idx.usize()];
+            let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
+                .color(unit_color(unit_idx.usize()));
+            if ui.button(label).clicked() {
+                unit.voice_idx = VoiceIdx(idx as u8);
+            }
         }
     });
 

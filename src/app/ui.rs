@@ -389,6 +389,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.voices,
             app.out.rate,
             &mut app.aux_state,
+            &app.ui_state.freeplay_piano,
         ),
         Tab::Unit => tabs::unit::ui(ui, &mut app.ui_state.shared, &mut song, &mut app.cmd),
         Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
