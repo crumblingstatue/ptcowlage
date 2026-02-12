@@ -337,11 +337,11 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             app.ui_state.freeplay_piano.record ^= true;
         } else {
             // Toggle pause
-            let should_pause = !egui::Popup::is_any_open(ui.ctx())
+            let should_toggle_pause = !egui::Popup::is_any_open(ui.ctx())
                 && !file_dia_open
                 && !ui.ctx().wants_keyboard_input();
 
-            if should_pause {
+            if should_toggle_pause {
                 song.pause ^= true;
             }
         }
