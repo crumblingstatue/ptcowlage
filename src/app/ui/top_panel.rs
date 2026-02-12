@@ -5,6 +5,7 @@ use {
         app::{
             FileOp, ModalPayload, SongState,
             command_queue::{Cmd, CommandQueue},
+            poly_migrate_single,
             ui::{
                 Tab,
                 file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP},
@@ -12,13 +13,12 @@ use {
             },
         },
         audio_out::{OutParams, prepare_song},
-        pxtone_misc::poly_migrate_units,
     },
     eframe::egui::{
         self, KeyboardShortcut,
         containers::menu::{MenuButton, MenuConfig},
     },
-    ptcow::{EventPayload, MooPlan, Unit, UnitIdx, timing::NonZeroMeas},
+    ptcow::{EventPayload, MooPlan, UnitIdx, timing::NonZeroMeas},
 };
 
 const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O);
@@ -89,39 +89,15 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             ui.separator();
             if ui.button("Auto migrate overlapping events").clicked() {
                 let orig_n_units: u8 = song.herd.units.len().try_into().unwrap();
-                for mut migrate_from in 0..orig_n_units {
+                for mut migrate_from in (0..orig_n_units).map(UnitIdx) {
                     // Skip muted units
-                    if song.herd.units[migrate_from as usize].mute {
+                    if song.herd.units[migrate_from.usize()].mute {
                         continue;
                     }
-                    loop {
-                        let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap());
-                        if migrate_to.0 >= 50 {
-                            app.modal_payload = Some(ModalPayload::Msg(
-                                "Error: Cannot create more units than 50".to_string(),
-                            ));
-                            break;
-                        }
-                        if !poly_migrate_units(UnitIdx(migrate_from), migrate_to, &mut song.song) {
-                            break;
-                        }
-                        // Find the first voice event of the migrated from unit,
-                        // and insert a duplicate voice event for the migrated to unit
-                        if let Some(idx) = song.song.events.eves.iter().position(|eve| {
-                            eve.unit == UnitIdx(migrate_from)
-                                && matches!(eve.payload, EventPayload::SetVoice(_))
-                        }) {
-                            let mut dup = song.song.events.eves[idx];
-                            dup.unit = migrate_to;
-                            song.song.events.eves.insert(idx + 1, dup);
-                        }
-                        let from_name = &song.herd.units[migrate_from as usize].name;
-                        let unit = Unit {
-                            name: format!("{from_name}-p"),
-                            ..Default::default()
-                        };
-                        song.herd.units.push(unit);
-                        migrate_from = migrate_to.0;
+                    while let Some(out) =
+                        poly_migrate_single(&mut app.modal_payload, song, migrate_from)
+                    {
+                        migrate_from = out;
                     }
                 }
                 // Doesn't seem to sound right until we restart the song

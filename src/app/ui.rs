@@ -6,8 +6,9 @@ pub mod top_panel;
 use {
     crate::{
         app::{
-            SongState,
+            ModalPayload, SongState,
             command_queue::{Cmd, CommandQueue},
+            poly_migrate_single,
             ui::{
                 left_panel::LeftPanelState,
                 tabs::{
@@ -357,6 +358,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.aux_state,
             &mut app.ui_state.voices,
             &mut app.cmd,
+            &mut app.modal_payload,
         ),
         Tab::Map => {
             tabs::map::ui(ui, &mut song, &mut app.ui_state.map, &mut app.cmd);
@@ -380,6 +382,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.aux_state,
             &mut app.ui_state.voices,
             &mut app.cmd,
+            &mut app.modal_payload,
         ),
         Tab::Voices => tabs::voices::ui(
             ui,
@@ -391,7 +394,13 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.aux_state,
             &app.ui_state.freeplay_piano,
         ),
-        Tab::Unit => tabs::unit::ui(ui, &mut app.ui_state.shared, &mut song, &mut app.cmd),
+        Tab::Unit => tabs::unit::ui(
+            ui,
+            &mut app.ui_state.shared,
+            &mut song,
+            &mut app.cmd,
+            &mut app.modal_payload,
+        ),
         Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
     }
     drop(song);
@@ -504,7 +513,11 @@ fn line_points_between(a: egui::Pos2, b: egui::Pos2) -> impl Iterator<Item = egu
     })
 }
 
-fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
+fn handle_units_command(
+    cmd: Option<UnitsCmd>,
+    song: &mut SongState,
+    app_modal_payload: &mut Option<ModalPayload>,
+) {
     if let Some(cmd) = cmd {
         match cmd {
             UnitsCmd::ToggleSolo { idx } => {
@@ -576,6 +589,9 @@ fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState) {
                 });
                 song.herd.units.remove(idx.usize());
             }
+            UnitsCmd::MigrateUnitEvents { idx } => {
+                poly_migrate_single(app_modal_payload, song, idx);
+            }
         }
     }
 }
@@ -586,6 +602,7 @@ enum UnitsCmd {
     SeekNextOnEvent { idx: UnitIdx },
     DeleteUnit { idx: UnitIdx },
     SeekPrevOnEvent { idx: UnitIdx },
+    MigrateUnitEvents { idx: UnitIdx },
 }
 
 fn unit_ui(
@@ -624,6 +641,9 @@ fn unit_ui(
         }
         if ui.button("▶ Next On event").clicked() {
             *cmd = Some(UnitsCmd::SeekNextOnEvent { idx });
+        }
+        if ui.button("Migrate overlapping events").clicked() {
+            *cmd = Some(UnitsCmd::MigrateUnitEvents { idx });
         }
     });
 

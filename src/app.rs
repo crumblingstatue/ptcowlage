@@ -14,6 +14,7 @@ use {
             AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
         },
         evilscript,
+        pxtone_misc::poly_migrate_units,
     },
     anyhow::Context,
     eframe::egui,
@@ -567,4 +568,35 @@ fn do_tick0_events(song: &mut SongState) {
             _ => {}
         }
     }
+}
+
+fn poly_migrate_single(
+    app_modal_payload: &mut Option<ModalPayload>,
+    song: &mut SongState,
+    migrate_from: UnitIdx,
+) -> Option<UnitIdx> {
+    let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap());
+    if migrate_to.0 >= 50 {
+        *app_modal_payload = Some(ModalPayload::Msg(
+            "Error: Cannot create more units than 50".to_string(),
+        ));
+        return None;
+    }
+    if !poly_migrate_units(migrate_from, migrate_to, &mut song.song) {
+        return None;
+    }
+    if let Some(idx) = song.song.events.eves.iter().position(|eve| {
+        eve.unit == migrate_from && matches!(eve.payload, EventPayload::SetVoice(_))
+    }) {
+        let mut dup = song.song.events.eves[idx];
+        dup.unit = migrate_to;
+        song.song.events.eves.insert(idx + 1, dup);
+    }
+    let from_name = &song.herd.units[migrate_from.usize()].name;
+    let unit = ptcow::Unit {
+        name: format!("{from_name}-p"),
+        ..Default::default()
+    };
+    song.herd.units.push(unit);
+    Some(migrate_to)
 }

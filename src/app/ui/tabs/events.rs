@@ -1,6 +1,7 @@
 use {
     crate::{
         app::{
+            ModalPayload,
             command_queue::CommandQueue,
             ui::{
                 UnitPopupTab, handle_units_command, tabs::voices::VoicesUiState, unit_color,
@@ -69,6 +70,7 @@ pub fn ui(
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
+    app_modal_payload: &mut Option<ModalPayload>,
 ) {
     ui_state.toasts.show(ui.ctx());
     top_ui(ui, song, ui_state);
@@ -367,7 +369,7 @@ pub fn ui(
                 });
             });
         });
-    handle_units_command(unit_cmd, song);
+    handle_units_command(unit_cmd, song, app_modal_payload);
     if let Some(cmd) = ev_list_cmd {
         match cmd {
             EventListCmd::Remove { idx } => {

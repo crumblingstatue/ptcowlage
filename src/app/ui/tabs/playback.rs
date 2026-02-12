@@ -1,7 +1,7 @@
 use {
     crate::{
         app::{
-            SongState,
+            ModalPayload, SongState,
             command_queue::CommandQueue,
             ui::{
                 FreeplayPianoState, UnitPopupTab, UnitsCmd, handle_units_command, img,
@@ -24,6 +24,7 @@ pub fn ui(
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
+    app_modal_payload: &mut Option<ModalPayload>,
 ) {
     if !song.song.text.name.is_empty() {
         ui.label(&song.song.text.name);
@@ -64,6 +65,7 @@ pub fn ui(
                 aux,
                 voices_ui_state,
                 app_cmd,
+                app_modal_payload,
             );
         });
     ui.label("Cows are interactive. m: mute, s: solo");
@@ -83,6 +85,7 @@ fn playback_cows_ui(
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
+    app_modal_payload: &mut Option<ModalPayload>,
 ) {
     let mut cmd = None;
     for (i, unit) in song.herd.units.iter_mut().enumerate() {
@@ -166,7 +169,7 @@ fn playback_cows_ui(
             );
         });
     }
-    handle_units_command(cmd, song);
+    handle_units_command(cmd, song, app_modal_payload);
 }
 
 pub struct PlaybackUiState {

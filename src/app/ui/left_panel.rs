@@ -67,7 +67,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 );
             }
         });
-    handle_units_command(cmd, song);
+    handle_units_command(cmd, song, &mut app.modal_payload);
     unit_mute_unmute_all_ui(ui, &mut song.herd.units);
     ui.label("m: mute, s: solo");
     ui.label("h: hide, v: visual solo");

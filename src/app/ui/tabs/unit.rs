@@ -1,6 +1,7 @@
 use {
     crate::{
         app::{
+            ModalPayload,
             command_queue::CommandQueue,
             ui::{SharedUiState, handle_units_command, unit_ui},
         },
@@ -14,6 +15,7 @@ pub fn ui(
     shared: &mut SharedUiState,
     song: &mut SongState,
     app_cmd: &mut CommandQueue,
+    app_modal_payload: &mut Option<ModalPayload>,
 ) {
     let mut cmd = None;
     egui::ScrollArea::vertical()
@@ -27,5 +29,5 @@ pub fn ui(
                 unit_ui(ui, unit_idx, unit, &song.ins, &mut cmd, app_cmd);
             }
         });
-    handle_units_command(cmd, song);
+    handle_units_command(cmd, song, app_modal_payload);
 }
