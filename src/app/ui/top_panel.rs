@@ -58,11 +58,12 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         ui.menu_button("File", |ui| {
             #[cfg(not(target_arch = "wasm32"))]
             file_menu_ui_desktop(
+                ui,
                 &mut app.file_dia,
                 &mut bt_open,
                 &mut bt_reload,
                 &mut bt_save,
-                ui,
+                app.open_file.is_some(),
             );
             #[cfg(target_arch = "wasm32")]
             file_menu_ui_web(
@@ -251,11 +252,12 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn file_menu_ui_desktop(
+    ui: &mut egui::Ui,
     app_file_dia: &mut egui_file_dialog::FileDialog,
     bt_open: &mut bool,
     bt_reload: &mut bool,
     bt_save: &mut bool,
-    ui: &mut egui::Ui,
+    can_save: bool,
 ) {
     *bt_open = ui
         .add(egui::Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)))
@@ -264,7 +266,10 @@ fn file_menu_ui_desktop(
         .add(egui::Button::new("Reload").shortcut_text(ui.ctx().format_shortcut(&RELOAD_SHORTCUT)))
         .clicked();
     *bt_save = ui
-        .add(egui::Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)))
+        .add_enabled(
+            can_save,
+            egui::Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)),
+        )
         .clicked();
     if ui.button("Save as").clicked() {
         app_file_dia.set_user_data(FileOp::SaveProjAs);
