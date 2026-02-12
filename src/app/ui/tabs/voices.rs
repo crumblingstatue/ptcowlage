@@ -96,6 +96,11 @@ pub fn ui(
             let button = egui::Button::selectable(ui_state.selected_idx == i, (img, &voice.name))
                 .sense(egui::Sense::click_and_drag());
             let re = ui.add(button);
+            re.context_menu(|ui| {
+                if ui.button("Duplicate").clicked() {
+                    op = Some(VoiceUiOp::Duplicate(i));
+                }
+            });
             if re.clicked() {
                 ui_state.selected_idx = i;
             }
@@ -157,6 +162,10 @@ pub fn ui(
             VoiceUiOp::Swap(a, b) => {
                 song.ins.voices.swap(a, b);
             }
+            VoiceUiOp::Duplicate(idx) => {
+                let dup = song.ins.voices[idx].clone();
+                song.ins.voices.insert(idx, dup);
+            }
             VoiceUiOp::Delete(idx) => {
                 song.ins.voices.remove(idx);
             }
@@ -171,6 +180,7 @@ enum VoiceUiOp {
     MoveEnd(usize),
     Delete(usize),
     Swap(usize, usize),
+    Duplicate(usize),
 }
 
 fn voice_ui(
