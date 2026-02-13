@@ -10,6 +10,8 @@ pub enum Cmd {
     OpenVoice(ptcow::VoiceIdx),
     OverwriteEvent { idx: usize, payload: EventPayload },
     InsertEvent { idx: usize, event: ptcow::Event },
+    SetActiveTab(crate::app::ui::Tab),
+    SetEventsFilter(crate::app::ui::tabs::events::Filter),
 }
 
 #[derive(Default)]

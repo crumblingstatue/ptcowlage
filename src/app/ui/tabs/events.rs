@@ -21,12 +21,13 @@ use {
 pub struct RawEventsUiState {
     follow: bool,
     unit_popup_tab: UnitPopupTab,
-    filter: Filter,
+    pub filter: Filter,
     filtered_events: Vec<usize>,
     pub go_to: Option<usize>,
     pub highlight: Option<usize>,
     cmd_string_buf: String,
     toasts: Toasts,
+    pub filter_needs_recalc: bool,
 }
 
 impl Default for RawEventsUiState {
@@ -42,6 +43,7 @@ impl Default for RawEventsUiState {
             toasts: Toasts::new()
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
+            filter_needs_recalc: true,
         }
     }
 }
@@ -52,9 +54,9 @@ enum EventListCmd {
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
-struct Filter {
-    unit: Option<UnitIdx>,
-    event: Option<u8>,
+pub struct Filter {
+    pub unit: Option<UnitIdx>,
+    pub event: Option<u8>,
 }
 
 impl Filter {
@@ -419,7 +421,6 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
         ui.checkbox(&mut ui_state.follow, "Follow");
         ui.separator();
         ui.label("Filter");
-        let filt_clean = ui_state.filter;
         let selected_text = match &ui_state.filter.unit {
             Some(u) => unit_rich_text(
                 *u,
@@ -438,6 +439,7 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
                     .clicked()
                 {
                     ui_state.filter.unit = None;
+                    ui_state.filter_needs_recalc = true;
                 }
                 for (i, unit) in song.herd.units.iter().enumerate() {
                     let idx = UnitIdx(i as u8);
@@ -449,6 +451,7 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
                         .clicked()
                     {
                         ui_state.filter.unit = Some(idx);
+                        ui_state.filter_needs_recalc = true;
                     }
                 }
             });
@@ -461,6 +464,7 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
             .show_ui(ui, |ui| {
                 if ui.button("Off").clicked() {
                     ui_state.filter.event = None;
+                    ui_state.filter_needs_recalc = true;
                 }
                 for i in 0..16 {
                     if ui
@@ -468,11 +472,12 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
                         .clicked()
                     {
                         ui_state.filter.event = Some(i);
+                        ui_state.filter_needs_recalc = true;
                     }
                 }
             });
         // Recalculate filtered events if filter changed
-        if ui_state.filter != filt_clean {
+        if ui_state.filter_needs_recalc {
             ui_state.filtered_events = song
                 .song
                 .events
@@ -493,6 +498,7 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
                     Some(idx)
                 })
                 .collect();
+            ui_state.filter_needs_recalc = false;
         }
     });
 }

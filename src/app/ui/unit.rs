@@ -7,8 +7,11 @@ use {
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
             ui::{
-                group_idx_slider, img,
-                tabs::voices::{VoicesUiState, voice_ui_inner},
+                Tab, group_idx_slider, img,
+                tabs::{
+                    events::Filter,
+                    voices::{VoicesUiState, voice_ui_inner},
+                },
                 voice_img,
             },
         },
@@ -89,18 +92,42 @@ pub fn unit_ui(
         ui.label("portament sample num");
         ui.add(egui::DragValue::new(&mut unit.porta_destination));
         ui.end_row();
-        ui.label("Pan vol l");
+        if ui.link("Pan vol l").clicked() {
+            app_cmd.push(Cmd::SetEventsFilter(Filter {
+                unit: Some(idx),
+                event: Some(EventPayload::PanVol(0).discriminant()),
+            }));
+            app_cmd.push(Cmd::SetActiveTab(Tab::Events));
+        }
         ui.add(egui::DragValue::new(&mut unit.pan_vols[0]));
         ui.label("r");
         ui.add(egui::DragValue::new(&mut unit.pan_vols[1]));
-        ui.label("Pan time l");
+        if ui.link("Pan time l").clicked() {
+            app_cmd.push(Cmd::SetEventsFilter(Filter {
+                unit: Some(idx),
+                event: Some(EventPayload::PanTime(0).discriminant()),
+            }));
+            app_cmd.push(Cmd::SetActiveTab(Tab::Events));
+        }
         ui.add(egui::DragValue::new(&mut unit.pan_time_offs[0]));
         ui.label("r");
         ui.add(egui::DragValue::new(&mut unit.pan_time_offs[1]));
         ui.end_row();
-        ui.label("volume");
+        if ui.link("volume").clicked() {
+            app_cmd.push(Cmd::SetEventsFilter(Filter {
+                unit: Some(idx),
+                event: Some(EventPayload::Volume(0).discriminant()),
+            }));
+            app_cmd.push(Cmd::SetActiveTab(Tab::Events));
+        }
         ui.add(egui::Slider::new(&mut unit.volume, 0..=256));
-        ui.label("velocity");
+        if ui.link("velocity").clicked() {
+            app_cmd.push(Cmd::SetEventsFilter(Filter {
+                unit: Some(idx),
+                event: Some(EventPayload::Velocity(0).discriminant()),
+            }));
+            app_cmd.push(Cmd::SetActiveTab(Tab::Events));
+        }
         ui.add(egui::Slider::new(&mut unit.velocity, 0..=256));
         ui.end_row();
         ui.label("group");

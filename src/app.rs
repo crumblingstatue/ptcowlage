@@ -485,6 +485,13 @@ impl App {
                 let eves = &mut song.song.events;
                 eves.insert(idx, event);
             }
+            Cmd::SetActiveTab(tab) => {
+                self.ui_state.tab = tab;
+            }
+            Cmd::SetEventsFilter(filter) => {
+                self.ui_state.raw_events.filter = filter;
+                self.ui_state.raw_events.filter_needs_recalc = true;
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]

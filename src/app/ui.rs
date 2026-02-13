@@ -26,7 +26,7 @@ use {
     rustysynth::SoundFont,
 };
 
-mod tabs {
+pub mod tabs {
     pub mod effects;
     pub mod events;
     pub mod map;
