@@ -51,6 +51,7 @@ impl Default for RawEventsUiState {
 enum EventListCmd {
     Remove { idx: usize },
     Insert { idx: usize, event: Event },
+    Swap(usize, usize),
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -159,6 +160,16 @@ pub fn ui(
                 let (_rect, re) = row.col(|ui| {
                     ui.add(egui::Label::new(idx.to_string()).sense(egui::Sense::click()))
                         .context_menu(|ui| {
+                            ui.horizontal(|ui| {
+                                if ui.button("⬆").clicked() {
+                                    ev_list_cmd =
+                                        Some(EventListCmd::Swap(idx, idx.saturating_sub(1)));
+                                }
+                                if ui.button("⬇").clicked() {
+                                    ev_list_cmd = Some(EventListCmd::Swap(idx, idx + 1));
+                                }
+                            });
+                            ui.separator();
                             if ui.button("Delete").clicked() {
                                 ev_list_cmd = Some(EventListCmd::Remove { idx });
                             }
@@ -429,6 +440,9 @@ pub fn ui(
             }
             EventListCmd::Insert { idx, event } => {
                 song.song.events.insert(idx, event);
+            }
+            EventListCmd::Swap(a, b) => {
+                song.song.events.swap(a, b);
             }
         }
         ui_state.filter_needs_recalc = true;
