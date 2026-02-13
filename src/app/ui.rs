@@ -9,10 +9,9 @@ use {
         app::{
             SongState,
             ui::{
-                left_panel::LeftPanelState,
                 tabs::{
                     events::RawEventsUiState, map::MapState, piano_roll::PianoRollState,
-                    playback::PlaybackUiState, voices::VoicesUiState,
+                    voices::VoicesUiState,
                 },
                 unit::{unit_color, unit_voice_img},
             },
@@ -261,11 +260,9 @@ pub struct UiState {
     pub tab: Tab,
     pub piano_roll: PianoRollState,
     pub map: MapState,
-    pub playback: PlaybackUiState,
     pub freeplay_piano: FreeplayPianoState,
     pub raw_events: RawEventsUiState,
     pub voices: VoicesUiState,
-    pub left_panel: LeftPanelState,
     pub shared: SharedUiState,
     pub sf2_import: Option<Sf2ImportDialog>,
 }
@@ -347,11 +344,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
         Tab::Playback => tabs::playback::ui(
             ui,
             &mut song,
-            &mut app.ui_state.playback,
             &mut app.ui_state.freeplay_piano,
-            app.out.rate,
-            &mut app.aux_state,
-            &mut app.ui_state.voices,
             &mut app.cmd,
             &mut app.modal_payload,
         ),
@@ -374,8 +367,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut song,
             &mut app.ui_state.raw_events,
             app.out.rate,
-            &mut app.aux_state,
-            &mut app.ui_state.voices,
             &mut app.cmd,
             &mut app.modal_payload,
         ),

@@ -6,30 +6,16 @@ use {
             ui::{
                 UiState,
                 unit::{
-                    UnitPopupTab, UnitsCmd, handle_units_command, unit_mute_unmute_all_ui,
-                    unit_popup_ctx_menu,
+                    UnitsCmd, handle_units_command, unit_mute_unmute_all_ui, unit_popup_ctx_menu,
                 },
                 unit_color, unit_voice_img,
             },
         },
-        audio_out::AuxAudioState,
         egui_ext::ImageExt,
     },
     eframe::egui,
-    ptcow::{EveList, MooInstructions, SampleRate, Unit, UnitIdx},
+    ptcow::{EveList, MooInstructions, Unit, UnitIdx},
 };
-
-pub struct LeftPanelState {
-    unit_popup_tab: UnitPopupTab,
-}
-
-impl Default for LeftPanelState {
-    fn default() -> Self {
-        Self {
-            unit_popup_tab: UnitPopupTab::Unit,
-        }
-    }
-}
 
 pub fn ui(app: &mut App, ui: &mut egui::Ui) {
     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
@@ -58,9 +44,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             for (i, unit) in song.herd.units.iter_mut().enumerate() {
                 unit_ui(
-                    app.out.rate,
                     &mut app.ui_state,
-                    &mut app.aux_state,
                     ui,
                     &mut song.ins,
                     &mut cmd,
@@ -82,9 +66,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
 }
 
 fn unit_ui(
-    out_rate: SampleRate,
     ui_state: &mut UiState,
-    aux_state: &mut Option<AuxAudioState>,
     ui: &mut egui::Ui,
     ins: &mut MooInstructions,
     cmd: &mut Option<UnitsCmd>,
@@ -127,19 +109,7 @@ fn unit_ui(
         if re.double_clicked() {
             ui_state.tab = super::Tab::Unit;
         }
-        unit_popup_ctx_menu(
-            &re,
-            UnitIdx(i as u8),
-            unit,
-            ins,
-            cmd,
-            &mut ui_state.left_panel.unit_popup_tab,
-            out_rate,
-            aux_state,
-            &mut ui_state.voices,
-            app_cmd,
-            evelist,
-        );
+        unit_popup_ctx_menu(&re, UnitIdx(i as u8), unit, ins, cmd, app_cmd, evelist);
         any_hovered |= re.contains_pointer();
         if any_hovered {
             // Toggle unit solo/mute

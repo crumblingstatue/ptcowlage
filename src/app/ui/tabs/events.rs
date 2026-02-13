@@ -5,12 +5,11 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 group_idx_slider,
-                tabs::voices::VoicesUiState,
-                unit::{UnitPopupTab, handle_units_command, unit_popup_ui},
+                unit::{handle_units_command, unit_ui},
                 unit_color, voice_img, voice_img_opt,
             },
         },
-        audio_out::{AuxAudioState, SongState},
+        audio_out::SongState,
         evilscript,
     },
     eframe::egui::{self, AtomExt},
@@ -21,7 +20,6 @@ use {
 
 pub struct RawEventsUiState {
     follow: bool,
-    unit_popup_tab: UnitPopupTab,
     pub filter: Filter,
     filtered_events: Vec<usize>,
     pub go_to: Option<usize>,
@@ -36,7 +34,6 @@ impl Default for RawEventsUiState {
     fn default() -> Self {
         Self {
             follow: Default::default(),
-            unit_popup_tab: UnitPopupTab::Unit,
             filter: Filter::default(),
             filtered_events: Vec::new(),
             go_to: None,
@@ -73,8 +70,6 @@ pub fn ui(
     song: &mut SongState,
     ui_state: &mut RawEventsUiState,
     out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
-    voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
     app_modal_payload: &mut Option<ModalPayload>,
 ) {
@@ -238,16 +233,12 @@ pub fn ui(
                                 match kind {
                                     PopupKind::UnitUi => {
                                         let idx = ev.unit;
-                                        unit_popup_ui(
+                                        unit_ui(
                                             ui,
                                             idx,
                                             unit,
-                                            &mut song.ins,
+                                            &song.ins,
                                             &mut unit_cmd,
-                                            &mut ui_state.unit_popup_tab,
-                                            out_rate,
-                                            aux,
-                                            voices_ui_state,
                                             app_cmd,
                                             &eves_clone,
                                         );

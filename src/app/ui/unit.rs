@@ -6,22 +6,14 @@ use {
             ModalPayload,
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{
-                Tab, group_idx_slider, img,
-                tabs::{
-                    events::Filter,
-                    voices::{VoicesUiState, voice_ui_inner},
-                },
-                voice_img,
-            },
+            ui::{Tab, group_idx_slider, img, tabs::events::Filter, voice_img},
         },
-        audio_out::{AuxAudioState, SongState},
+        audio_out::SongState,
         egui_ext::ImageExt as _,
     },
     eframe::egui::{self, AtomExt},
     ptcow::{
-        EveList, Event, EventPayload, GroupIdx, MooInstructions, PanTime, SampleRate, Unit,
-        UnitIdx, VoiceIdx,
+        EveList, Event, EventPayload, GroupIdx, MooInstructions, PanTime, Unit, UnitIdx, VoiceIdx,
     },
 };
 
@@ -336,73 +328,12 @@ pub fn unit_popup_ctx_menu(
     unit: &mut Unit,
     ins: &mut MooInstructions,
     cmd: &mut Option<UnitsCmd>,
-    tab: &mut UnitPopupTab,
-    out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
-    voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
     evelist: &EveList,
 ) {
     egui::Popup::context_menu(re)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| {
-            unit_popup_ui(
-                ui,
-                idx,
-                unit,
-                ins,
-                cmd,
-                tab,
-                out_rate,
-                aux,
-                voices_ui_state,
-                app_cmd,
-                evelist,
-            )
-        });
-}
-
-pub fn unit_popup_ui(
-    ui: &mut egui::Ui,
-    idx: UnitIdx,
-    unit: &mut Unit,
-    ins: &mut MooInstructions,
-    cmd: &mut Option<UnitsCmd>,
-    tab: &mut UnitPopupTab,
-    out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
-    voices_ui_state: &mut VoicesUiState,
-    app_cmd: &mut CommandQueue,
-    evelist: &[Event],
-) {
-    ui.horizontal(|ui| {
-        if ui.button("ｘ").clicked() {
-            ui.close();
-        }
-        ui.separator();
-        ui.selectable_value(tab, UnitPopupTab::Unit, "Unit");
-        let voice_label = format!(
-            "Voice ({})",
-            ins.voices
-                .get(unit.voice_idx.usize())
-                .map_or("<invalid>", |v| &v.name)
-        );
-        ui.selectable_value(tab, UnitPopupTab::Voice, voice_label);
-    });
-    ui.separator();
-    match tab {
-        UnitPopupTab::Unit => unit_ui(ui, idx, unit, ins, cmd, app_cmd, evelist),
-        UnitPopupTab::Voice => {
-            if let Some(voice) = ins.voices.get_mut(unit.voice_idx.usize()) {
-                let aux = aux.get_or_insert_with(|| {
-                    crate::audio_out::spawn_aux_audio_thread(out_rate, 1024)
-                });
-                voice_ui_inner(ui, voice, unit.voice_idx, out_rate, aux, voices_ui_state);
-            } else {
-                ui.label("Invalid voice index");
-            }
-        }
-    }
+        .show(|ui| unit_ui(ui, idx, unit, ins, cmd, app_cmd, evelist));
 }
 
 const UNIT_COLORS: [egui::Color32; 22] = [
@@ -456,12 +387,6 @@ pub fn unit_mute_unmute_all_ui(ui: &mut egui::Ui, units: &mut [ptcow::Unit]) {
             }
         }
     });
-}
-
-#[derive(PartialEq)]
-pub enum UnitPopupTab {
-    Unit,
-    Voice,
 }
 
 pub fn pan_time_slider(pan_time: &'_ mut PanTime) -> egui::Slider<'_> {

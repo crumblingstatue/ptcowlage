@@ -5,26 +5,20 @@ use {
             command_queue::CommandQueue,
             ui::{
                 FreeplayPianoState, img,
-                tabs::voices::VoicesUiState,
-                unit::{UnitPopupTab, UnitsCmd, handle_units_command, unit_mute_unmute_all_ui},
+                unit::{UnitsCmd, handle_units_command, unit_mute_unmute_all_ui},
                 unit_color,
             },
         },
-        audio_out::AuxAudioState,
         egui_ext::ImageExt as _,
     },
     eframe::egui,
-    ptcow::{SampleRate, UnitIdx},
+    ptcow::UnitIdx,
 };
 
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    ui_state: &mut PlaybackUiState,
     piano_state: &mut FreeplayPianoState,
-    dst_sps: SampleRate,
-    aux: &mut Option<AuxAudioState>,
-    voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
     app_modal_payload: &mut Option<ModalPayload>,
 ) {
@@ -58,17 +52,7 @@ pub fn ui(
         .max_height(ui.available_height() - 32.0)
         .auto_shrink([false, true])
         .show(ui, |ui| {
-            playback_cows_ui(
-                ui,
-                song,
-                ui_state,
-                piano_state,
-                dst_sps,
-                aux,
-                voices_ui_state,
-                app_cmd,
-                app_modal_payload,
-            );
+            playback_cows_ui(ui, song, piano_state, app_cmd, app_modal_payload);
         });
     ui.label("Cows are interactive. m: mute, s: solo");
 
@@ -81,11 +65,7 @@ pub fn ui(
 fn playback_cows_ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    ui_state: &mut PlaybackUiState,
     piano_state: &mut FreeplayPianoState,
-    out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
-    voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
     app_modal_payload: &mut Option<ModalPayload>,
 ) {
@@ -128,10 +108,6 @@ fn playback_cows_ui(
                 unit,
                 &mut song.ins,
                 &mut cmd,
-                &mut ui_state.unit_popup_tab,
-                out_rate,
-                aux,
-                voices_ui_state,
                 app_cmd,
                 &song.song.events,
             );
@@ -164,26 +140,10 @@ fn playback_cows_ui(
                 unit,
                 &mut song.ins,
                 &mut cmd,
-                &mut ui_state.unit_popup_tab,
-                out_rate,
-                aux,
-                voices_ui_state,
                 app_cmd,
                 &song.song.events,
             );
         });
     }
     handle_units_command(cmd, song, app_modal_payload);
-}
-
-pub struct PlaybackUiState {
-    unit_popup_tab: UnitPopupTab,
-}
-
-impl Default for PlaybackUiState {
-    fn default() -> Self {
-        Self {
-            unit_popup_tab: UnitPopupTab::Unit,
-        }
-    }
 }
