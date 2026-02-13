@@ -208,22 +208,24 @@ pub fn ui(
                     Some(unit) => {
                         #[derive(Clone, Copy)]
                         enum PopupKind {
-                            Left,
-                            Right,
+                            UnitUi,
+                            UnitPicker,
                         }
 
                         let re = ui.link(unit_rich_text(ev.unit, &unit.name));
                         let mut toggle = false;
-                        if re.clicked_by(egui::PointerButton::Primary) {
-                            ui.memory_mut(|mem| mem.data.insert_temp(re.id, PopupKind::Left));
+                        if re.clicked_by(egui::PointerButton::Secondary) {
+                            ui.memory_mut(|mem| mem.data.insert_temp(re.id, PopupKind::UnitUi));
                             toggle = true;
-                        } else if re.clicked_by(egui::PointerButton::Secondary) {
-                            ui.memory_mut(|mem| mem.data.insert_temp(re.id, PopupKind::Right));
+                        } else if re.clicked_by(egui::PointerButton::Primary) {
+                            ui.memory_mut(|mem| mem.data.insert_temp(re.id, PopupKind::UnitPicker));
                             toggle = true;
                         }
                         let popup_kind = ui.memory(|mem| mem.data.get_temp::<PopupKind>(re.id));
                         let close_behavior = match popup_kind {
-                            Some(PopupKind::Left) => egui::PopupCloseBehavior::CloseOnClickOutside,
+                            Some(PopupKind::UnitUi) => {
+                                egui::PopupCloseBehavior::CloseOnClickOutside
+                            }
                             _ => egui::PopupCloseBehavior::CloseOnClick,
                         };
                         egui::Popup::from_response(&re)
@@ -234,7 +236,7 @@ pub fn ui(
                                     return;
                                 };
                                 match kind {
-                                    PopupKind::Left => {
+                                    PopupKind::UnitUi => {
                                         let idx = ev.unit;
                                         unit_popup_ui(
                                             ui,
@@ -250,7 +252,7 @@ pub fn ui(
                                             &eves_clone,
                                         );
                                     }
-                                    PopupKind::Right => {
+                                    PopupKind::UnitPicker => {
                                         for (idx, unit_name) in unit_names.iter().enumerate() {
                                             if ui
                                                 .button(
