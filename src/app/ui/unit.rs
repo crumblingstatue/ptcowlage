@@ -130,7 +130,7 @@ pub fn unit_ui(
         ui.label("group");
         group_idx_slider(ui, &mut unit.group);
         ui.end_row();
-        ui.label("Group history");
+        ui.label("Group timeline");
         ui.end_row();
         let mut any_group_ev = false;
         for (ev_idx, ev) in evelist.iter().enumerate() {
@@ -181,7 +181,7 @@ pub fn unit_ui(
             ui.label("<invalid voice>");
         }
         ui.end_row();
-        if ui.link("Voice history").clicked() {
+        if ui.link("Voice timeline").clicked() {
             app_cmd.push(Cmd::SetEventsFilter(Filter {
                 unit: Some(idx),
                 event: Some(EventPayload::SetVoice(VoiceIdx(0)).discriminant()),
