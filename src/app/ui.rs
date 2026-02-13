@@ -680,6 +680,40 @@ fn unit_ui(
         ui.label("group");
         group_idx_slider(ui, &mut unit.group);
         ui.end_row();
+        ui.label("Group history");
+        ui.end_row();
+        let mut any_group_ev = false;
+        for (ev_idx, ev) in evelist.iter().enumerate() {
+            if ev.unit == idx
+                && let EventPayload::SetGroup(group_idx) = &ev.payload
+            {
+                any_group_ev = true;
+                ui.label(ev.tick.to_string());
+                let mut idx = group_idx.0;
+                if ui
+                    .add(egui::DragValue::new(&mut idx).range(0..=GroupIdx::MAX.0))
+                    .changed()
+                {
+                    app_cmd.push(Cmd::OverwriteEvent {
+                        idx: ev_idx,
+                        payload: EventPayload::SetGroup(GroupIdx(idx)),
+                    });
+                }
+            }
+        }
+        if !any_group_ev {
+            if ui.button("+ Add group event at tick 0").clicked() {
+                app_cmd.push(Cmd::InsertEvent {
+                    idx: 0,
+                    event: Event {
+                        payload: EventPayload::SetGroup(GroupIdx(0)),
+                        unit: idx,
+                        tick: 0,
+                    },
+                });
+            }
+        }
+        ui.end_row();
         ui.label("tuning");
         ui.add(egui::DragValue::new(&mut unit.tuning).speed(0.001));
         ui.end_row();

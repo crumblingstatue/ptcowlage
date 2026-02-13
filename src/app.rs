@@ -480,6 +480,11 @@ impl App {
                 let eves = &mut song.song.events;
                 eves[idx].payload = payload;
             }
+            Cmd::InsertEvent { idx, event } => {
+                let mut song = self.song.lock().unwrap();
+                let eves = &mut song.song.events;
+                eves.insert(idx, event);
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]

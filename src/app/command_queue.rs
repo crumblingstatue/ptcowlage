@@ -9,6 +9,7 @@ pub enum Cmd {
     SaveCurrentFile,
     OpenVoice(ptcow::VoiceIdx),
     OverwriteEvent { idx: usize, payload: EventPayload },
+    InsertEvent { idx: usize, event: ptcow::Event },
 }
 
 #[derive(Default)]
