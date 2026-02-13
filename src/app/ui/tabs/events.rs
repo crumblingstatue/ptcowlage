@@ -302,7 +302,7 @@ pub fn ui(
                     EventPayload::Volume(vol) => {
                         ui.horizontal(|ui| {
                             ui.label("Volume");
-                            ui.add(egui::DragValue::new(vol));
+                            ui.add(egui::Slider::new(vol, 0..=256));
                         });
                     }
                     EventPayload::Portament { duration } => {
