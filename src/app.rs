@@ -602,12 +602,25 @@ fn poly_migrate_single(
     if !poly_migrate_units(migrate_from, migrate_to, &mut song.song) {
         return None;
     }
-    if let Some(idx) = song.song.events.eves.iter().position(|eve| {
-        eve.unit == migrate_from && matches!(eve.payload, EventPayload::SetVoice(_))
-    }) {
-        let mut dup = song.song.events.eves[idx];
-        dup.unit = migrate_to;
-        song.song.events.eves.insert(idx + 1, dup);
+    // Duplicate certain types of events for the migrated-to unit
+    let mut dups = Vec::new();
+    for (idx, eve) in song.song.events.eves.iter().enumerate() {
+        if eve.unit == migrate_from
+            && matches!(
+                eve.payload,
+                EventPayload::SetVoice(_)
+                    | EventPayload::SetGroup(_)
+                    | EventPayload::Volume(_)
+                    | EventPayload::PanTime(_)
+            )
+        {
+            let mut dup = song.song.events.eves[idx];
+            dup.unit = migrate_to;
+            dups.push((idx + 1, dup));
+        }
+    }
+    for (idx, dup) in dups {
+        song.song.events.eves.insert(idx, dup);
     }
     let from_name = &song.herd.units[migrate_from.usize()].name;
     let unit = ptcow::Unit {
