@@ -514,6 +514,10 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
                     }
                 }
             });
+        if ui.button("ｘ").on_hover_text("Clear").clicked() {
+            ui_state.filter = Filter::default();
+            ui_state.filter_needs_recalc = true;
+        }
         // Recalculate filtered events if filter changed
         if ui_state.filter_needs_recalc {
             ui_state.filtered_events = song
