@@ -29,6 +29,7 @@ pub struct RawEventsUiState {
     cmd_string_buf: String,
     toasts: Toasts,
     pub filter_needs_recalc: bool,
+    preview_unit_changes: bool,
 }
 
 impl Default for RawEventsUiState {
@@ -45,6 +46,7 @@ impl Default for RawEventsUiState {
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
             filter_needs_recalc: true,
+            preview_unit_changes: true,
         }
     }
 }
@@ -302,7 +304,10 @@ pub fn ui(
                     EventPayload::Volume(vol) => {
                         ui.horizontal(|ui| {
                             ui.label("Volume");
-                            ui.add(egui::Slider::new(vol, 0..=256));
+                            let changed = ui.add(egui::Slider::new(vol, 0..=256)).changed();
+                            if changed && ui_state.preview_unit_changes {
+                                song.herd.units[ev.unit.usize()].volume = *vol;
+                            }
                         });
                     }
                     EventPayload::Portament { duration } => {
@@ -520,6 +525,7 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
             ui_state.filter_needs_recalc = true;
         }
         ui.separator();
+        ui.checkbox(&mut ui_state.preview_unit_changes, "Preview unit changes");
         if ui
             .button("⚠ Clean up")
             .on_hover_text("[EXPERIMENTAL] Remove \"losing\" events on the same tick")
