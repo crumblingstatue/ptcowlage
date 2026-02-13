@@ -195,7 +195,10 @@ pub fn unit_ui(
             if ev.unit == idx
                 && let EventPayload::SetVoice(voic) = &ev.payload
             {
-                let voice = &ins.voices[voic.usize()];
+                let Some(voice) = &ins.voices.get(voic.usize()) else {
+                    ui.label("Invalid voice index");
+                    return;
+                };
                 ui.menu_button(
                     (&ev.tick.to_string(), voice_img(voice), &voice.name),
                     |ui| {
