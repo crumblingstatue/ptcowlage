@@ -25,8 +25,8 @@ use {
     },
     eframe::egui::{self, AtomExt},
     ptcow::{
-        Event, EventPayload, GroupIdx, MooInstructions, PcmData, SampleRate, Unit, UnitIdx, Voice,
-        VoiceData, VoiceIdx,
+        EveList, Event, EventPayload, GroupIdx, MooInstructions, PcmData, SampleRate, Unit,
+        UnitIdx, Voice, VoiceData, VoiceIdx,
     },
     rustysynth::SoundFont,
 };
@@ -612,6 +612,7 @@ fn unit_ui(
     ins: &MooInstructions,
     cmd: &mut Option<UnitsCmd>,
     app_cmd: &mut CommandQueue,
+    evelist: &[Event],
 ) {
     ui.horizontal(|ui| {
         ui.add(egui::Image::new(img::COW).hflip());
@@ -696,6 +697,35 @@ fn unit_ui(
             ui.label("<invalid voice>");
         }
         ui.end_row();
+        ui.label("Voice history");
+        ui.end_row();
+        for (ev_idx, ev) in evelist.iter().enumerate() {
+            if ev.unit == idx
+                && let EventPayload::SetVoice(voic) = &ev.payload
+            {
+                let voice = &ins.voices[voic.usize()];
+                ui.menu_button(
+                    (&ev.tick.to_string(), voice_img(voice), &voice.name),
+                    |ui| {
+                        for (i, voice) in ins.voices.iter().enumerate() {
+                            if ui
+                                .button((
+                                    voice_img(voice).atom_size(egui::vec2(16.0, 16.0)),
+                                    &voice.name,
+                                ))
+                                .clicked()
+                            {
+                                app_cmd.push(Cmd::OverwriteEvent {
+                                    idx: ev_idx,
+                                    payload: EventPayload::SetVoice(VoiceIdx(i as u8)),
+                                });
+                            }
+                        }
+                    },
+                );
+            }
+        }
+        ui.end_row();
         ui.heading("Tones");
         ui.end_row();
         for tone in &mut unit.tones {
@@ -743,6 +773,7 @@ fn unit_popup_ctx_menu(
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
+    evelist: &EveList,
 ) {
     egui::Popup::context_menu(re)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
@@ -758,6 +789,7 @@ fn unit_popup_ctx_menu(
                 aux,
                 voices_ui_state,
                 app_cmd,
+                evelist,
             )
         });
 }
@@ -773,6 +805,7 @@ fn unit_popup_ui(
     aux: &mut Option<AuxAudioState>,
     voices_ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
+    evelist: &[Event],
 ) {
     ui.horizontal(|ui| {
         if ui.button("ｘ").clicked() {
@@ -790,7 +823,7 @@ fn unit_popup_ui(
     });
     ui.separator();
     match tab {
-        UnitPopupTab::Unit => unit_ui(ui, idx, unit, ins, cmd, app_cmd),
+        UnitPopupTab::Unit => unit_ui(ui, idx, unit, ins, cmd, app_cmd, evelist),
         UnitPopupTab::Voice => {
             if let Some(voice) = ins.voices.get_mut(unit.voice_idx.usize()) {
                 let aux = aux.get_or_insert_with(|| {

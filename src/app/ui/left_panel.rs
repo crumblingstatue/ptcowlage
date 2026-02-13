@@ -12,7 +12,7 @@ use {
         egui_ext::ImageExt,
     },
     eframe::egui,
-    ptcow::{MooInstructions, SampleRate, Unit, UnitIdx},
+    ptcow::{EveList, MooInstructions, SampleRate, Unit, UnitIdx},
 };
 
 pub struct LeftPanelState {
@@ -64,6 +64,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     i,
                     unit,
                     &mut app.cmd,
+                    &song.song.events,
                 );
             }
         });
@@ -87,6 +88,7 @@ fn unit_ui(
     i: usize,
     unit: &mut ptcow::Unit,
     app_cmd: &mut CommandQueue,
+    evelist: &EveList,
 ) {
     let c = unit_color(i);
     let n: i32 = unit.pan_time_bufs.iter().flatten().copied().sum();
@@ -132,6 +134,7 @@ fn unit_ui(
             aux_state,
             &mut ui_state.voices,
             app_cmd,
+            evelist,
         );
         any_hovered |= re.contains_pointer();
         if any_hovered {

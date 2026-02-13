@@ -475,6 +475,11 @@ impl App {
                 self.ui_state.tab = Tab::Voices;
                 self.ui_state.voices.selected_idx = idx.usize();
             }
+            Cmd::OverwriteEvent { idx, payload } => {
+                let mut song = self.song.lock().unwrap();
+                let eves = &mut song.song.events;
+                eves[idx].payload = payload;
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]

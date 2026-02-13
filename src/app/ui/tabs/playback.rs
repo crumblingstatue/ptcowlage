@@ -131,6 +131,7 @@ fn playback_cows_ui(
                 aux,
                 voices_ui_state,
                 app_cmd,
+                &song.song.events,
             );
 
             macro_rules! inst_img {
@@ -166,6 +167,7 @@ fn playback_cows_ui(
                 aux,
                 voices_ui_state,
                 app_cmd,
+                &song.song.events,
             );
         });
     }

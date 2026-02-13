@@ -146,6 +146,9 @@ pub fn ui(
                 {
                     row.set_selected(true);
                 }
+                // Unfortunately we need to clone the events here to get around overlapping borrow issue.
+                // This clone is used inside the unit popup ui for the voice history feature.
+                let eves_clone = song.song.events.clone();
                 let Some(ev) = song.song.events.get_mut(idx) else {
                     row.col(|ui| {
                         ui.label("<out of bounds>");
@@ -226,9 +229,10 @@ pub fn ui(
                                 };
                                 match kind {
                                     PopupKind::Left => {
+                                        let idx = ev.unit;
                                         unit_popup_ui(
                                             ui,
-                                            ev.unit,
+                                            idx,
                                             unit,
                                             &mut song.ins,
                                             &mut unit_cmd,
@@ -237,6 +241,7 @@ pub fn ui(
                                             aux,
                                             voices_ui_state,
                                             app_cmd,
+                                            &eves_clone,
                                         );
                                     }
                                     PopupKind::Right => {

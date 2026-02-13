@@ -26,7 +26,15 @@ pub fn ui(
                     ui.label("Invalid selected unit");
                     return;
                 };
-                unit_ui(ui, unit_idx, unit, &song.ins, &mut cmd, app_cmd);
+                unit_ui(
+                    ui,
+                    unit_idx,
+                    unit,
+                    &song.ins,
+                    &mut cmd,
+                    app_cmd,
+                    &song.song.events,
+                );
             }
         });
     handle_units_command(cmd, song, app_modal_payload);

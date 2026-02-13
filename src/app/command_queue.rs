@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use {ptcow::EventPayload, std::collections::VecDeque};
 
 pub enum Cmd {
     ReloadCurrentFile,
@@ -8,6 +8,7 @@ pub enum Cmd {
     ReplaceAudioThread,
     SaveCurrentFile,
     OpenVoice(ptcow::VoiceIdx),
+    OverwriteEvent { idx: usize, payload: EventPayload },
 }
 
 #[derive(Default)]
