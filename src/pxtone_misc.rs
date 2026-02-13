@@ -1,4 +1,4 @@
-use ptcow::{EventPayload, Song, UnitIdx};
+use ptcow::{EveList, EventPayload, Song, UnitIdx};
 
 /// Migrate overlapping 'on' events from one unit to another
 pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song) -> bool {
@@ -49,4 +49,26 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
 
 fn overlap<T: PartialOrd>(r1: std::ops::Range<T>, r2: std::ops::Range<T>) -> bool {
     r1.start < r2.end && r1.end > r2.start
+}
+
+/// If two events of the same type for the same unit happen on the same tick, all but the last of
+/// those events will "lose", meaning they have no effect.
+///
+/// This function removes such "losing" events.
+pub fn clean_losing_events(events: &mut EveList) {
+    events.reverse();
+    // "Next" from the viewpoint of the unreversed event list
+    let mut next_ev_discr = None;
+    let mut next_tick = None;
+    let mut next_unit = None;
+    events.retain(|eve| {
+        let same_as_next = next_ev_discr == Some(eve.payload.discriminant())
+            && next_tick == Some(eve.tick)
+            && next_unit == Some(eve.unit);
+        next_ev_discr = Some(eve.payload.discriminant());
+        next_tick = Some(eve.tick);
+        next_unit = Some(eve.unit);
+        !same_as_next
+    });
+    events.reverse();
 }

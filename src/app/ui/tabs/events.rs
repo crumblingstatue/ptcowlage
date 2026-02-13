@@ -518,6 +518,23 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
             ui_state.filter = Filter::default();
             ui_state.filter_needs_recalc = true;
         }
+        ui.separator();
+        if ui
+            .button("⚠ Clean up")
+            .on_hover_text("[EXPERIMENTAL] Remove \"losing\" events on the same tick")
+            .clicked()
+        {
+            let orig_len = song.song.events.len();
+            crate::pxtone_misc::clean_losing_events(&mut song.song.events);
+            let n_removed = orig_len - song.song.events.len();
+            ui_state.toasts.add(
+                Toast::new()
+                    .kind(ToastKind::Info)
+                    .text(format!("Removed {n_removed} events"))
+                    .options(ToastOptions::default().duration_in_seconds(8.0)),
+            );
+            ui_state.filter_needs_recalc = true;
+        }
         // Recalculate filtered events if filter changed
         if ui_state.filter_needs_recalc {
             ui_state.filtered_events = song
