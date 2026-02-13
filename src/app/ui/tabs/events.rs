@@ -375,7 +375,7 @@ pub fn ui(
                                 ui.add(crate::app::ui::unit::pan_time_slider(val)).changed();
                             if changed && ui_state.preview_unit_changes {
                                 song.herd.units[ev.unit.usize()].pan_time_offs =
-                                    val.to_lr_offsets(44_100);
+                                    val.to_lr_offsets(out_rate);
                             }
                         });
                     }

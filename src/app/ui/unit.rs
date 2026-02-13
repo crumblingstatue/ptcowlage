@@ -102,7 +102,7 @@ pub fn unit_ui(
         ui.add(egui::DragValue::new(&mut unit.pan_vols[0]));
         ui.label("r");
         ui.add(egui::DragValue::new(&mut unit.pan_vols[1]));
-        let mut pan_time = PanTime::from_lr_offsets(unit.pan_time_offs, 44_100);
+        let mut pan_time = PanTime::from_lr_offsets(unit.pan_time_offs, ins.out_sample_rate);
         if ui.link("Pan time").clicked() {
             app_cmd.push(Cmd::SetEventsFilter(Filter {
                 unit: Some(idx),
@@ -111,7 +111,7 @@ pub fn unit_ui(
             app_cmd.push(Cmd::SetActiveTab(Tab::Events));
         }
         if ui.add(pan_time_slider(&mut pan_time)).changed() {
-            unit.pan_time_offs = pan_time.to_lr_offsets(44_100);
+            unit.pan_time_offs = pan_time.to_lr_offsets(ins.out_sample_rate);
         }
         ui.label("l");
         ui.add(egui::DragValue::new(&mut unit.pan_time_offs[0]));
