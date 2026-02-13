@@ -189,10 +189,12 @@ pub fn unit_ui(
             app_cmd.push(Cmd::SetActiveTab(Tab::Events));
         }
         ui.end_row();
+        let mut any_voice_ev = false;
         for (ev_idx, ev) in evelist.iter().enumerate() {
             if ev.unit == idx
                 && let EventPayload::SetVoice(voic) = &ev.payload
             {
+                any_voice_ev = true;
                 let Some(voice) = &ins.voices.get(voic.usize()) else {
                     ui.label("Invalid voice index");
                     return;
@@ -216,6 +218,18 @@ pub fn unit_ui(
                         }
                     },
                 );
+            }
+        }
+        if !any_voice_ev {
+            if ui.button("+ Add voice event at tick 0").clicked() {
+                app_cmd.push(Cmd::InsertEvent {
+                    idx: 0,
+                    event: Event {
+                        payload: EventPayload::SetVoice(VoiceIdx(0)),
+                        unit: idx,
+                        tick: 0,
+                    },
+                });
             }
         }
         ui.end_row();
