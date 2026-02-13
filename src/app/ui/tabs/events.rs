@@ -338,7 +338,14 @@ pub fn ui(
                     EventPayload::SetVoice(v_idx) => {
                         ui.horizontal(|ui| {
                             let v_opt = song.ins.voices.get(v_idx.usize());
-                            let name = v_opt.map_or("<invalid index>", |v| &v.name);
+                            let mut s = String::new();
+                            let name = v_opt.map_or_else(
+                                || {
+                                    s = format!("<invalid: {}>", v_idx.0);
+                                    &s
+                                },
+                                |v| &v.name,
+                            );
                             ui.label("Voice");
                             ui.menu_button((voice_img_opt(v_opt), name), |ui| {
                                 for (i, voice) in song.ins.voices.iter().enumerate() {
