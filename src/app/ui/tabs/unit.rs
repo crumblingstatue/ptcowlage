@@ -1,3 +1,5 @@
+//! UI code for the Unit tab
+
 use {
     crate::{
         app::{
