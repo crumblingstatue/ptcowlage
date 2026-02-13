@@ -159,9 +159,7 @@ pub fn ui(
             }
             VoiceUiOp::MoveEnd(idx) => {
                 let voice = song.ins.voices.remove(idx);
-                song.ins
-                    .voices
-                    .insert(song.ins.voices.len().saturating_sub(1), voice);
+                song.ins.voices.push(voice);
             }
             VoiceUiOp::Swap(a, b) => {
                 song.ins.voices.swap(a, b);
