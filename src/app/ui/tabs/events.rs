@@ -2,7 +2,7 @@ use {
     crate::{
         app::{
             ModalPayload,
-            command_queue::CommandQueue,
+            command_queue::{Cmd, CommandQueue},
             ui::{
                 tabs::voices::VoicesUiState,
                 unit::{UnitPopupTab, handle_units_command, unit_popup_ui},
@@ -377,6 +377,43 @@ pub fn ui(
                 });
             });
         });
+    if let Some(evt_discr) = ui_state.filter.event
+        && let Some(unit_idx) = ui_state.filter.unit
+        && ui_state.filtered_events.is_empty()
+    {
+        ui.label("Looks like there are no events for this filter");
+        if ui.button("Insert at beginning").clicked() {
+            'block: {
+                let payload = match evt_discr {
+                    1 => EventPayload::On { duration: 0 },
+                    2 => EventPayload::Key(0),
+                    3 => EventPayload::PanVol(0),
+                    4 => EventPayload::Velocity(0),
+                    5 => EventPayload::Volume(0),
+                    6 => EventPayload::Portament { duration: 0 },
+                    7 => EventPayload::BeatClock,
+                    8 => EventPayload::BeatTempo,
+                    9 => EventPayload::BeatNum,
+                    10 => EventPayload::Repeat,
+                    11 => EventPayload::Last,
+                    12 => EventPayload::SetVoice(VoiceIdx(0)),
+                    13 => EventPayload::SetGroup(GroupIdx(0)),
+                    14 => EventPayload::Tuning(0.0),
+                    15 => EventPayload::PanTime(0),
+                    _ => break 'block,
+                };
+                app_cmd.push(Cmd::InsertEvent {
+                    idx: 0,
+                    event: Event {
+                        payload,
+                        unit: unit_idx,
+                        tick: 0,
+                    },
+                });
+                ui_state.filter_needs_recalc = true;
+            }
+        }
+    }
     handle_units_command(unit_cmd, song, app_modal_payload);
     if let Some(cmd) = ev_list_cmd {
         match cmd {
