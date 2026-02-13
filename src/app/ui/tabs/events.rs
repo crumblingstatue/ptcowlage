@@ -425,6 +425,7 @@ pub fn ui(
                 song.song.events.insert(idx, event);
             }
         }
+        ui_state.filter_needs_recalc = true;
     }
 }
 
