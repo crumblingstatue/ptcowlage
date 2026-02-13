@@ -673,9 +673,9 @@ fn unit_ui(
         ui.add(egui::DragValue::new(&mut unit.pan_time_offs[1]));
         ui.end_row();
         ui.label("volume");
-        ui.add(egui::DragValue::new(&mut unit.volume));
+        ui.add(egui::Slider::new(&mut unit.volume, 0..=256));
         ui.label("velocity");
-        ui.add(egui::DragValue::new(&mut unit.velocity));
+        ui.add(egui::Slider::new(&mut unit.velocity, 0..=256));
         ui.end_row();
         ui.label("group");
         group_idx_slider(ui, &mut unit.group);
