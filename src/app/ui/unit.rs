@@ -181,7 +181,13 @@ pub fn unit_ui(
             ui.label("<invalid voice>");
         }
         ui.end_row();
-        ui.label("Voice history");
+        if ui.link("Voice history").clicked() {
+            app_cmd.push(Cmd::SetEventsFilter(Filter {
+                unit: Some(idx),
+                event: Some(EventPayload::SetVoice(VoiceIdx(0)).discriminant()),
+            }));
+            app_cmd.push(Cmd::SetActiveTab(Tab::Events));
+        }
         ui.end_row();
         for (ev_idx, ev) in evelist.iter().enumerate() {
             if ev.unit == idx
