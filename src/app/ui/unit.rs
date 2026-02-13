@@ -1,3 +1,5 @@
+//! Common UI code for units, including the Unit tab, and the unit popups
+
 use {
     crate::{
         app::{
