@@ -7,13 +7,13 @@ use {
                 group_idx_slider,
                 tabs::voices::VoicesUiState,
                 unit::{UnitPopupTab, handle_units_command, unit_popup_ui},
-                unit_color,
+                unit_color, voice_img, voice_img_opt,
             },
         },
         audio_out::{AuxAudioState, SongState},
         evilscript,
     },
-    eframe::egui,
+    eframe::egui::{self, AtomExt},
     egui_extras::Column,
     egui_toast::{Toast, ToastKind, ToastOptions, Toasts},
     ptcow::{Event, EventPayload, GroupIdx, PanTime, SampleRate, UnitIdx, VoiceIdx},
@@ -335,22 +335,25 @@ pub fn ui(
                     }
                     EventPayload::SetVoice(v_idx) => {
                         ui.horizontal(|ui| {
-                            let mut num_usize = v_idx.usize();
-                            egui::ComboBox::new("v_dropdown", "Voice").show_index(
-                                ui,
-                                &mut num_usize,
-                                song.ins.voices.len(),
-                                |idx| {
-                                    song.ins.voices.get(idx).map_or_else(
-                                        || {
-                                            egui::RichText::new("<invalid>")
-                                                .color(egui::Color32::RED)
-                                        },
-                                        |v| egui::RichText::new(&v.name),
-                                    )
-                                },
-                            );
-                            *v_idx = VoiceIdx(num_usize.try_into().unwrap());
+                            let v_opt = song.ins.voices.get(v_idx.usize());
+                            let name = v_opt.map_or("<invalid index>", |v| &v.name);
+                            ui.label("Voice");
+                            ui.menu_button((voice_img_opt(v_opt), name), |ui| {
+                                for (i, voice) in song.ins.voices.iter().enumerate() {
+                                    if ui
+                                        .button((
+                                            voice_img(voice).atom_size(egui::vec2(16.0, 16.0)),
+                                            &voice.name,
+                                        ))
+                                        .clicked()
+                                    {
+                                        *v_idx = VoiceIdx(i as u8);
+                                        if ui_state.preview_unit_changes {
+                                            song.herd.units[ev.unit.usize()].voice_idx = *v_idx;
+                                        }
+                                    }
+                                }
+                            });
                             if ui.button("⮩").clicked() {
                                 app_cmd.push(crate::app::command_queue::Cmd::OpenVoice(*v_idx));
                             }

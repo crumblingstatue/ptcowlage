@@ -517,6 +517,13 @@ fn voice_img(voice: &Voice) -> egui::ImageSource<'static> {
     }
 }
 
+fn voice_img_opt(opt_voice: Option<&Voice>) -> egui::ImageSource<'static> {
+    match opt_voice {
+        Some(voice) => voice_img(voice),
+        None => img::X,
+    }
+}
+
 /// Returns true if import ui should close
 pub(crate) fn sf2_import_ui(
     ui: &mut egui::Ui,
