@@ -3,7 +3,10 @@ use {
         app::{
             ModalPayload,
             command_queue::CommandQueue,
-            ui::{SharedUiState, handle_units_command, unit_ui},
+            ui::{
+                SharedUiState,
+                unit::{handle_units_command, unit_ui},
+            },
         },
         audio_out::SongState,
     },

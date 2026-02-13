@@ -4,8 +4,12 @@ use {
             App,
             command_queue::CommandQueue,
             ui::{
-                UiState, UnitPopupTab, UnitsCmd, handle_units_command, unit_color,
-                unit_mute_unmute_all_ui, unit_popup_ctx_menu, unit_voice_img,
+                UiState,
+                unit::{
+                    UnitPopupTab, UnitsCmd, handle_units_command, unit_mute_unmute_all_ui,
+                    unit_popup_ctx_menu,
+                },
+                unit_color, unit_voice_img,
             },
         },
         audio_out::AuxAudioState,

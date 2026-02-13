@@ -4,8 +4,10 @@ use {
             ModalPayload, SongState,
             command_queue::CommandQueue,
             ui::{
-                FreeplayPianoState, UnitPopupTab, UnitsCmd, handle_units_command, img,
-                tabs::voices::VoicesUiState, unit_color, unit_mute_unmute_all_ui,
+                FreeplayPianoState, img,
+                tabs::voices::VoicesUiState,
+                unit::{UnitPopupTab, UnitsCmd, handle_units_command, unit_mute_unmute_all_ui},
+                unit_color,
             },
         },
         audio_out::AuxAudioState,
@@ -120,7 +122,7 @@ fn playback_cows_ui(
                 }
             }
 
-            crate::app::ui::unit_popup_ctx_menu(
+            crate::app::ui::unit::unit_popup_ctx_menu(
                 &re,
                 UnitIdx(i as u8),
                 unit,
@@ -156,7 +158,7 @@ fn playback_cows_ui(
             ui.add_space(408.0);
             ui.add(egui::Image::new(inst_img!()));
             let re = ui.add(egui::Image::new(img::COW).sense(egui::Sense::click()));
-            crate::app::ui::unit_popup_ctx_menu(
+            crate::app::ui::unit::unit_popup_ctx_menu(
                 &re,
                 UnitIdx(i as u8),
                 unit,

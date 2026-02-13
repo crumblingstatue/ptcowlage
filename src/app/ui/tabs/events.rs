@@ -4,8 +4,9 @@ use {
             ModalPayload,
             command_queue::CommandQueue,
             ui::{
-                UnitPopupTab, handle_units_command, tabs::voices::VoicesUiState, unit_color,
-                unit_popup_ui,
+                tabs::voices::VoicesUiState,
+                unit::{UnitPopupTab, handle_units_command, unit_popup_ui},
+                unit_color,
             },
         },
         audio_out::{AuxAudioState, SongState},
