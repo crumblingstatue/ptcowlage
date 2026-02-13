@@ -20,8 +20,8 @@ use {
     },
     eframe::egui::{self, AtomExt},
     ptcow::{
-        EveList, Event, EventPayload, GroupIdx, MooInstructions, SampleRate, Unit, UnitIdx,
-        VoiceIdx,
+        EveList, Event, EventPayload, GroupIdx, MooInstructions, PanTime, SampleRate, Unit,
+        UnitIdx, VoiceIdx,
     },
 };
 
@@ -102,13 +102,18 @@ pub fn unit_ui(
         ui.add(egui::DragValue::new(&mut unit.pan_vols[0]));
         ui.label("r");
         ui.add(egui::DragValue::new(&mut unit.pan_vols[1]));
-        if ui.link("Pan time l").clicked() {
+        let mut pan_time = PanTime::from_lr_offsets(unit.pan_time_offs, 44_100);
+        if ui.link("Pan time").clicked() {
             app_cmd.push(Cmd::SetEventsFilter(Filter {
                 unit: Some(idx),
-                event: Some(EventPayload::PanTime(0).discriminant()),
+                event: Some(EventPayload::PanTime(PanTime::default()).discriminant()),
             }));
             app_cmd.push(Cmd::SetActiveTab(Tab::Events));
         }
+        if ui.add(pan_time_slider(&mut pan_time)).changed() {
+            unit.pan_time_offs = pan_time.to_lr_offsets(44_100);
+        }
+        ui.label("l");
         ui.add(egui::DragValue::new(&mut unit.pan_time_offs[0]));
         ui.label("r");
         ui.add(egui::DragValue::new(&mut unit.pan_time_offs[1]));
@@ -454,4 +459,8 @@ pub fn unit_mute_unmute_all_ui(ui: &mut egui::Ui, units: &mut [ptcow::Unit]) {
 pub enum UnitPopupTab {
     Unit,
     Voice,
+}
+
+pub fn pan_time_slider(pan_time: &'_ mut PanTime) -> egui::Slider<'_> {
+    egui::Slider::new(&mut pan_time.0, PanTime::RANGE)
 }

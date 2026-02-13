@@ -4,6 +4,7 @@ use {
             ModalPayload,
             command_queue::{Cmd, CommandQueue},
             ui::{
+                group_idx_slider,
                 tabs::voices::VoicesUiState,
                 unit::{UnitPopupTab, handle_units_command, unit_popup_ui},
                 unit_color,
@@ -15,7 +16,7 @@ use {
     eframe::egui,
     egui_extras::Column,
     egui_toast::{Toast, ToastKind, ToastOptions, Toasts},
-    ptcow::{Event, EventPayload, GroupIdx, SampleRate, UnitIdx, VoiceIdx},
+    ptcow::{Event, EventPayload, GroupIdx, PanTime, SampleRate, UnitIdx, VoiceIdx},
 };
 
 pub struct RawEventsUiState {
@@ -351,7 +352,7 @@ pub fn ui(
                     EventPayload::SetGroup(group_idx) => {
                         ui.horizontal(|ui| {
                             ui.label("Group");
-                            ui.add(egui::DragValue::new(&mut group_idx.0));
+                            group_idx_slider(ui, group_idx);
                         });
                     }
                     EventPayload::Tuning(val) => {
@@ -363,7 +364,7 @@ pub fn ui(
                     EventPayload::PanTime(val) => {
                         ui.horizontal(|ui| {
                             ui.label("Pan time");
-                            ui.add(egui::DragValue::new(val));
+                            ui.add(crate::app::ui::unit::pan_time_slider(val));
                         });
                     }
                     EventPayload::PtcowDebug(val) => {
@@ -399,7 +400,7 @@ pub fn ui(
                     12 => EventPayload::SetVoice(VoiceIdx(0)),
                     13 => EventPayload::SetGroup(GroupIdx(0)),
                     14 => EventPayload::Tuning(0.0),
-                    15 => EventPayload::PanTime(0),
+                    15 => EventPayload::PanTime(PanTime::default()),
                     _ => break 'block,
                 };
                 app_cmd.push(Cmd::InsertEvent {
