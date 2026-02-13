@@ -513,7 +513,7 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
             .filter
             .event
             .map_or("Off", |disc| ev_discr_name(disc));
-        egui::ComboBox::new("event_cb", "Event")
+        egui::ComboBox::new("payload_cb", "Payload")
             .selected_text(selected_text)
             .show_ui(ui, |ui| {
                 if ui.button("Off").clicked() {
