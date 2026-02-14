@@ -1,4 +1,8 @@
-use ptcow::{EveList, EventPayload, Song, UnitIdx};
+use std::collections::BTreeMap;
+
+use ptcow::{DEFAULT_KEY, EveList, Event, EventPayload, Song, Unit, UnitIdx, VoiceIdx};
+
+use crate::audio_out::SongState;
 
 /// Migrate overlapping 'on' events from one unit to another
 pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song) -> bool {
@@ -71,4 +75,115 @@ pub fn clean_losing_events(events: &mut EveList) {
         !same_as_next
     });
     events.reverse();
+}
+
+struct KeyEvOffsets {
+    on: usize,
+    key: usize,
+}
+
+pub(crate) fn split_unit_events_by_key(song: &mut SongState, idx: UnitIdx) {
+    let eves = &mut song.song.events.eves;
+    let offsets = key_ev_offsets(eves, idx);
+    let mut key_map: BTreeMap<i32, Vec<KeyEvOffsets>> = BTreeMap::new();
+    for offs in offsets {
+        assert_eq!(eves[offs.key].unit, idx);
+        assert_eq!(eves[offs.on].unit, idx);
+        let EventPayload::Key(key) = eves[offs.key].payload else {
+            continue;
+        };
+        let vec = key_map.entry(key).or_default();
+        vec.push(offs);
+    }
+    let Some((fst_key, _fst_offs)) = key_map.first_key_value() else {
+        return;
+    };
+    let name = song.herd.units[idx.usize()].name.clone();
+    song.herd.units[idx.usize()]
+        .name
+        .push_str(&format!("-{}", fst_key / 256));
+    let fst_voice_idx = eves
+        .iter()
+        .find_map(|eve| {
+            if eve.unit != idx {
+                return None;
+            }
+            match eve.payload {
+                EventPayload::SetVoice(idx) => Some(idx),
+                _ => None,
+            }
+        })
+        .unwrap_or(VoiceIdx(0));
+    let mut unit_idx_counter = UnitIdx(song.herd.units.len() as u8);
+    let mut events_to_insert = Vec::new();
+    for (key, offs) in key_map.into_iter().skip(1) {
+        for off in offs {
+            assert_eq!(eves[off.key].unit, idx);
+            assert_eq!(eves[off.on].unit, idx);
+            eves[off.key].unit = unit_idx_counter;
+            eves[off.key].payload = EventPayload::Key(DEFAULT_KEY);
+            eves[off.on].unit = unit_idx_counter;
+        }
+        song.herd.units.push(Unit {
+            name: format!("{name}-{}", key / 256),
+            ..Default::default()
+        });
+        events_to_insert.push(Event {
+            payload: EventPayload::SetVoice(fst_voice_idx),
+            unit: unit_idx_counter,
+            tick: 0,
+        });
+        unit_idx_counter.0 += 1;
+    }
+    eves.splice(0..0, events_to_insert);
+    song.song.events.sort();
+}
+
+fn key_ev_offsets(eves: &[Event], unit_idx: UnitIdx) -> Vec<KeyEvOffsets> {
+    let mut out = Vec::new();
+    for (eve_idx, eve) in eves.iter().enumerate() {
+        if eve.unit != unit_idx {
+            continue;
+        }
+        // Find an on event
+        if matches!(eve.payload, EventPayload::On { .. }) {
+            // Find winning key event before next On event
+            let Some(key_idx) = find_winning_key_ev(eves, eve_idx, unit_idx) else {
+                continue;
+            };
+            debug_assert!(matches!(eves[key_idx].payload, EventPayload::Key { .. }));
+            assert_eq!(eves[eve_idx].unit, unit_idx);
+            assert_eq!(eves[key_idx].unit, unit_idx);
+            out.push(KeyEvOffsets {
+                on: eve_idx,
+                key: key_idx,
+            });
+        }
+    }
+    out
+}
+
+fn find_winning_key_ev(eves: &[Event], on_idx: usize, unit_idx: UnitIdx) -> Option<usize> {
+    let first_tick = first_tick(eves, on_idx);
+    let next_on = next_on(eves, on_idx)?;
+    eves[first_tick..next_on]
+        .iter()
+        .rposition(|eve| eve.unit == unit_idx && matches!(eve.payload, EventPayload::Key(_)))
+        .map(|off| first_tick + off)
+}
+
+fn first_tick(eves: &[Event], idx: usize) -> usize {
+    let tick = eves[idx].tick;
+    let mut cursor = idx;
+    while eves[cursor].tick == tick {
+        cursor -= 1;
+    }
+    cursor
+}
+
+fn next_on(eves: &[Event], idx: usize) -> Option<usize> {
+    eves[idx..]
+        .iter()
+        .position(|eve| matches!(eve.payload, EventPayload::On { .. }))
+        .map(|off| idx + off)
 }

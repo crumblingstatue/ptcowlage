@@ -24,6 +24,7 @@ pub enum UnitsCmd {
     DeleteUnit { idx: UnitIdx },
     SeekPrevOnEvent { idx: UnitIdx },
     MigrateUnitEvents { idx: UnitIdx },
+    SplitByKey { idx: UnitIdx },
 }
 
 pub fn unit_ui(
@@ -64,9 +65,14 @@ pub fn unit_ui(
         if ui.button("▶ Next On event").clicked() {
             *cmd = Some(UnitsCmd::SeekNextOnEvent { idx });
         }
-        if ui.button("Migrate overlapping events").clicked() {
-            *cmd = Some(UnitsCmd::MigrateUnitEvents { idx });
-        }
+        ui.menu_button("Split", |ui| {
+            if ui.button("Overlapping events").clicked() {
+                *cmd = Some(UnitsCmd::MigrateUnitEvents { idx });
+            }
+            if ui.button("By key").clicked() {
+                *cmd = Some(UnitsCmd::SplitByKey { idx });
+            }
+        });
     });
 
     ui.separator();
@@ -337,6 +343,9 @@ pub fn handle_units_command(
             }
             UnitsCmd::MigrateUnitEvents { idx } => {
                 poly_migrate_single(app_modal_payload, song, idx);
+            }
+            UnitsCmd::SplitByKey { idx } => {
+                crate::pxtone_misc::split_unit_events_by_key(song, idx);
             }
         }
     }
