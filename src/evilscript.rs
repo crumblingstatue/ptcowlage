@@ -8,6 +8,7 @@ pub enum EvilCmd {
     RemoveMatchingEvent {
         predicate: Box<dyn FnMut(&Event) -> bool>,
     },
+    RemoveRange(std::ops::RangeInclusive<usize>),
     Help,
 }
 
@@ -42,6 +43,11 @@ pub fn parse(cmd: &str) -> anyhow::Result<EvilCmd> {
             }
             etc => anyhow::bail!("I don't know what a '{etc}' is"),
         },
+        "rm-range" => {
+            let start = tokens.next().context("Need starting range")?.parse()?;
+            let end = tokens.next().context("Need end range")?.parse()?;
+            Ok(EvilCmd::RemoveRange(start..=end))
+        }
         "help" => Ok(EvilCmd::Help),
         _ => anyhow::bail!("Unknown evil comand '{cmd}'"),
     }
@@ -50,6 +56,7 @@ pub fn parse(cmd: &str) -> anyhow::Result<EvilCmd> {
 const HELP_STRING: &str = "\
 rm <PayloadType (payload_value)> - Remove events matching a payload
 rm unit <unit_idx> - Remove events that reference unit of index <unit_idx>
+rm-range <start> <end> Remove (an inclusive) range of events based on index
 help - Show this help (duh)
 ";
 
@@ -58,6 +65,9 @@ pub fn exec(cmd: EvilCmd, song: &mut SongState) -> Option<String> {
     match cmd {
         EvilCmd::RemoveMatchingEvent { mut predicate } => {
             song.song.events.retain(|eve| !predicate(eve));
+        }
+        EvilCmd::RemoveRange(range) => {
+            song.song.events.drain(range);
         }
         EvilCmd::Help => return Some(HELP_STRING.into()),
     }
