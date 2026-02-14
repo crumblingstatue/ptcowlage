@@ -343,6 +343,7 @@ pub fn handle_units_command(
             }
             UnitsCmd::MigrateUnitEvents { idx } => {
                 poly_migrate_single(app_modal_payload, song, idx);
+                song.song.events.sort();
             }
             UnitsCmd::SplitByKey { idx } => {
                 crate::pxtone_misc::split_unit_events_by_key(song, idx);
