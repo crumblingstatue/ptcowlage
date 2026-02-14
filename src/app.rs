@@ -18,6 +18,7 @@ use {
     },
     anyhow::Context,
     eframe::egui,
+    egui_toast::{Toast, ToastOptions},
     ptcow::{Event, EventPayload, Herd, MooInstructions, SampleRate, SampleT, Song, UnitIdx},
     rustysynth::SoundFont,
     std::{
@@ -394,6 +395,7 @@ impl eframe::App for App {
                 self.ui_state.sf2_import = None;
             }
         }
+        self.ui_state.shared.toasts.show(ctx);
         // Do queue commands
         while let Some(cmd) = self.cmd.pop() {
             self.do_cmd(cmd);
@@ -491,6 +493,18 @@ impl App {
             Cmd::SetEventsFilter(filter) => {
                 self.ui_state.raw_events.filter = filter;
                 self.ui_state.raw_events.filter_needs_recalc = true;
+            }
+            Cmd::Toast {
+                kind,
+                text,
+                duration,
+            } => {
+                self.ui_state.shared.toasts.add(
+                    Toast::new()
+                        .kind(kind)
+                        .text(text)
+                        .options(ToastOptions::default().duration_in_seconds(duration)),
+                );
             }
         }
     }

@@ -19,6 +19,7 @@ use {
         audio_out::{AuxAudioState, AuxMsg, SongStateHandle},
     },
     eframe::egui::{self, AtomExt},
+    egui_toast::Toasts,
     ptcow::{
         Event, EventPayload, GroupIdx, PcmData, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
     },
@@ -288,13 +289,24 @@ impl Sf2ImportDialog {
 }
 
 /// Ui state shared among different uis
-#[derive(Default)]
 pub struct SharedUiState {
     /// The active unit is the one that is:
     /// - Used to place notes in the piano roll
     /// - Shows up in the unit UI
     /// - Is highlighted in the left side units panel
     pub active_unit: Option<UnitIdx>,
+    pub toasts: Toasts,
+}
+
+impl Default for SharedUiState {
+    fn default() -> Self {
+        Self {
+            active_unit: Default::default(),
+            toasts: Toasts::new()
+                .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
+                .direction(egui::Direction::BottomUp),
+        }
+    }
 }
 
 impl UiState {

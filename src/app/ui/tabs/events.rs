@@ -14,7 +14,7 @@ use {
     },
     eframe::egui::{self, AtomExt},
     egui_extras::Column,
-    egui_toast::{Toast, ToastKind, ToastOptions, Toasts},
+    egui_toast::ToastKind,
     ptcow::{Event, EventPayload, GroupIdx, PanTime, SampleRate, UnitIdx, VoiceIdx},
 };
 
@@ -25,7 +25,6 @@ pub struct RawEventsUiState {
     pub go_to: Option<usize>,
     pub highlight: Option<usize>,
     cmd_string_buf: String,
-    toasts: Toasts,
     pub filter_needs_recalc: bool,
     preview_unit_changes: bool,
 }
@@ -39,9 +38,6 @@ impl Default for RawEventsUiState {
             go_to: None,
             highlight: None,
             cmd_string_buf: String::new(),
-            toasts: Toasts::new()
-                .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
-                .direction(egui::Direction::BottomUp),
             filter_needs_recalc: true,
             preview_unit_changes: true,
         }
@@ -74,8 +70,7 @@ pub fn ui(
     app_cmd: &mut CommandQueue,
     app_modal_payload: &mut Option<ModalPayload>,
 ) {
-    ui_state.toasts.show(ui.ctx());
-    top_ui(ui, song, ui_state);
+    top_ui(ui, song, ui_state, app_cmd);
 
     ui.separator();
     // Work around overlapping borrows of units
@@ -456,7 +451,12 @@ pub fn ui(
     }
 }
 
-fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiState) {
+fn top_ui(
+    ui: &mut egui::Ui,
+    song: &mut SongState,
+    ui_state: &mut RawEventsUiState,
+    app_cmd: &mut CommandQueue,
+) {
     ui.horizontal(|ui| {
         let re = ui.add(
             egui::TextEdit::singleline(&mut ui_state.cmd_string_buf).hint_text("Evil command line"),
@@ -465,21 +465,19 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
             match evilscript::parse(&ui_state.cmd_string_buf) {
                 Ok(cmd) => {
                     if let Some(out) = evilscript::exec(cmd, song) {
-                        ui_state.toasts.add(
-                            Toast::new()
-                                .kind(ToastKind::Info)
-                                .text(out)
-                                .options(ToastOptions::default().duration_in_seconds(15.0)),
-                        );
+                        app_cmd.push(Cmd::Toast {
+                            kind: ToastKind::Info,
+                            text: out,
+                            duration: 15.0,
+                        });
                     }
                 }
                 Err(e) => {
-                    ui_state.toasts.add(
-                        Toast::new()
-                            .kind(ToastKind::Error)
-                            .text(e.to_string())
-                            .options(ToastOptions::default().duration_in_seconds(5.0)),
-                    );
+                    app_cmd.push(Cmd::Toast {
+                        kind: ToastKind::Error,
+                        text: e.to_string(),
+                        duration: 5.0,
+                    });
                 }
             }
             ui_state.cmd_string_buf.clear();
@@ -556,12 +554,11 @@ fn top_ui(ui: &mut egui::Ui, song: &mut SongState, ui_state: &mut RawEventsUiSta
             let orig_len = song.song.events.len();
             crate::pxtone_misc::clean_losing_events(&mut song.song.events);
             let n_removed = orig_len - song.song.events.len();
-            ui_state.toasts.add(
-                Toast::new()
-                    .kind(ToastKind::Info)
-                    .text(format!("Removed {n_removed} events"))
-                    .options(ToastOptions::default().duration_in_seconds(8.0)),
-            );
+            app_cmd.push(Cmd::Toast {
+                kind: ToastKind::Info,
+                text: format!("Removed {n_removed} events"),
+                duration: 8.0,
+            });
             ui_state.filter_needs_recalc = true;
         }
         // Recalculate filtered events if filter changed

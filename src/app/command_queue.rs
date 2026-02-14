@@ -1,17 +1,32 @@
-use {ptcow::EventPayload, std::collections::VecDeque};
+use {egui_toast::ToastKind, ptcow::EventPayload, std::collections::VecDeque};
 
 pub enum Cmd {
     ReloadCurrentFile,
-    OpenEventInEventsTab { index: usize },
-    RemoveNoteAtIdx { idx: usize },
+    OpenEventInEventsTab {
+        index: usize,
+    },
+    RemoveNoteAtIdx {
+        idx: usize,
+    },
     // Replace the current audio thread (should be called after the audio output is reconfigured)
     ReplaceAudioThread,
     SaveCurrentFile,
     OpenVoice(ptcow::VoiceIdx),
-    OverwriteEvent { idx: usize, payload: EventPayload },
-    InsertEvent { idx: usize, event: ptcow::Event },
+    OverwriteEvent {
+        idx: usize,
+        payload: EventPayload,
+    },
+    InsertEvent {
+        idx: usize,
+        event: ptcow::Event,
+    },
     SetActiveTab(crate::app::ui::Tab),
     SetEventsFilter(crate::app::ui::tabs::events::Filter),
+    Toast {
+        kind: ToastKind,
+        text: String,
+        duration: f64,
+    },
 }
 
 #[derive(Default)]
