@@ -48,6 +48,7 @@ enum EventListCmd {
     Remove { idx: usize },
     Insert { idx: usize, event: Event },
     Swap(usize, usize),
+    TruncateAfter(usize),
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -190,6 +191,10 @@ pub fn ui(
                             });
                             if ui.button("Clone (C)").clicked() {
                                 ev_list_cmd = Some(EventListCmd::Insert { idx, event: *ev });
+                            }
+                            ui.separator();
+                            if ui.button("⚠ Truncate after this").clicked() {
+                                ev_list_cmd = Some(EventListCmd::TruncateAfter(idx));
                             }
                         });
                 });
@@ -445,6 +450,9 @@ pub fn ui(
             }
             EventListCmd::Swap(a, b) => {
                 song.song.events.swap(a, b);
+            }
+            EventListCmd::TruncateAfter(idx) => {
+                song.song.events.truncate(idx + 1);
             }
         }
         ui_state.filter_needs_recalc = true;
