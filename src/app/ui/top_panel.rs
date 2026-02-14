@@ -18,13 +18,24 @@ use {
         self, KeyboardShortcut,
         containers::menu::{MenuButton, MenuConfig},
     },
-    ptcow::{EventPayload, MooPlan, UnitIdx, timing::NonZeroMeas},
+    ptcow::{EveList, EventPayload, MooPlan, UnitIdx, VoiceIdx, timing::NonZeroMeas},
+    std::collections::{HashMap, HashSet},
 };
 
 const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O);
 const SAVE_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::S);
 const RELOAD_SHORTCUT: KeyboardShortcut =
     KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::R);
+
+fn used_voices(eves: &EveList) -> HashSet<VoiceIdx> {
+    let mut used = HashSet::new();
+    for eve in eves.iter() {
+        if let EventPayload::SetVoice(idx) = eve.payload {
+            used.insert(idx);
+        }
+    }
+    used
+}
 
 pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     let [
@@ -86,6 +97,29 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     song.song.events.clear();
                 }
             });
+            if ui.button("Remove unused voices").clicked() {
+                let used_voices = used_voices(&song.song.events);
+                let mut idx = VoiceIdx(0);
+                let mut new_idx = VoiceIdx(0);
+                let mut index_map = HashMap::new();
+                song.ins.voices.retain(|_| {
+                    let retain = used_voices.contains(&idx);
+                    if retain {
+                        index_map.insert(idx, new_idx);
+                        new_idx.0 += 1;
+                    }
+                    idx.0 += 1;
+                    retain
+                });
+                for eve in song.song.events.iter_mut() {
+                    if let EventPayload::SetVoice(idx) = &mut eve.payload {
+                        *idx = index_map[idx];
+                    }
+                }
+                for unit in song.herd.units.iter_mut() {
+                    unit.voice_idx = index_map[&unit.voice_idx];
+                }
+            }
             ui.separator();
             if ui.button("Auto migrate overlapping events").clicked() {
                 let orig_n_units: u8 = song.herd.units.len().try_into().unwrap();
