@@ -96,7 +96,12 @@ fn unit_ui(
 
         let re = ui.label(egui::RichText::new(&unit.name).color(c));
         if n != 0 {
-            ui.colored_label(egui::Color32::RED, "⚫");
+            let w = (n.abs() as f32 / 5000.0).clamp(4.0, ui.available_width());
+            let left_center = ui.cursor().left_center();
+            ui.painter().line_segment(
+                [left_center, left_center + egui::vec2(w, 0.0)],
+                egui::Stroke::new(3.0, c),
+            );
         }
         if let Some(idx) = ui_state.shared.active_unit
             && idx.usize() == i
