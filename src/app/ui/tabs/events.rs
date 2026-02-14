@@ -465,19 +465,11 @@ fn top_ui(
             match evilscript::parse(&ui_state.cmd_string_buf) {
                 Ok(cmd) => {
                     if let Some(out) = evilscript::exec(cmd, song) {
-                        app_cmd.push(Cmd::Toast {
-                            kind: ToastKind::Info,
-                            text: out,
-                            duration: 15.0,
-                        });
+                        app_cmd.toast(ToastKind::Info, out, 15.0);
                     }
                 }
                 Err(e) => {
-                    app_cmd.push(Cmd::Toast {
-                        kind: ToastKind::Error,
-                        text: e.to_string(),
-                        duration: 5.0,
-                    });
+                    app_cmd.toast(ToastKind::Error, e.to_string(), 5.0);
                 }
             }
             ui_state.cmd_string_buf.clear();
@@ -554,11 +546,7 @@ fn top_ui(
             let orig_len = song.song.events.len();
             crate::pxtone_misc::clean_losing_events(&mut song.song.events);
             let n_removed = orig_len - song.song.events.len();
-            app_cmd.push(Cmd::Toast {
-                kind: ToastKind::Info,
-                text: format!("Removed {n_removed} events"),
-                duration: 8.0,
-            });
+            app_cmd.toast(ToastKind::Info, format!("Removed {n_removed} events"), 8.0);
             ui_state.filter_needs_recalc = true;
         }
         // Recalculate filtered events if filter changed

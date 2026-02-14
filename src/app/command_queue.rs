@@ -41,4 +41,11 @@ impl CommandQueue {
     pub fn pop(&mut self) -> Option<Cmd> {
         self.queue.pop_front()
     }
+    pub fn toast(&mut self, kind: ToastKind, text: String, duration: f64) {
+        self.push(Cmd::Toast {
+            kind,
+            text,
+            duration,
+        });
+    }
 }
