@@ -994,14 +994,14 @@ fn rect_nth_column(rect: egui::Rect, n: usize, total: usize) -> egui::Rect {
 struct KeyInfo {
     semitone: u8,
     c_scale_idx: u16,
-    octave: u16,
+    octave: i16,
 }
 
 fn key_info(lowest_semitone: u8, key: u8) -> KeyInfo {
     let semitone = lowest_semitone + key;
     let name_offset = 9;
     let c_scale_idx = (semitone as u16 + name_offset) % 12;
-    let octave = ((semitone as u16 + name_offset) / 12).saturating_sub(5);
+    let octave = ((semitone as i16 + name_offset as i16) / 12) - 5;
     KeyInfo {
         semitone,
         c_scale_idx,
