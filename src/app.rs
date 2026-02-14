@@ -527,10 +527,20 @@ impl App {
         }
     }
     fn reload_current_file(&mut self) {
-        if let Some(path) = &self.open_file
-            && let Err(e) = self.load_song_from_path(path.clone())
-        {
-            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+        match self.open_file.as_ref().cloned() {
+            Some(path) => match self.load_song_from_path(path.clone()) {
+                Ok(()) => {
+                    self.cmd
+                        .toast(ToastKind::Info, format!("Reloaded {}", path.display()), 3.0);
+                }
+                Err(e) => {
+                    self.cmd.toast(ToastKind::Error, e.to_string(), 6.0);
+                }
+            },
+            None => {
+                self.cmd
+                    .toast(ToastKind::Error, "No file to reload".into(), 5.0);
+            }
         }
     }
     fn save_current_file(&mut self) {
@@ -539,7 +549,7 @@ impl App {
             let serialized = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
             std::fs::write(path, serialized).unwrap();
             self.cmd
-                .toast(ToastKind::Info, format!("Saved {}", path.display()), 4.0);
+                .toast(ToastKind::Info, format!("Saved {}", path.display()), 3.0);
         }
     }
     /// Replace already running ptcow audio thread with a new one
