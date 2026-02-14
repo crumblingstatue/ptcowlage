@@ -95,9 +95,14 @@ pub(crate) fn split_unit_events_by_key(song: &mut SongState, idx: UnitIdx) {
         let vec = key_map.entry(key).or_default();
         vec.push(offs);
     }
-    let Some((fst_key, _fst_offs)) = key_map.first_key_value() else {
+    let Some((fst_key, fst_offs)) = key_map.first_key_value() else {
         return;
     };
+    for off in fst_offs {
+        assert_eq!(eves[off.key].unit, idx);
+        assert_eq!(eves[off.on].unit, idx);
+        eves[off.key].payload = EventPayload::Key(DEFAULT_KEY);
+    }
     let name = song.herd.units[idx.usize()].name.clone();
     song.herd.units[idx.usize()]
         .name
