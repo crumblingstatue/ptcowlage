@@ -1001,7 +1001,7 @@ fn key_info(lowest_semitone: u8, key: u8) -> KeyInfo {
     let semitone = lowest_semitone + key;
     let name_offset = 9;
     let c_scale_idx = (semitone as u16 + name_offset) % 12;
-    let octave = ((semitone as i16 + name_offset as i16) / 12) - 5;
+    let octave = ((semitone as i16 + name_offset as i16) / 12) - 4;
     KeyInfo {
         semitone,
         c_scale_idx,
