@@ -78,7 +78,6 @@ fn unit_ui(
 ) {
     let c = unit_color(i);
     let n: i32 = unit.pan_time_bufs.iter().flatten().copied().sum();
-    let tint = if n == 0 { egui::Color32::WHITE } else { c };
     ui.horizontal(|ui| {
         let mut any_hovered = false;
         if unit.mute {
@@ -91,12 +90,14 @@ fn unit_ui(
             .add(
                 egui::Image::new(unit_voice_img(ins, unit))
                     .sense(egui::Sense::click())
-                    .tint(tint)
                     .hflip(),
             )
             .contains_pointer();
 
         let re = ui.label(egui::RichText::new(&unit.name).color(c));
+        if n != 0 {
+            ui.colored_label(egui::Color32::RED, "⚫");
+        }
         if let Some(idx) = ui_state.shared.active_unit
             && idx.usize() == i
         {
