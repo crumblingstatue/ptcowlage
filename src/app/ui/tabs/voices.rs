@@ -68,6 +68,20 @@ pub fn ui(
         });
         #[cfg(not(target_arch = "wasm32"))]
         ui.menu_button("Import ->", |ui| {
+            if ui.button(".ptvoice").clicked() {
+                use crate::app::ui::file_ops::FILT_PTVOICE;
+
+                file_dia.config_mut().default_file_filter = Some(FILT_PTVOICE.into());
+                file_dia.set_user_data(FileOp::ImportPtVoice);
+                file_dia.pick_file();
+            }
+            if ui.button(".ptnoise").clicked() {
+                use crate::app::ui::file_ops::FILT_PTNOISE;
+
+                file_dia.config_mut().default_file_filter = Some(FILT_PTNOISE.into());
+                file_dia.set_user_data(FileOp::ImportPtNoise);
+                file_dia.pick_file();
+            }
             if ui.button("Single from .sf2").clicked() {
                 use crate::app::ui::file_ops::FILT_SF2;
 

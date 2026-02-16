@@ -1,5 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::app::ui::file_ops::FILT_WAV;
+use crate::app::ui::file_ops::{FILT_PTNOISE, FILT_PTVOICE, FILT_WAV};
 use {
     crate::{
         CliArgs,
@@ -131,7 +131,9 @@ impl App {
                 .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
                 .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"])
                 .add_file_filter_extensions(FILT_ORGANYA, vec!["org"])
-                .add_file_filter_extensions(FILT_SF2, vec!["sf2"]),
+                .add_file_filter_extensions(FILT_SF2, vec!["sf2"])
+                .add_file_filter_extensions(FILT_PTVOICE, vec!["ptvoice"])
+                .add_file_filter_extensions(FILT_PTNOISE, vec!["ptnoise"]),
             #[cfg(not(target_arch = "wasm32"))]
             pt_audio_dev: Some(spawn_ptcow_audio_thread(out_params, song_state_handle)),
             #[cfg(target_arch = "wasm32")]
@@ -310,6 +312,33 @@ impl eframe::App for App {
                         Err(e) => {
                             self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
                         }
+                    }
+                }
+                FileOp::ImportPtVoice => {
+                    let data = std::fs::read(&path).unwrap();
+                    match ptcow::Voice::from_ptvoice(&data) {
+                        Ok(mut voice) => {
+                            if let Some(os_str) = path.file_stem() {
+                                voice.name = os_str.to_string_lossy().into_owned();
+                            }
+                            self.song.lock().unwrap().ins.voices.push(voice);
+                        }
+                        Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+                    }
+                }
+                FileOp::ImportPtNoise => {
+                    let data = std::fs::read(&path).unwrap();
+                    match ptcow::NoiseData::from_ptnoise(&data) {
+                        Ok(noise) => {
+                            let mut voice = ptcow::Voice::default();
+                            voice.allocate::<false>();
+                            voice.units[0].data = ptcow::VoiceData::Noise(noise);
+                            if let Some(os_str) = path.file_stem() {
+                                voice.name = os_str.to_string_lossy().into_owned();
+                            }
+                            self.song.lock().unwrap().ins.voices.push(voice);
+                        }
+                        Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
                     }
                 }
                 FileOp::ImportMidi => {
