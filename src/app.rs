@@ -253,15 +253,23 @@ impl App {
                         (data, "out.ptcop")
                     }
                     FileOp::ExportWav => {
+                        use crate::audio_out::prepare_song;
+
                         let mut song = self.song.lock().unwrap();
+                        // Kill audio thread
                         self.pt_audio_dev = None;
-                        match crate::util::export_wav(&mut song) {
-                            Ok(wav) => (wav, "out.wav"),
+                        let wav = match crate::util::export_wav(&mut song) {
+                            Ok(wav) => wav,
                             Err(e) => {
                                 self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
                                 return;
                             }
-                        }
+                        };
+                        // Now we can resume playback
+                        prepare_song(&mut song, true);
+                        song.herd.moo_end = false;
+                        self.cmd.push(Cmd::ReplaceAudioThread);
+                        (wav, "out.wav")
                     }
                     _ => return,
                 };
