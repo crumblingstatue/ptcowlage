@@ -1,5 +1,3 @@
-#[cfg(target_arch = "wasm32")]
-use tinyaudio::OutputDevice;
 use {
     crate::{
         app::{
@@ -322,7 +320,7 @@ fn file_menu_ui_web(
     web_cmd: crate::web_glue::WebCmdQueueHandle,
     app_cmd: &mut CommandQueue,
     song: &mut SongState,
-    ptcow_audio: &mut Option<OutputDevice>,
+    ptcow_audio: &mut Option<tinyaudio::OutputDevice>,
 ) {
     use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
     if ui.button("Open").clicked() {
