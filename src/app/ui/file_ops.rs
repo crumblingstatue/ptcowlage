@@ -1,6 +1,6 @@
 use ptcow::VoiceIdx;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FileOp {
     OpenProj,
     ReplaceVoicesPtcop,
@@ -15,11 +15,35 @@ pub enum FileOp {
     ImportPtVoice,
 }
 
-pub const FILT_PTCOP: &str = "PxTone collage";
-pub const FILT_MIDI: &str = "Midi file";
-pub const FILT_PIYOPIYO: &str = "PiyoPiyo file";
-pub const FILT_ORGANYA: &str = "Organya file";
-pub const FILT_WAV: &str = "WAVE file";
-pub const FILT_SF2: &str = "SoundFont2 file";
-pub const FILT_PTVOICE: &str = "PxTone voice file";
-pub const FILT_PTNOISE: &str = "PxTone noise file";
+pub struct FileFilt {
+    pub name: &'static str,
+    pub ext: &'static str,
+}
+impl FileFilt {
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn web_filter(&self) -> String {
+        [".", self.ext].concat()
+    }
+}
+
+macro_rules! file_filts {
+    ($($const_name:ident, $name:literal, $ext:literal;)*) => {
+        $(
+            pub const $const_name: FileFilt = FileFilt {
+                name: $name,
+                ext: $ext,
+            };
+        )+
+    };
+}
+
+file_filts! {
+    FILT_PTCOP, "PxTone collage", "ptcop";
+    FILT_MIDI, "Midi file", "mid";
+    FILT_PIYOPIYO, "PiyoPiyo file", "pmd";
+    FILT_ORGANYA, "Organya file", "org";
+    FILT_WAV, "WAVE file", "wav";
+    FILT_SF2, "SoundFont2 file", "sf2";
+    FILT_PTVOICE, "PxTone voice file", "ptvoice";
+    FILT_PTNOISE, "PxTone noise file", "ptnoise";
+}

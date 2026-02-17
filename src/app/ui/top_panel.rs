@@ -1,14 +1,10 @@
 use {
     crate::{
         app::{
-            FileOp, ModalPayload, SongState,
+            ModalPayload, SongState,
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{
-                Tab,
-                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP},
-                piano_freeplay_ui,
-            },
+            ui::{Tab, piano_freeplay_ui},
         },
         audio_out::{OutParams, prepare_song},
     },
@@ -65,22 +61,13 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     let mut song_g = app.song.lock().unwrap();
     egui::MenuBar::new().ui(ui, |ui| {
         ui.menu_button("File", |ui| {
-            #[cfg(not(target_arch = "wasm32"))]
-            file_menu_ui_desktop(
+            file_menu_ui(
                 ui,
-                &mut app.file_dia,
                 &mut bt_open,
                 &mut bt_reload,
                 &mut bt_save,
                 app.open_file.is_some(),
-            );
-            #[cfg(target_arch = "wasm32")]
-            file_menu_ui_web(
-                ui,
-                app.web_cmd.clone(),
                 &mut app.cmd,
-                &mut song_g,
-                &mut app.pt_audio_dev,
             );
         });
         let song: &mut SongState = &mut song_g;
@@ -230,14 +217,8 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     drop(song_g);
     ui.add_space(2.0);
 
-    #[cfg(not(target_arch = "wasm32"))]
     if bt_open || sc_open {
-        if let Some(path) = &app.open_file {
-            app.file_dia.config_mut().initial_directory = path.parent().unwrap().to_path_buf();
-        }
-        app.file_dia.set_user_data(FileOp::OpenProj);
-        app.file_dia.config_mut().default_file_filter = Some(FILT_PTCOP.into());
-        app.file_dia.pick_file();
+        app.cmd.push(Cmd::PromptOpenPtcop);
     }
 
     if bt_reload || sc_reload {
@@ -258,112 +239,53 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn file_menu_ui_desktop(
+fn file_menu_ui(
     ui: &mut egui::Ui,
-    app_file_dia: &mut egui_file_dialog::FileDialog,
     bt_open: &mut bool,
     bt_reload: &mut bool,
     bt_save: &mut bool,
     can_save: bool,
+    app_cmd: &mut CommandQueue,
 ) {
     *bt_open = ui
         .add(egui::Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)))
         .clicked();
-    *bt_reload = ui
-        .add(egui::Button::new("Reload").shortcut_text(ui.ctx().format_shortcut(&RELOAD_SHORTCUT)))
-        .clicked();
-    *bt_save = ui
-        .add_enabled(
-            can_save,
-            egui::Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)),
-        )
-        .clicked();
+    if cfg!(not(target_arch = "wasm32")) {
+        *bt_reload = ui
+            .add(
+                egui::Button::new("Reload")
+                    .shortcut_text(ui.ctx().format_shortcut(&RELOAD_SHORTCUT)),
+            )
+            .clicked();
+        *bt_save = ui
+            .add_enabled(
+                can_save,
+                egui::Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)),
+            )
+            .clicked();
+    }
     if ui.button("Save as").clicked() {
-        app_file_dia.set_user_data(FileOp::SaveProjAs);
-        app_file_dia.config_mut().default_save_extension = Some(FILT_PTCOP.into());
-        app_file_dia.save_file();
+        app_cmd.push(Cmd::PromptSaveAs);
     }
     ui.separator();
     if ui.button("Import midi").clicked() {
-        app_file_dia.set_user_data(FileOp::ImportMidi);
-        app_file_dia.config_mut().default_file_filter = Some(FILT_MIDI.into());
-        app_file_dia.pick_file();
+        app_cmd.push(Cmd::PromptImportMidi);
     }
     if ui.button("Import PiyoPiyo").clicked() {
-        app_file_dia.set_user_data(FileOp::ImportPiyoPiyo);
-        app_file_dia.config_mut().default_file_filter = Some(FILT_PIYOPIYO.into());
-        app_file_dia.pick_file();
+        app_cmd.push(Cmd::PromptImportPiyo);
     }
     if ui.button("Import Organya").clicked() {
-        app_file_dia.set_user_data(FileOp::ImportOrganya);
-        app_file_dia.config_mut().default_file_filter = Some(FILT_ORGANYA.into());
-        app_file_dia.pick_file();
+        app_cmd.push(Cmd::PromptImportOrg);
     }
     ui.separator();
     if ui.button("Export wav").clicked() {
-        use crate::app::ui::file_ops::FILT_WAV;
-
-        app_file_dia.set_user_data(FileOp::ExportWav);
-        app_file_dia.config_mut().default_save_extension = Some(FILT_WAV.into());
-        app_file_dia.save_file();
+        app_cmd.push(Cmd::PromptExportWav);
     }
     ui.separator();
-    if ui.button("Quit").clicked() {
-        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn file_menu_ui_web(
-    ui: &mut egui::Ui,
-    web_cmd: crate::web_glue::WebCmdQueueHandle,
-    app_cmd: &mut CommandQueue,
-    song: &mut SongState,
-    ptcow_audio: &mut Option<tinyaudio::OutputDevice>,
-) {
-    use crate::web_glue::{WebCmd, WebCmdQueueHandleExt};
-    if ui.button("Open").clicked() {
-        wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file(".ptcop,.pttune").await;
-            web_cmd.push(WebCmd::OpenFile { data: bytes });
-        });
-    } else if ui.button("Import midi").clicked() {
-        wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file(".mid").await;
-            web_cmd.push(WebCmd::ImportMidi { data: bytes });
-        });
-    } else if ui.button("Import PiyoPiyo").clicked() {
-        wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file(".pmd").await;
-            web_cmd.push(WebCmd::ImportPiyo { data: bytes });
-        });
-    } else if ui.button("Import Organya").clicked() {
-        wasm_bindgen_futures::spawn_local(async move {
-            let bytes = crate::web_glue::open_file(".org").await;
-            web_cmd.push(WebCmd::ImportOrganya { data: bytes });
-        });
-    }
-    ui.separator();
-    if ui.button("Save as").clicked() {
-        let bytes = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
-        crate::web_glue::save_file(&bytes, "out.ptcop");
-    }
-    if ui.button("Export .wav").clicked() {
-        // Kill audio thread
-        *ptcow_audio = None;
-        match crate::util::export_wav(song) {
-            Ok(data) => {
-                crate::web_glue::save_file(&data, "out.wav");
-            }
-            Err(e) => {
-                eprintln!(".wav export error: {e}");
-            }
+    if cfg!(not(target_arch = "wasm32")) {
+        if ui.button("Quit").clicked() {
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
-        // Now we can resume playback
-        prepare_song(song, true);
-        song.herd.moo_end = false;
-        app_cmd.push(Cmd::ReplaceAudioThread);
     }
 }
 

@@ -7,7 +7,7 @@ export function open_file_dialog(accept) {
         input.onchange = () => {
             const file = input.files[0];
             const reader = new FileReader();
-            reader.onload = () => resolve(new Uint8Array(reader.result));
+            reader.onload = () => resolve([file.name, new Uint8Array(reader.result)]);
             reader.readAsArrayBuffer(file);
         };
         input.click();
