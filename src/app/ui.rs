@@ -385,12 +385,11 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
         Tab::Voices => tabs::voices::ui(
             ui,
             &mut song,
-            #[cfg(not(target_arch = "wasm32"))]
-            &mut app.file_dia,
             &mut app.ui_state.voices,
             app.out.rate,
             &mut app.aux_state,
             &app.ui_state.freeplay_piano,
+            &mut app.cmd,
         ),
         Tab::Unit => tabs::unit::ui(
             ui,

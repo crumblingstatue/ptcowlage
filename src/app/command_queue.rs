@@ -1,4 +1,8 @@
-use {egui_toast::ToastKind, ptcow::EventPayload, std::collections::VecDeque};
+use {
+    egui_toast::ToastKind,
+    ptcow::{EventPayload, VoiceIdx},
+    std::collections::VecDeque,
+};
 
 pub enum Cmd {
     ReloadCurrentFile,
@@ -27,6 +31,17 @@ pub enum Cmd {
         text: String,
         duration: f64,
     },
+    PromptImportPtVoice,
+    PromptImportPtNoise,
+    PromptImportSf2Sound,
+    PromptReplaceAllPtcop,
+    PromptReplaceSf2Single(VoiceIdx),
+    PromptSaveAs,
+    PromptImportMidi,
+    PromptImportPiyo,
+    PromptImportOrg,
+    PromptExportWav,
+    PromptOpenPtcop,
 }
 
 #[derive(Default)]

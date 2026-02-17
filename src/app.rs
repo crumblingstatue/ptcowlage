@@ -7,7 +7,10 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 Tab,
-                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileOp},
+                file_ops::{
+                    self, FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileFilt,
+                    FileOp,
+                },
             },
         },
         audio_out::{
@@ -30,7 +33,7 @@ use {
 };
 
 pub mod command_queue;
-mod ui;
+pub mod ui;
 
 pub struct App {
     song: SongStateHandle,
@@ -52,7 +55,7 @@ pub struct App {
     web_cmd: crate::web_glue::WebCmdQueueHandle,
 }
 
-enum ModalPayload {
+pub enum ModalPayload {
     Msg(String),
     SeekToSamplePrompt(SampleT),
 }
@@ -125,15 +128,15 @@ impl App {
             song: song_state_handle.clone(),
             #[cfg(not(target_arch = "wasm32"))]
             file_dia: egui_file_dialog::FileDialog::new()
-                .add_file_filter_extensions(FILT_PTCOP, vec!["ptcop"])
-                .add_save_extension(FILT_PTCOP, "ptcop")
-                .add_save_extension(FILT_WAV, "wav")
-                .add_file_filter_extensions(FILT_MIDI, vec!["mid"])
-                .add_file_filter_extensions(FILT_PIYOPIYO, vec!["pmd"])
-                .add_file_filter_extensions(FILT_ORGANYA, vec!["org"])
-                .add_file_filter_extensions(FILT_SF2, vec!["sf2"])
-                .add_file_filter_extensions(FILT_PTVOICE, vec!["ptvoice"])
-                .add_file_filter_extensions(FILT_PTNOISE, vec!["ptnoise"]),
+                .add_file_filter_extensions(FILT_PTCOP.name, vec![FILT_PTCOP.ext])
+                .add_save_extension(FILT_PTCOP.name, FILT_PTCOP.ext)
+                .add_save_extension(FILT_WAV.name, FILT_WAV.ext)
+                .add_file_filter_extensions(FILT_MIDI.name, vec![FILT_MIDI.ext])
+                .add_file_filter_extensions(FILT_PIYOPIYO.name, vec![FILT_PIYOPIYO.ext])
+                .add_file_filter_extensions(FILT_ORGANYA.name, vec![FILT_ORGANYA.ext])
+                .add_file_filter_extensions(FILT_SF2.name, vec![FILT_SF2.ext])
+                .add_file_filter_extensions(FILT_PTVOICE.name, vec![FILT_PTVOICE.ext])
+                .add_file_filter_extensions(FILT_PTNOISE.name, vec![FILT_PTNOISE.ext]),
             #[cfg(not(target_arch = "wasm32"))]
             pt_audio_dev: Some(spawn_ptcow_audio_thread(out_params, song_state_handle)),
             #[cfg(target_arch = "wasm32")]
@@ -218,6 +221,87 @@ impl App {
         let picked_path = self.file_dia.take_picked();
         let file_op = self.file_dia.user_data::<FileOp>().copied();
         (picked_path, file_op)
+    }
+
+    fn open_file_prompt(&mut self, filt: FileFilt, file_op: FileOp, save: bool) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if file_op == FileOp::OpenProj
+                && let Some(path) = &self.open_file
+            {
+                self.file_dia.config_mut().initial_directory = path.parent().unwrap().to_path_buf();
+            }
+            self.file_dia.set_user_data(file_op);
+            if save {
+                self.file_dia.config_mut().default_save_extension = Some(filt.name.into());
+                self.file_dia.save_file();
+            } else {
+                self.file_dia.config_mut().default_file_filter = Some(filt.name.into());
+                self.file_dia.pick_file();
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            use crate::web_glue::WebCmdQueueHandleExt;
+            let web_cmd = self.web_cmd.clone();
+            if save {
+                let (data, filename): (Vec<u8>, &str) = match file_op {
+                    FileOp::SaveProjAs => {
+                        let song = self.song.lock().unwrap();
+                        let data =
+                            ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
+                        (data, "out.ptcop")
+                    }
+                    FileOp::ExportWav => {
+                        let mut song = self.song.lock().unwrap();
+                        self.pt_audio_dev = None;
+                        match crate::util::export_wav(&mut song) {
+                            Ok(wav) => (wav, "out.wav"),
+                            Err(e) => {
+                                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                                return;
+                            }
+                        }
+                    }
+                    _ => return,
+                };
+                crate::web_glue::save_file(&data, filename);
+            } else {
+                wasm_bindgen_futures::spawn_local(async move {
+                    let file = crate::web_glue::open_file(&filt.web_filter()).await;
+                    web_cmd.push(crate::web_glue::WebCmd::from_file_op(
+                        file_op, file.data, file.name,
+                    ));
+                });
+            }
+        }
+    }
+
+    fn import_ptvoice(&mut self, data: Vec<u8>, path: &Path) {
+        match ptcow::Voice::from_ptvoice(&data) {
+            Ok(mut voice) => {
+                if let Some(os_str) = path.file_stem() {
+                    voice.name = os_str.to_string_lossy().into_owned();
+                }
+                self.song.lock().unwrap().ins.voices.push(voice);
+            }
+            Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+        }
+    }
+
+    fn import_ptnoise(&mut self, data: Vec<u8>, path: &Path) {
+        match ptcow::NoiseData::from_ptnoise(&data) {
+            Ok(noise) => {
+                let mut voice = ptcow::Voice::default();
+                voice.allocate::<false>();
+                voice.units[0].data = ptcow::VoiceData::Noise(noise);
+                if let Some(os_str) = path.file_stem() {
+                    voice.name = os_str.to_string_lossy().into_owned();
+                }
+                self.song.lock().unwrap().ins.voices.push(voice);
+            }
+            Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+        }
     }
 }
 
@@ -316,30 +400,11 @@ impl eframe::App for App {
                 }
                 FileOp::ImportPtVoice => {
                     let data = std::fs::read(&path).unwrap();
-                    match ptcow::Voice::from_ptvoice(&data) {
-                        Ok(mut voice) => {
-                            if let Some(os_str) = path.file_stem() {
-                                voice.name = os_str.to_string_lossy().into_owned();
-                            }
-                            self.song.lock().unwrap().ins.voices.push(voice);
-                        }
-                        Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
-                    }
+                    self.import_ptvoice(data, &path);
                 }
                 FileOp::ImportPtNoise => {
                     let data = std::fs::read(&path).unwrap();
-                    match ptcow::NoiseData::from_ptnoise(&data) {
-                        Ok(noise) => {
-                            let mut voice = ptcow::Voice::default();
-                            voice.allocate::<false>();
-                            voice.units[0].data = ptcow::VoiceData::Noise(noise);
-                            if let Some(os_str) = path.file_stem() {
-                                voice.name = os_str.to_string_lossy().into_owned();
-                            }
-                            self.song.lock().unwrap().ins.voices.push(voice);
-                        }
-                        Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
-                    }
+                    self.import_ptnoise(data, &path);
                 }
                 FileOp::ImportMidi => {
                     let mid_data = std::fs::read(&path).unwrap();
@@ -535,14 +600,52 @@ impl App {
                         .options(ToastOptions::default().duration_in_seconds(duration)),
                 );
             }
+            Cmd::PromptImportPtVoice => {
+                self.open_file_prompt(file_ops::FILT_PTVOICE, FileOp::ImportPtVoice, false);
+            }
+            Cmd::PromptImportPtNoise => {
+                self.open_file_prompt(file_ops::FILT_PTNOISE, FileOp::ImportPtNoise, false);
+            }
+            Cmd::PromptImportSf2Sound => {
+                self.open_file_prompt(file_ops::FILT_SF2, FileOp::ImportSf2Single, false);
+            }
+            Cmd::PromptReplaceAllPtcop => {
+                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ReplaceVoicesPtcop, false)
+            }
+            Cmd::PromptReplaceSf2Single(voice_idx) => self.open_file_prompt(
+                file_ops::FILT_SF2,
+                FileOp::ReplaceSf2Single(voice_idx),
+                false,
+            ),
+            Cmd::PromptSaveAs => {
+                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::SaveProjAs, true);
+            }
+            Cmd::PromptImportMidi => {
+                self.open_file_prompt(file_ops::FILT_MIDI, FileOp::ImportMidi, false);
+            }
+            Cmd::PromptImportPiyo => {
+                self.open_file_prompt(file_ops::FILT_PIYOPIYO, FileOp::ImportPiyoPiyo, false);
+            }
+            Cmd::PromptImportOrg => {
+                self.open_file_prompt(file_ops::FILT_ORGANYA, FileOp::ImportOrganya, false);
+            }
+            Cmd::PromptExportWav => {
+                self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWav, true);
+            }
+            Cmd::PromptOpenPtcop => {
+                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::OpenProj, false);
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]
     fn do_web_cmd(&mut self, cmd: crate::web_glue::WebCmd) {
         use crate::web_glue::WebCmd;
         match cmd {
-            WebCmd::OpenFile { data } => {
-                self.load_song_from_bytes(&data);
+            WebCmd::OpenFile { data, name } => {
+                if let Err(e) = self.load_song_from_bytes(&data) {
+                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                }
+                self.open_file = Some(name.into());
             }
             WebCmd::ImportMidi { data } => {
                 self.import_midi_from_bytes(&data);
@@ -552,6 +655,17 @@ impl App {
             }
             WebCmd::ImportOrganya { data } => {
                 self.import_organya_from_bytes(&data);
+            }
+            WebCmd::ImportPtVoice { data, name } => {
+                self.import_ptvoice(data, name.as_ref());
+            }
+            WebCmd::ImportPtNoise { data, name } => {
+                self.import_ptnoise(data, name.as_ref());
+            }
+            WebCmd::ReplaceVoicesPtCop { data } => {
+                let (_, _, ins) = ptcow::read_song(&data, 44_100).unwrap();
+                let mut song = self.song.lock().unwrap();
+                song.ins.voices = ins.voices;
             }
         }
     }

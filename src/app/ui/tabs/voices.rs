@@ -1,9 +1,8 @@
 use {
     crate::{
-        app::ui::{
-            FreeplayPianoState,
-            file_ops::{FILT_PTCOP, FileOp},
-            unit_color, voice_img, waveform_edit_widget,
+        app::{
+            command_queue::{Cmd, CommandQueue},
+            ui::{FreeplayPianoState, unit_color, voice_img, waveform_edit_widget},
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
     },
@@ -29,11 +28,11 @@ pub struct VoicesUiState {
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    #[cfg(not(target_arch = "wasm32"))] file_dia: &mut egui_file_dialog::FileDialog,
     ui_state: &mut VoicesUiState,
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     piano_state: &FreeplayPianoState,
+    app_cmd: &mut CommandQueue,
 ) {
     let mut op = None;
     ui.horizontal_wrapped(|ui| {
@@ -66,45 +65,25 @@ pub fn ui(
                 song.ins.voices.push(voice);
             }
         });
-        #[cfg(not(target_arch = "wasm32"))]
         ui.menu_button("Import ->", |ui| {
             if ui.button(".ptvoice").clicked() {
-                use crate::app::ui::file_ops::FILT_PTVOICE;
-
-                file_dia.config_mut().default_file_filter = Some(FILT_PTVOICE.into());
-                file_dia.set_user_data(FileOp::ImportPtVoice);
-                file_dia.pick_file();
+                app_cmd.push(Cmd::PromptImportPtVoice);
             }
             if ui.button(".ptnoise").clicked() {
-                use crate::app::ui::file_ops::FILT_PTNOISE;
-
-                file_dia.config_mut().default_file_filter = Some(FILT_PTNOISE.into());
-                file_dia.set_user_data(FileOp::ImportPtNoise);
-                file_dia.pick_file();
+                app_cmd.push(Cmd::PromptImportPtNoise);
             }
             if ui.button("Single from .sf2").clicked() {
-                use crate::app::ui::file_ops::FILT_SF2;
-
-                file_dia.config_mut().default_file_filter = Some(FILT_SF2.into());
-                file_dia.set_user_data(FileOp::ImportSf2Single);
-                file_dia.pick_file();
+                app_cmd.push(Cmd::PromptImportSf2Sound);
             }
         });
-        #[cfg(not(target_arch = "wasm32"))]
         ui.menu_button("Replace ->", |ui| {
             if ui.button("All from .ptcop...").clicked() {
-                file_dia.config_mut().default_file_filter = Some(FILT_PTCOP.into());
-                file_dia.set_user_data(FileOp::ReplaceVoicesPtcop);
-                file_dia.pick_file();
+                app_cmd.push(Cmd::PromptReplaceAllPtcop);
             }
             if ui.button("Current from .sf2").clicked() {
-                use crate::app::ui::file_ops::FILT_SF2;
-
-                file_dia.config_mut().default_file_filter = Some(FILT_SF2.into());
-                file_dia.set_user_data(FileOp::ReplaceSf2Single(VoiceIdx(
+                app_cmd.push(Cmd::PromptReplaceSf2Single(VoiceIdx(
                     ui_state.selected_idx as u8,
                 )));
-                file_dia.pick_file();
             }
         });
         for (i, voice) in song.ins.voices.iter().enumerate() {
