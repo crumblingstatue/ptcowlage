@@ -286,11 +286,8 @@ impl App {
     }
 
     fn import_ptvoice(&mut self, data: Vec<u8>, path: &Path) {
-        match ptcow::Voice::from_ptvoice(&data) {
-            Ok(mut voice) => {
-                if let Some(os_str) = path.file_stem() {
-                    voice.name = os_str.to_string_lossy().into_owned();
-                }
+        match load_ptvoice(data, path) {
+            Ok(voice) => {
                 self.song.lock().unwrap().ins.voices.push(voice);
             }
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
@@ -298,19 +295,32 @@ impl App {
     }
 
     fn import_ptnoise(&mut self, data: Vec<u8>, path: &Path) {
-        match ptcow::NoiseData::from_ptnoise(&data) {
-            Ok(noise) => {
-                let mut voice = ptcow::Voice::default();
-                voice.allocate::<false>();
-                voice.units[0].data = ptcow::VoiceData::Noise(noise);
-                if let Some(os_str) = path.file_stem() {
-                    voice.name = os_str.to_string_lossy().into_owned();
-                }
+        match load_ptnoise(data, path) {
+            Ok(voice) => {
                 self.song.lock().unwrap().ins.voices.push(voice);
             }
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
         }
     }
+}
+
+fn load_ptvoice(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+    let mut voice = ptcow::Voice::from_ptvoice(&data)?;
+    if let Some(os_str) = path.file_stem() {
+        voice.name = os_str.to_string_lossy().into_owned();
+    }
+    Ok(voice)
+}
+
+fn load_ptnoise(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+    let noise = ptcow::NoiseData::from_ptnoise(&data)?;
+    let mut voice = ptcow::Voice::default();
+    voice.allocate::<false>();
+    voice.units[0].data = ptcow::VoiceData::Noise(noise);
+    if let Some(os_str) = path.file_stem() {
+        voice.name = os_str.to_string_lossy().into_owned();
+    }
+    Ok(voice)
 }
 
 impl eframe::App for App {
@@ -381,6 +391,30 @@ impl eframe::App for App {
                 FileOp::ReplaceVoicesPtcop => {
                     let mut song = self.song.lock().unwrap();
                     import_voices(&path, &mut song);
+                }
+                FileOp::ReplacePtVoiceSingle(voice_idx) => {
+                    let data = std::fs::read(&path).unwrap();
+                    match load_ptvoice(data, &path) {
+                        Ok(voice) => {
+                            let mut song = self.song.lock().unwrap();
+                            song.ins.voices[voice_idx.usize()] = voice;
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                }
+                FileOp::ReplacePtNoiseSingle(voice_idx) => {
+                    let data = std::fs::read(&path).unwrap();
+                    match load_ptnoise(data, &path) {
+                        Ok(voice) => {
+                            let mut song = self.song.lock().unwrap();
+                            song.ins.voices[voice_idx.usize()] = voice;
+                        }
+                        Err(e) => {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
                 }
                 FileOp::ReplaceSf2Single(voice_idx) => {
                     let mut sf2_file = File::open(path).unwrap();
@@ -620,6 +654,20 @@ impl App {
             Cmd::PromptReplaceAllPtcop => {
                 self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ReplaceVoicesPtcop, false)
             }
+            Cmd::PromptReplacePtVoiceSingle(voice_idx) => {
+                self.open_file_prompt(
+                    file_ops::FILT_PTVOICE,
+                    FileOp::ReplacePtVoiceSingle(voice_idx),
+                    false,
+                );
+            }
+            Cmd::PromptReplacePtNoiseSingle(voice_idx) => {
+                self.open_file_prompt(
+                    file_ops::FILT_PTNOISE,
+                    FileOp::ReplacePtNoiseSingle(voice_idx),
+                    false,
+                );
+            }
             Cmd::PromptReplaceSf2Single(voice_idx) => self.open_file_prompt(
                 file_ops::FILT_SF2,
                 FileOp::ReplaceSf2Single(voice_idx),
@@ -675,6 +723,32 @@ impl App {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices = ins.voices;
             }
+            WebCmd::ReplacePtVoiceSingle {
+                data,
+                name,
+                voice_idx,
+            } => match load_ptvoice(data, name.as_ref()) {
+                Ok(voice) => {
+                    let mut song = self.song.lock().unwrap();
+                    song.ins.voices[voice_idx.usize()] = voice;
+                }
+                Err(e) => {
+                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                }
+            },
+            WebCmd::ReplacePtNoiseSingle {
+                data,
+                name,
+                voice_idx,
+            } => match load_ptnoise(data, name.as_ref()) {
+                Ok(voice) => {
+                    let mut song = self.song.lock().unwrap();
+                    song.ins.voices[voice_idx.usize()] = voice;
+                }
+                Err(e) => {
+                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                }
+            },
         }
     }
     fn reload_current_file(&mut self) {

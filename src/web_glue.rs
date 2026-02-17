@@ -1,3 +1,4 @@
+use ptcow::VoiceIdx;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -53,13 +54,40 @@ impl WebCmdQueueHandleExt for WebCmdQueueHandle {
 }
 
 pub enum WebCmd {
-    OpenFile { data: Vec<u8>, name: String },
-    ImportMidi { data: Vec<u8> },
-    ImportPiyo { data: Vec<u8> },
-    ImportOrganya { data: Vec<u8> },
-    ImportPtVoice { data: Vec<u8>, name: String },
-    ImportPtNoise { data: Vec<u8>, name: String },
-    ReplaceVoicesPtCop { data: Vec<u8> },
+    OpenFile {
+        data: Vec<u8>,
+        name: String,
+    },
+    ImportMidi {
+        data: Vec<u8>,
+    },
+    ImportPiyo {
+        data: Vec<u8>,
+    },
+    ImportOrganya {
+        data: Vec<u8>,
+    },
+    ImportPtVoice {
+        data: Vec<u8>,
+        name: String,
+    },
+    ImportPtNoise {
+        data: Vec<u8>,
+        name: String,
+    },
+    ReplaceVoicesPtCop {
+        data: Vec<u8>,
+    },
+    ReplacePtVoiceSingle {
+        data: Vec<u8>,
+        name: String,
+        voice_idx: VoiceIdx,
+    },
+    ReplacePtNoiseSingle {
+        data: Vec<u8>,
+        name: String,
+        voice_idx: VoiceIdx,
+    },
 }
 
 impl WebCmd {
@@ -76,6 +104,16 @@ impl WebCmd {
             FileOp::ImportSf2Single => todo!(),
             FileOp::ImportPtNoise => Self::ImportPtNoise { data, name },
             FileOp::ImportPtVoice => Self::ImportPtVoice { data, name },
+            FileOp::ReplacePtVoiceSingle(voice_idx) => Self::ReplacePtVoiceSingle {
+                data,
+                name,
+                voice_idx,
+            },
+            FileOp::ReplacePtNoiseSingle(voice_idx) => Self::ReplacePtNoiseSingle {
+                data,
+                name,
+                voice_idx,
+            },
         }
     }
 }

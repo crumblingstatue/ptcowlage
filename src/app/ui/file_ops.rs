@@ -10,6 +10,8 @@ pub enum FileOp {
     ImportOrganya,
     ExportWav,
     ReplaceSf2Single(VoiceIdx),
+    ReplacePtVoiceSingle(VoiceIdx),
+    ReplacePtNoiseSingle(VoiceIdx),
     ImportSf2Single,
     ImportPtNoise,
     ImportPtVoice,

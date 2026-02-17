@@ -42,6 +42,8 @@ pub enum Cmd {
     PromptImportOrg,
     PromptExportWav,
     PromptOpenPtcop,
+    PromptReplacePtVoiceSingle(VoiceIdx),
+    PromptReplacePtNoiseSingle(VoiceIdx),
 }
 
 #[derive(Default)]

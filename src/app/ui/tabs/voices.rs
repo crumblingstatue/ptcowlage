@@ -80,6 +80,16 @@ pub fn ui(
             if ui.button("All from .ptcop...").clicked() {
                 app_cmd.push(Cmd::PromptReplaceAllPtcop);
             }
+            if ui.button("Current from .ptvoice").clicked() {
+                app_cmd.push(Cmd::PromptReplacePtVoiceSingle(VoiceIdx(
+                    ui_state.selected_idx as u8,
+                )));
+            }
+            if ui.button("Current from .ptnoise").clicked() {
+                app_cmd.push(Cmd::PromptReplacePtNoiseSingle(VoiceIdx(
+                    ui_state.selected_idx as u8,
+                )));
+            }
             if ui.button("Current from .sf2").clicked() {
                 app_cmd.push(Cmd::PromptReplaceSf2Single(VoiceIdx(
                     ui_state.selected_idx as u8,
