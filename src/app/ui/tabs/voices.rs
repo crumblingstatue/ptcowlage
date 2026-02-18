@@ -230,16 +230,14 @@ fn voice_ui(
         }
     });
 
-    ui.indent("voic", |ui| {
-        voice_ui_inner(
-            ui,
-            voice,
-            VoiceIdx(idx.try_into().unwrap()),
-            out_rate,
-            aux,
-            ui_state,
-        );
-    });
+    voice_ui_inner(
+        ui,
+        voice,
+        VoiceIdx(idx.try_into().unwrap()),
+        out_rate,
+        aux,
+        ui_state,
+    );
 }
 
 pub fn voice_ui_inner(
