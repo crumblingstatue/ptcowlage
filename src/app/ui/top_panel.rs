@@ -159,19 +159,29 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             });
         });
         ui.separator();
-        let mut tab = |tab, label, on| {
-            ui.selectable_value(&mut app.ui_state.tab, tab, label);
+        let mut tab = |tab, label, fkey: &str, on| {
+            ui.selectable_value(
+                &mut app.ui_state.tab,
+                tab,
+                (
+                    label,
+                    egui::RichText::new(fkey)
+                        .size(11.0)
+                        .color(egui::Color32::WHITE)
+                        .background_color(egui::Color32::DARK_GRAY),
+                ),
+            );
             if on {
                 app.ui_state.tab = tab;
             }
         };
-        tab(Tab::Playback, "▶ Playback [F4]", k_f4);
-        tab(Tab::Map, "📜 Map [F5]", k_f5);
-        tab(Tab::PianoRoll, "🎹 Piano roll [F6]", k_f6);
-        tab(Tab::Events, "󾠬 Events [F7]", k_f7);
-        tab(Tab::Voices, "📢 Voices [F8]", k_f8);
-        tab(Tab::Unit, "🐄 Unit [F9]", k_f9);
-        tab(Tab::Effects, "🔊 Effects [F10]", k_f10);
+        tab(Tab::Playback, "▶ Playback", "F4", k_f4);
+        tab(Tab::Map, "📜 Map", "F5", k_f5);
+        tab(Tab::PianoRoll, "🎹 Piano roll", "F6", k_f6);
+        tab(Tab::Events, "󾠬 Events", "F7", k_f7);
+        tab(Tab::Voices, "📢 Voices", "F8", k_f8);
+        tab(Tab::Unit, "🐄 Unit", "F9", k_f9);
+        tab(Tab::Effects, "🔊 Effects", "F10", k_f10);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if let Some(open_path) = &app.open_file {
                 ui.label(format!("{}", open_path.file_name().unwrap().display()));
