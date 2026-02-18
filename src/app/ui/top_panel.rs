@@ -72,6 +72,21 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         });
         ui.menu_button("View", |ui| {
             egui::gui_zoom::zoom_menu_buttons(ui);
+            ui.separator();
+            if ui.button("Fullscreen").clicked() {
+                #[cfg(not(target_arch = "wasm32"))]
+                ui.ctx()
+                    .send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+                #[cfg(target_arch = "wasm32")]
+                crate::web_glue::request_fullscreen();
+            }
+            if ui.button("Exit fullscreen").clicked() {
+                #[cfg(not(target_arch = "wasm32"))]
+                ui.ctx()
+                    .send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                #[cfg(target_arch = "wasm32")]
+                crate::web_glue::exit_fullscreen();
+            }
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {

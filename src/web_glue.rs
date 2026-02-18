@@ -16,6 +16,20 @@ unsafe extern "C" {
     pub fn save_file(data: &[u8], filename: &str);
 }
 
+pub fn request_fullscreen() {
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+    let element = document.document_element().unwrap();
+
+    let _ = element.request_fullscreen();
+}
+
+pub fn exit_fullscreen() {
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+    let _ = document.exit_fullscreen();
+}
+
 pub struct OpenedFile {
     pub name: String,
     pub data: Vec<u8>,
