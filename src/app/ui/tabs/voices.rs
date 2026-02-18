@@ -526,16 +526,23 @@ fn voice_unit_ui(
                 }
             });
 
-            if let WaveData::Coord { points, .. } = wave_data {
+            if let WaveData::Coord { points, resolution } = wave_data {
+                let reso = f32::from(*resolution);
                 let (rect, _re) =
-                    ui.allocate_exact_size(egui::vec2(200.0, 200.0), egui::Sense::click_and_drag());
+                    ui.allocate_exact_size(egui::vec2(reso, reso), egui::Sense::click_and_drag());
                 let p = ui.painter_at(rect);
-                let lt = rect.left_top();
-                let egui_points: Vec<egui::Pos2> = points
+                p.rect_filled(rect, 2.0, egui::Color32::from_rgb(0, 102, 67));
+                let lc = rect.left_center();
+                let mut egui_points: Vec<egui::Pos2> = points
                     .iter()
-                    .map(|pt| egui::pos2(lt.x + pt.x as f32, (lt.y + 100.) + pt.y as f32))
+                    .map(|pt| egui::pos2(lc.x + pt.x as f32, lc.y - pt.y as f32))
                     .collect();
-                p.line(egui_points, egui::Stroke::new(2.0, egui::Color32::WHITE));
+                // pxtone Voice seems to add this point when drawing it
+                egui_points.push(rect.right_center());
+                p.line(
+                    egui_points,
+                    egui::Stroke::new(2.0, egui::Color32::from_rgb(34, 204, 110)),
+                );
             }
             inst.recalc_wave_data(wave_data, unit.volume, unit.pan);
         }
