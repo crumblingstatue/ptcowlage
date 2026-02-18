@@ -397,7 +397,11 @@ impl eframe::App for App {
                     match load_ptvoice(data, &path) {
                         Ok(voice) => {
                             let mut song = self.song.lock().unwrap();
-                            song.ins.voices[voice_idx.usize()] = voice;
+                            if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                                *voice_of_idx = voice;
+                            } else {
+                                song.ins.voices.push(voice);
+                            }
                         }
                         Err(e) => {
                             self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
@@ -409,7 +413,11 @@ impl eframe::App for App {
                     match load_ptnoise(data, &path) {
                         Ok(voice) => {
                             let mut song = self.song.lock().unwrap();
-                            song.ins.voices[voice_idx.usize()] = voice;
+                            if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                                *voice_of_idx = voice;
+                            } else {
+                                song.ins.voices.push(voice);
+                            }
                         }
                         Err(e) => {
                             self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
@@ -730,7 +738,11 @@ impl App {
             } => match load_ptvoice(data, name.as_ref()) {
                 Ok(voice) => {
                     let mut song = self.song.lock().unwrap();
-                    song.ins.voices[voice_idx.usize()] = voice;
+                    if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                        *voice_of_idx = voice;
+                    } else {
+                        song.ins.voices.push(voice);
+                    }
                 }
                 Err(e) => {
                     self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
@@ -743,7 +755,11 @@ impl App {
             } => match load_ptnoise(data, name.as_ref()) {
                 Ok(voice) => {
                     let mut song = self.song.lock().unwrap();
-                    song.ins.voices[voice_idx.usize()] = voice;
+                    if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                        *voice_of_idx = voice;
+                    } else {
+                        song.ins.voices.push(voice);
+                    }
                 }
                 Err(e) => {
                     self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
