@@ -248,14 +248,13 @@ pub fn voice_ui_inner(
     aux: &mut AuxAudioState,
     ui_state: &mut VoicesUiState,
 ) {
-    for (unit, inst) in zip(&mut voice.units, &mut voice.insts) {
-        ui.strong("v-unit");
+    let total = voice.units.len();
+    for (i, (unit, inst)) in zip(&mut voice.units, &mut voice.insts).enumerate() {
+        ui.strong(format!("unit {}/{total}", i + 1));
         ui.indent("vu", |ui| {
             voice_unit_ui(ui, unit, inst, out_rate, voice_idx, ui_state, aux);
         });
-    }
-    for (i, inst) in voice.insts.iter_mut().enumerate() {
-        ui.strong("v-instance");
+        ui.strong(format!("instance {}/{total}", i + 1));
         ui.indent("vi", |ui| {
             ui.horizontal(|ui| {
                 ui.label("Sample buf");
