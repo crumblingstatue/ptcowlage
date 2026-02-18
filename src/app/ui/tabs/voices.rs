@@ -2,7 +2,7 @@ use {
     crate::{
         app::{
             command_queue::{Cmd, CommandQueue},
-            ui::{FreeplayPianoState, unit_color, voice_img, waveform_edit_widget},
+            ui::{FreeplayPianoState, SharedUiState, unit_color, voice_img, waveform_edit_widget},
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
     },
@@ -10,7 +10,7 @@ use {
     eframe::egui,
     ptcow::{
         Bps, ChNum, EnvPt, NoiseData, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
-        NoiseTable, NoiseType, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags, VoiceIdx,
+        NoiseTable, NoiseType, OsciPt, SampleRate, UnitIdx, Voice, VoiceData, VoiceFlags, VoiceIdx,
         VoiceInstance, VoiceUnit, WaveData, noise_to_pcm,
     },
     rustc_hash::FxHashMap,
@@ -29,6 +29,7 @@ pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
     ui_state: &mut VoicesUiState,
+    shared: &mut SharedUiState,
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     piano_state: &FreeplayPianoState,
@@ -124,6 +125,14 @@ pub fn ui(
                 if ui.input(|inp| inp.pointer.primary_released()) {
                     ui_state.dragged_idx = None;
                     op = Some(VoiceUiOp::Swap(dragged_idx, i));
+                }
+            }
+            if re.hovered() {
+                let voice_idx = VoiceIdx(i as u8);
+                for (i, unit) in song.herd.units.iter().enumerate() {
+                    if unit.voice_idx == voice_idx {
+                        shared.highlight_set.insert(UnitIdx(i as u8));
+                    }
                 }
             }
         }

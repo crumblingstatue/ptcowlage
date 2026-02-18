@@ -63,6 +63,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
     if ui.button("Unhide all").clicked() {
         app.ui_state.piano_roll.hidden_units.clear();
     }
+    app.ui_state.shared.highlight_set.clear();
 }
 
 fn unit_ui(
@@ -107,6 +108,9 @@ fn unit_ui(
             && idx.usize() == i
         {
             ui.painter().debug_rect(re.rect, egui::Color32::YELLOW, "");
+        }
+        if ui_state.shared.highlight_set.contains(&UnitIdx(i as u8)) {
+            ui.painter().debug_rect(re.rect, egui::Color32::WHITE, "");
         }
         if re.clicked() {
             ui_state.shared.active_unit = Some(UnitIdx(i as u8));

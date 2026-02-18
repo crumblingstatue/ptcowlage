@@ -23,6 +23,7 @@ use {
     ptcow::{
         Event, EventPayload, GroupIdx, PcmData, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
     },
+    rustc_hash::FxHashSet,
     rustysynth::SoundFont,
 };
 
@@ -296,6 +297,8 @@ pub struct SharedUiState {
     /// - Is highlighted in the left side units panel
     pub active_unit: Option<UnitIdx>,
     pub toasts: Toasts,
+    /// Units in this set will be highlighted
+    pub highlight_set: FxHashSet<UnitIdx>,
 }
 
 impl Default for SharedUiState {
@@ -305,6 +308,7 @@ impl Default for SharedUiState {
             toasts: Toasts::new()
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
+            highlight_set: FxHashSet::default(),
         }
     }
 }
@@ -386,6 +390,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             ui,
             &mut song,
             &mut app.ui_state.voices,
+            &mut app.ui_state.shared,
             app.out.rate,
             &mut app.aux_state,
             &app.ui_state.freeplay_piano,
