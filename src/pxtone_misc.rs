@@ -181,6 +181,10 @@ fn first_tick(eves: &[Event], idx: usize) -> usize {
     let tick = eves[idx].tick;
     let mut cursor = idx;
     while eves[cursor].tick == tick {
+        // This is literally the first event
+        if cursor == 0 {
+            return 0;
+        }
         cursor -= 1;
     }
     cursor
