@@ -70,6 +70,9 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 &mut app.cmd,
             );
         });
+        ui.menu_button("View", |ui| {
+            egui::gui_zoom::zoom_menu_buttons(ui);
+        });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
             ui.menu_button("Clear events", |ui| {
