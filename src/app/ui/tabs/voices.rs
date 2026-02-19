@@ -627,21 +627,26 @@ fn voice_unit_ui(
 
 fn envelope_src_ui(unit: &mut VoiceUnit, ui: &mut egui::Ui, x_cursor: u16) {
     let (rect, _re) = ui.allocate_exact_size(
-        egui::vec2(x_cursor as f32, 256.0),
+        egui::vec2(x_cursor as f32, 128.0),
         egui::Sense::click_and_drag(),
     );
     let p = ui.painter_at(rect);
-    let lt = rect.left_top();
-    p.rect_filled(rect, 2.0, egui::Color32::BLACK);
+    let lb = rect.left_bottom();
+    p.rect_filled(rect, 2.0, egui::Color32::from_rgb(102, 67, 0));
     let mut x_cursor = 0;
-    let egui_points: Vec<egui::Pos2> = unit
+    let mut egui_points: Vec<egui::Pos2> = unit
         .envelope
         .points
         .iter()
         .map(|pt| {
             x_cursor += pt.x;
-            egui::pos2(lt.x + x_cursor as f32, lt.y + pt.y as f32)
+            egui::pos2(lb.x + x_cursor as f32, lb.y - pt.y as f32)
         })
         .collect();
-    p.line(egui_points, egui::Stroke::new(2.0, egui::Color32::WHITE));
+    // Ptvoice seems to have a point at (0, bottom) when drawing
+    egui_points.insert(0, egui::pos2(lb.x, lb.y));
+    p.line(
+        egui_points,
+        egui::Stroke::new(2.0, egui::Color32::from_rgb(204, 110, 34)),
+    );
 }
