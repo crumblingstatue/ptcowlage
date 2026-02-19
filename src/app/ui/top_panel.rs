@@ -16,6 +16,7 @@ use {
     std::collections::{HashMap, HashSet},
 };
 
+const NEW_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::N);
 const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O);
 const SAVE_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::S);
 const RELOAD_SHORTCUT: KeyboardShortcut =
@@ -33,6 +34,7 @@ fn used_voices(eves: &EveList) -> HashSet<VoiceIdx> {
 
 pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     let [
+        sc_new,
         sc_open,
         sc_save,
         sc_reload,
@@ -45,6 +47,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         k_f10,
     ] = ui.input_mut(|inp| {
         [
+            inp.consume_shortcut(&NEW_SHORTCUT),
             inp.consume_shortcut(&OPEN_SHORTCUT),
             inp.consume_shortcut(&SAVE_SHORTCUT),
             inp.consume_shortcut(&RELOAD_SHORTCUT),
@@ -245,6 +248,10 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     drop(song_g);
     ui.add_space(2.0);
 
+    if sc_new {
+        app.cmd.push(Cmd::ClearProject);
+    }
+
     if bt_open || sc_open {
         app.cmd.push(Cmd::PromptOpenPtcop);
     }
@@ -275,7 +282,10 @@ fn file_menu_ui(
     can_save: bool,
     app_cmd: &mut CommandQueue,
 ) {
-    if ui.button("New").clicked() {
+    if ui
+        .add(egui::Button::new("New").shortcut_text(ui.ctx().format_shortcut(&NEW_SHORTCUT)))
+        .clicked()
+    {
         app_cmd.push(Cmd::ClearProject);
     }
     *bt_open = ui
