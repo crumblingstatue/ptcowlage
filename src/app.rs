@@ -689,6 +689,7 @@ impl App {
                 let mut song = self.song.lock().unwrap();
                 *song = SongState::new(self.out.rate);
                 song.prepare(self.out.rate);
+                self.open_file = None;
             }
         }
     }
