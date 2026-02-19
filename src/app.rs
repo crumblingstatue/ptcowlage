@@ -38,7 +38,7 @@ pub mod ui;
 pub struct App {
     song: SongStateHandle,
     #[cfg(not(target_arch = "wasm32"))]
-    file_dia: egui_file_dialog::FileDialog,
+    pub file_dia: egui_file_dialog::FileDialog,
     /// Main audio output for ptcow playback
     pt_audio_dev: Option<OutputDevice>,
     out: OutParams,
@@ -541,6 +541,14 @@ impl eframe::App for App {
                 }
             }
         }
+    }
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        #[cfg(not(target_arch = "wasm32"))]
+        eframe::set_value(
+            storage,
+            "pinned-folders",
+            &self.file_dia.storage_mut().pinned_folders,
+        );
     }
 }
 

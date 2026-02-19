@@ -74,7 +74,14 @@ fn main() {
             cc.egui_ctx
                 .send_viewport_cmd(egui::ViewportCommand::Title("pxtone Cowlage".into()));
             font_fallback::install_ja_fallback_font(&cc.egui_ctx);
-            let app = app::App::new(args, OutParams::default(), &[]);
+            let mut app = app::App::new(args, OutParams::default(), &[]);
+
+            if let Some(storage) = cc.storage {
+                if let Some(folders) = eframe::get_value(storage, "pinned-folders") {
+                    app.file_dia.storage_mut().pinned_folders = folders;
+                }
+            }
+
             Ok(Box::new(app))
         }),
     )

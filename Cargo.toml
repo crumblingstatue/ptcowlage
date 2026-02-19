@@ -12,7 +12,7 @@ oggv = ["ptcow/oggv"]
 [dependencies]
 eframe.version = "0.33"
 eframe.default-features = false
-eframe.features = ["default_fonts", "glow", "x11", "wayland"]
+eframe.features = ["default_fonts", "glow", "x11", "wayland", "persistence"]
 egui_extras.version = "0.33"
 egui_extras.features = ["image"]
 egui-toast = "0.19"
