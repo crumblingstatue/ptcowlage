@@ -87,8 +87,13 @@ fn main() {
 fn load_persistence(cc: &eframe::CreationContext<'_>, app: &mut app::App) {
     if let Some(storage) = cc.storage {
         #[cfg(not(target_arch = "wasm32"))]
-        if let Some(folders) = eframe::get_value(storage, "pinned-folders") {
-            app.file_dia.storage_mut().pinned_folders = folders;
+        {
+            if let Some(folders) = eframe::get_value(storage, "pinned-folders") {
+                app.file_dia.storage_mut().pinned_folders = folders;
+            }
+            if let Some(list) = eframe::get_value(storage, "recently-opened") {
+                app.recently_opened = list;
+            }
         }
         if let Some(text) = storage.get_string("out-buf-size") {
             if let Ok(num) = text.parse() {

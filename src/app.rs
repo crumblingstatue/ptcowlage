@@ -1,5 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::app::ui::file_ops::{FILT_PTNOISE, FILT_PTVOICE, FILT_WAV};
+use {
+    crate::app::ui::file_ops::{FILT_PTNOISE, FILT_PTVOICE, FILT_WAV},
+    recently_used_list::RecentlyUsedList,
+};
 use {
     crate::{
         CliArgs,
@@ -39,6 +42,8 @@ pub struct App {
     song: SongStateHandle,
     #[cfg(not(target_arch = "wasm32"))]
     pub file_dia: egui_file_dialog::FileDialog,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub recently_opened: RecentlyUsedList<PathBuf>,
     /// Main audio output for ptcow playback
     pt_audio_dev: Option<OutputDevice>,
     pub out: OutParams,
@@ -123,6 +128,8 @@ impl App {
                 .add_file_filter_extensions(FILT_SF2.name, vec![FILT_SF2.ext])
                 .add_file_filter_extensions(FILT_PTVOICE.name, vec![FILT_PTVOICE.ext])
                 .add_file_filter_extensions(FILT_PTNOISE.name, vec![FILT_PTNOISE.ext]),
+            #[cfg(not(target_arch = "wasm32"))]
+            recently_opened: RecentlyUsedList::default(),
             #[cfg(not(target_arch = "wasm32"))]
             pt_audio_dev: Some(spawn_ptcow_audio_thread(out_params, song_state_handle)),
             #[cfg(target_arch = "wasm32")]
@@ -544,11 +551,14 @@ impl eframe::App for App {
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         #[cfg(not(target_arch = "wasm32"))]
-        eframe::set_value(
-            storage,
-            "pinned-folders",
-            &self.file_dia.storage_mut().pinned_folders,
-        );
+        {
+            eframe::set_value(
+                storage,
+                "pinned-folders",
+                &self.file_dia.storage_mut().pinned_folders,
+            );
+            eframe::set_value(storage, "recently-opened", &self.recently_opened);
+        }
         storage.set_string("out-buf-size", self.out.buf_size.to_string());
     }
 }
@@ -565,6 +575,8 @@ impl App {
     pub fn load_song_from_path(&mut self, path: PathBuf) -> anyhow::Result<()> {
         let data = std::fs::read(&path).context("Failed to read file")?;
         self.load_song_from_bytes(&data)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        self.recently_opened.use_(path.clone());
         self.open_file = Some(path);
         Ok(())
     }
@@ -699,6 +711,13 @@ impl App {
                 *song = SongState::new(self.out.rate);
                 song.prepare(self.out.rate);
                 self.open_file = None;
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            Cmd::OpenPtcopFromPath { path } => {
+                if let Err(e) = self.load_song_from_path(path) {
+                    self.modal_payload =
+                        Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                }
             }
         }
     }

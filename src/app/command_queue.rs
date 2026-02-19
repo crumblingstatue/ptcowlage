@@ -45,6 +45,10 @@ pub enum Cmd {
     PromptReplacePtVoiceSingle(VoiceIdx),
     PromptReplacePtNoiseSingle(VoiceIdx),
     ClearProject,
+    #[cfg(not(target_arch = "wasm32"))]
+    OpenPtcopFromPath {
+        path: std::path::PathBuf,
+    },
 }
 
 #[derive(Default)]

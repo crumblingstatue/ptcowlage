@@ -2302,6 +2302,7 @@ dependencies = [
  "organyacat",
  "piyopiyo",
  "ptcow",
+ "recently_used_list",
  "rustc-hash 2.1.1",
  "rustysynth",
  "tinyaudio",
@@ -2398,6 +2399,14 @@ checksum = "6717cf23b488adf64b9d711329542ba34de147df262370221940dfabc2c91358"
 dependencies = [
  "bytemuck",
  "font-types",
+]
+
+[[package]]
+name = "recently_used_list"
+version = "0.1.0"
+source = "git+https://github.com/crumblingstatue/recently_used_list.git#90af7254942e9ac657e0f2df6fbeee4a95a27385"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

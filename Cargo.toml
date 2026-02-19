@@ -49,6 +49,7 @@ fontique = "0.7.0"
 egui-file-dialog = "0.12"
 clap.version = "4.5"
 clap.features = ["derive"]
+recently_used_list.git = "https://github.com/crumblingstatue/recently_used_list.git"
 
 [profile.dev]
 debug = "line-tables-only"

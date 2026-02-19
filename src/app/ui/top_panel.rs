@@ -13,7 +13,10 @@ use {
         containers::menu::{MenuButton, MenuConfig},
     },
     ptcow::{EveList, EventPayload, MooPlan, UnitIdx, VoiceIdx, timing::NonZeroMeas},
-    std::collections::{HashMap, HashSet},
+    std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    },
 };
 
 const NEW_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::N);
@@ -71,6 +74,8 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 &mut bt_save,
                 app.open_file.is_some(),
                 &mut app.cmd,
+                #[cfg(not(target_arch = "wasm32"))]
+                &mut app.recently_opened,
             );
         });
         ui.menu_button("View", |ui| {
@@ -281,6 +286,8 @@ fn file_menu_ui(
     bt_save: &mut bool,
     can_save: bool,
     app_cmd: &mut CommandQueue,
+    #[cfg(not(target_arch = "wasm32"))]
+    app_recently_opened: &mut recently_used_list::RecentlyUsedList<PathBuf>,
 ) {
     if ui
         .add(egui::Button::new("New").shortcut_text(ui.ctx().format_shortcut(&NEW_SHORTCUT)))
@@ -292,6 +299,22 @@ fn file_menu_ui(
         .add(egui::Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)))
         .clicked();
     if cfg!(not(target_arch = "wasm32")) {
+        #[cfg(not(target_arch = "wasm32"))]
+        ui.menu_button("Recent", |ui| {
+            app_recently_opened.retain(|item| {
+                let mut retain = true;
+                ui.horizontal(|ui| {
+                    if ui.button(item.display().to_string()).clicked() {
+                        app_cmd.push(Cmd::OpenPtcopFromPath { path: item.clone() });
+                    }
+                    ui.add_space(32.0);
+                    if ui.button("🗑").clicked() {
+                        retain = false;
+                    }
+                });
+                retain
+            });
+        });
         *bt_reload = ui
             .add(
                 egui::Button::new("Reload")
