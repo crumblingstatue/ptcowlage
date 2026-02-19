@@ -2,7 +2,10 @@ use {
     crate::{
         app::{
             command_queue::{Cmd, CommandQueue},
-            ui::{FreeplayPianoState, SharedUiState, unit_color, voice_img, waveform_edit_widget},
+            ui::{
+                FreeplayPianoState, SharedUiState, img, unit_color, voice_data_img, voice_img,
+                waveform_edit_widget,
+            },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
     },
@@ -259,7 +262,10 @@ pub fn voice_ui_inner(
 ) {
     let total = voice.units.len();
     for (i, (unit, inst)) in zip(&mut voice.units, &mut voice.insts).enumerate() {
-        ui.strong(format!("unit {}/{total}", i + 1));
+        ui.horizontal(|ui| {
+            ui.image(voice_data_img(&unit.data));
+            ui.strong(format!("unit {}/{total}", i + 1));
+        });
         ui.indent("vu", |ui| {
             voice_unit_ui(ui, unit, inst, out_rate, voice_idx, ui_state, aux);
         });
@@ -516,7 +522,10 @@ fn voice_unit_ui(
                 ui.end_row();
                 ui.label("Kind");
                 if ui
-                    .selectable_label(matches!(*wave_data, WaveData::Coord { .. }), "Coordinate")
+                    .selectable_label(
+                        matches!(*wave_data, WaveData::Coord { .. }),
+                        (img::SAXO, "Coordinate"),
+                    )
                     .clicked()
                 {
                     *wave_data = WaveData::Coord {
@@ -525,7 +534,10 @@ fn voice_unit_ui(
                     };
                 }
                 if ui
-                    .selectable_label(matches!(wave_data, WaveData::Overtone { .. }), "Overtone")
+                    .selectable_label(
+                        matches!(wave_data, WaveData::Overtone { .. }),
+                        (img::ACCORDION, "Overtone"),
+                    )
                     .clicked()
                 {
                     *wave_data = WaveData::Overtone { points: Vec::new() };

@@ -516,7 +516,11 @@ fn line_points_between(a: egui::Pos2, b: egui::Pos2) -> impl Iterator<Item = egu
 }
 
 fn voice_img(voice: &Voice) -> egui::ImageSource<'static> {
-    match &voice.units[0].data {
+    voice_data_img(&voice.units[0].data)
+}
+
+fn voice_data_img(data: &VoiceData) -> egui::ImageSource<'static> {
+    match data {
         ptcow::VoiceData::Noise(_) => img::DRUM,
         ptcow::VoiceData::Pcm(_) => img::MIC,
         ptcow::VoiceData::Wave(data) => match data {
