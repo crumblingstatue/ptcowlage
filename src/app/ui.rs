@@ -519,7 +519,10 @@ fn voice_img(voice: &Voice) -> egui::ImageSource<'static> {
     match &voice.units[0].data {
         ptcow::VoiceData::Noise(_) => img::DRUM,
         ptcow::VoiceData::Pcm(_) => img::MIC,
-        ptcow::VoiceData::Wave(_) => img::SAXO,
+        ptcow::VoiceData::Wave(data) => match data {
+            ptcow::WaveData::Coord { .. } => img::SAXO,
+            ptcow::WaveData::Overtone { .. } => img::ACCORDION,
+        },
         ptcow::VoiceData::OggV(_) => img::FISH,
     }
 }
