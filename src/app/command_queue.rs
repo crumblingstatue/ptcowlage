@@ -44,6 +44,7 @@ pub enum Cmd {
     PromptOpenPtcop,
     PromptReplacePtVoiceSingle(VoiceIdx),
     PromptReplacePtNoiseSingle(VoiceIdx),
+    ClearProject,
 }
 
 #[derive(Default)]

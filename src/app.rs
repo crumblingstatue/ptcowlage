@@ -22,7 +22,7 @@ use {
     anyhow::Context,
     eframe::egui,
     egui_toast::{Toast, ToastKind, ToastOptions},
-    ptcow::{Event, EventPayload, Herd, MooInstructions, SampleRate, SampleT, Song, UnitIdx},
+    ptcow::{Event, EventPayload, SampleRate, SampleT, UnitIdx},
     rustysynth::SoundFont,
     std::{
         fs::File,
@@ -65,13 +65,7 @@ pub type BundledSongs = &'static [(&'static str, &'static [u8])];
 impl App {
     pub fn new(args: CliArgs, out_params: OutParams, bundled_songs: BundledSongs) -> Self {
         let sample_rate = 44_100;
-        let mut song_state = SongState {
-            herd: Herd::default(),
-            song: Song::default(),
-            ins: MooInstructions::new(sample_rate),
-            pause: true,
-            master_vol: 1.0,
-        };
+        let mut song_state = SongState::new(sample_rate);
         let mut modal_payload = None;
         if let Some(mid_path) = args.midi_import {
             let mid_data = std::fs::read(&mid_path).unwrap();
@@ -114,15 +108,7 @@ impl App {
         if let Some(ptcop_path) = args.voice_import {
             import_voices(&ptcop_path, &mut song_state);
         }
-        // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
-        crate::audio_out::prepare_song(&mut song_state, true);
-        ptcow::rebuild_tones(
-            &mut song_state.ins,
-            sample_rate,
-            &mut song_state.herd.delays,
-            &mut song_state.herd.overdrives,
-            &song_state.song.master,
-        );
+        song_state.prepare(sample_rate);
         let song_state_handle = Arc::new(Mutex::new(song_state));
         let mut this = Self {
             song: song_state_handle.clone(),
@@ -698,6 +684,11 @@ impl App {
             }
             Cmd::PromptOpenPtcop => {
                 self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::OpenProj, false);
+            }
+            Cmd::ClearProject => {
+                let mut song = self.song.lock().unwrap();
+                *song = SongState::new(self.out.rate);
+                song.prepare(self.out.rate);
             }
         }
     }

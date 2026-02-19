@@ -54,6 +54,29 @@ pub struct SongState {
     pub master_vol: f32,
 }
 
+impl SongState {
+    pub fn new(sample_rate: SampleRate) -> Self {
+        Self {
+            herd: Herd::default(),
+            song: Song::default(),
+            ins: MooInstructions::new(sample_rate),
+            pause: true,
+            master_vol: 1.0,
+        }
+    }
+    pub fn prepare(&mut self, sample_rate: SampleRate) {
+        // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
+        crate::audio_out::prepare_song(self, true);
+        ptcow::rebuild_tones(
+            &mut self.ins,
+            sample_rate,
+            &mut self.herd.delays,
+            &mut self.herd.overdrives,
+            &self.song.master,
+        );
+    }
+}
+
 pub fn prepare_song(song: &mut SongState, loop_: bool) {
     ptcow::moo_prepare(
         &mut song.ins,

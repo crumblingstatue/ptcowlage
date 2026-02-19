@@ -275,6 +275,9 @@ fn file_menu_ui(
     can_save: bool,
     app_cmd: &mut CommandQueue,
 ) {
+    if ui.button("New").clicked() {
+        app_cmd.push(Cmd::ClearProject);
+    }
     *bt_open = ui
         .add(egui::Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)))
         .clicked();
