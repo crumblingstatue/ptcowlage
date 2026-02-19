@@ -6,7 +6,7 @@ use {
             ui::{
                 FreeplayPianoState, img,
                 unit::{UnitsCmd, handle_units_command, unit_mute_unmute_all_ui},
-                unit_color,
+                unit_color, voice_data_img,
             },
         },
         egui_ext::ImageExt as _,
@@ -111,13 +111,11 @@ fn playback_cows_ui(
                 app_cmd,
                 &song.song.events,
             );
-
-            macro_rules! inst_img {
-                () => {
-                    crate::app::ui::unit_voice_img(&song.ins, unit)
-                };
-            }
-            ui.add(egui::Image::new(inst_img!()).hflip());
+            // Make the left cow's instrument represent the voice unit 1,
+            // and right cow unit 2, if exists. Otherwise, right cow represents unit 1 as well.
+            let opt_voice = song.ins.voices.get(unit.voice_idx.usize());
+            let vu1_img = opt_voice.map_or(img::X, |voice| voice_data_img(&voice.units[0].data));
+            ui.add(egui::Image::new(vu1_img.clone()).hflip());
             let p = ui.painter();
             let mut offs = ui.cursor().left_center();
             for buf in &unit.pan_time_bufs {
@@ -132,7 +130,11 @@ fn playback_cows_ui(
                 offs.x += 16.0;
             }
             ui.add_space(408.0);
-            ui.add(egui::Image::new(inst_img!()));
+            ui.add(egui::Image::new(
+                opt_voice
+                    .and_then(|voice| voice.units.get(1))
+                    .map_or(vu1_img, |vu| voice_data_img(&vu.data)),
+            ));
             let re = ui.add(egui::Image::new(img::COW).sense(egui::Sense::click()));
             crate::app::ui::unit::unit_popup_ctx_menu(
                 &re,
