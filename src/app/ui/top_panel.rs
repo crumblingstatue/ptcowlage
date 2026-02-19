@@ -300,21 +300,38 @@ fn file_menu_ui(
         .clicked();
     if cfg!(not(target_arch = "wasm32")) {
         #[cfg(not(target_arch = "wasm32"))]
-        ui.menu_button("Recent", |ui| {
-            app_recently_opened.retain(|item| {
-                let mut retain = true;
+        {
+            let recent_btn = egui::containers::menu::SubMenuButton::new("Recent").config(
+                MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
+            );
+            recent_btn.ui(ui, |ui: &mut egui::Ui| {
+                app_recently_opened.retain(|item| {
+                    let mut retain = true;
+                    ui.horizontal(|ui| {
+                        if ui.button(item.display().to_string()).clicked() {
+                            app_cmd.push(Cmd::OpenPtcopFromPath { path: item.clone() });
+                            ui.close();
+                        }
+                        ui.add_space(32.0);
+                        if ui.button("🗑").clicked() {
+                            retain = false;
+                        }
+                    });
+                    retain
+                });
+                ui.separator();
                 ui.horizontal(|ui| {
-                    if ui.button(item.display().to_string()).clicked() {
-                        app_cmd.push(Cmd::OpenPtcopFromPath { path: item.clone() });
+                    ui.label("capacity");
+                    let mut cap = app_recently_opened.capacity();
+                    if ui.add(egui::Slider::new(&mut cap, 3..=64)).changed() {
+                        app_recently_opened.set_capacity(cap);
                     }
-                    ui.add_space(32.0);
-                    if ui.button("🗑").clicked() {
-                        retain = false;
+                    if ui.button("🗑 clear").clicked() {
+                        app_recently_opened.clear();
                     }
                 });
-                retain
             });
-        });
+        }
         *bt_reload = ui
             .add(
                 egui::Button::new("Reload")
