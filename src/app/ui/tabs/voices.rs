@@ -588,7 +588,7 @@ fn voice_unit_ui(
         ui.label("Tuning");
         ui.add(egui::DragValue::new(&mut unit.tuning).speed(0.001));
         ui.end_row();
-        ui.label(format!("Envelope ({} points)", unit.envelope.points.len()));
+        ui.strong(format!("Envelope ({} points)", unit.envelope.points.len()));
         ui.label("fps");
         ui.add(egui::DragValue::new(&mut unit.envelope.seconds_per_point));
         if ui.button("+").clicked() {
