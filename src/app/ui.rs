@@ -84,6 +84,11 @@ fn piano_freeplay_ui(
         )
     });
     ui.label("🎹").on_hover_text("Piano freeplay UI");
+    if let Some(toot) = state.toot
+        && let Some(unit) = song.herd.units.get(toot.usize())
+    {
+        ui.image(unit_voice_img(&song.ins, unit));
+    }
     egui::ComboBox::new("unit_cb", "Unit")
         .selected_text(egui::RichText::new(selected_text).color(selected_color))
         .show_ui(ui, |ui| {
