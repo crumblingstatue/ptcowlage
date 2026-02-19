@@ -76,16 +76,26 @@ fn main() {
             font_fallback::install_ja_fallback_font(&cc.egui_ctx);
             let mut app = app::App::new(args, OutParams::default(), &[]);
 
-            if let Some(storage) = cc.storage {
-                if let Some(folders) = eframe::get_value(storage, "pinned-folders") {
-                    app.file_dia.storage_mut().pinned_folders = folders;
-                }
-            }
+            load_persistence(cc, &mut app);
 
             Ok(Box::new(app))
         }),
     )
     .unwrap();
+}
+
+fn load_persistence(cc: &eframe::CreationContext<'_>, app: &mut app::App) {
+    if let Some(storage) = cc.storage {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(folders) = eframe::get_value(storage, "pinned-folders") {
+            app.file_dia.storage_mut().pinned_folders = folders;
+        }
+        if let Some(text) = storage.get_string("out-buf-size") {
+            if let Ok(num) = text.parse() {
+                app.out.buf_size = num;
+            }
+        }
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -121,7 +131,7 @@ fn main() {
                     use crate::audio_out::OutParams;
 
                     egui_extras::install_image_loaders(&cc.egui_ctx);
-                    let app = app::App::new(
+                    let mut app = app::App::new(
                         CliArgs::default(),
                         OutParams {
                             // Web version is a bit slower, so let's use a bigger buf size
@@ -133,6 +143,7 @@ fn main() {
                     );
                     // Enforce dark theme, as we don't support light theme for our custom colors
                     cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
+                    load_persistence(cc, &mut app);
                     Ok(Box::new(app))
                 }),
             )
