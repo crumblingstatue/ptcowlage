@@ -554,7 +554,9 @@ fn voice_unit_ui(
                     )
                     .clicked()
                 {
-                    *wave_data = WaveData::Overtone { points: Vec::new() };
+                    *wave_data = WaveData::Overtone {
+                        points: vec![OsciPt { x: 1, y: 16 }],
+                    };
                 }
             });
 
