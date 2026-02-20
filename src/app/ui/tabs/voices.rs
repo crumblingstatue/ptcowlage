@@ -491,7 +491,7 @@ fn voice_unit_ui(
             });
         }
         VoiceData::Wave(wave_data) => {
-            ui.horizontal_wrapped(|ui| {
+            ui.horizontal(|ui| {
                 ui.label("Kind");
                 if ui
                     .selectable_label(
@@ -516,90 +516,63 @@ fn voice_unit_ui(
                         points: vec![OsciPt { x: 1, y: 16 }],
                     };
                 }
-                ui.end_row();
-                match wave_data {
-                    WaveData::Coord { points, resolution } => {
-                        ui.label(format!("{} points", points.len()));
-                        for pt in &mut *points {
-                            ui.add(egui::DragValue::new(&mut pt.x).prefix("x "))
-                                .changed();
-                            ui.add(egui::DragValue::new(&mut pt.y).prefix("y "))
-                                .changed();
-                        }
-                        if ui.button("+").clicked() {
-                            points.push(OsciPt {
-                                x: points.last().map_or(0, |pt| pt.x) + 16,
-                                y: 0,
-                            });
-                        }
-                        if ui.button("-").clicked() {
-                            points.pop();
-                        }
-                        ui.label("Resolution");
-                        ui.add(egui::DragValue::new(resolution)).changed();
-                    }
-                    WaveData::Overtone { points } => {
-                        ui.style_mut().spacing.slider_width = 512.0;
-                        ui.label(format!("{} points", points.len()));
-                        if ui.button("+").clicked() {
-                            points.push(OsciPt {
-                                x: points.last().map_or(0, |pt| pt.x) + 1,
-                                y: 1,
-                            });
-                        }
-                        if ui.button("-").clicked() {
-                            points.pop();
-                        }
-                        ui.end_row();
-                        for pt in &mut *points {
-                            ui.add(egui::DragValue::new(&mut pt.x).range(1..=512).prefix("x "))
-                                .changed();
-                            ui.add(egui::Slider::new(&mut pt.y, -128..=128).prefix("y "))
-                                .changed();
-                            ui.end_row();
-                        }
-                    }
-                };
             });
-
             match wave_data {
                 WaveData::Coord { points, resolution } => {
-                    let reso = f32::from(*resolution);
-                    let (rect, _re) = ui
-                        .allocate_exact_size(egui::vec2(reso, reso), egui::Sense::click_and_drag());
-                    let p = ui.painter_at(rect);
-                    p.rect_filled(rect, 2.0, PAL.wave_bg);
-                    let lc = rect.left_center();
-                    let mut egui_points: Vec<egui::Pos2> = points
-                        .iter()
-                        .map(|pt| egui::pos2(lc.x + pt.x as f32, lc.y - pt.y as f32))
-                        .collect();
-                    // pxtone Voice seems to add this point when drawing it
-                    egui_points.push(rect.right_center());
-                    p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
+                    ui.horizontal_top(|ui| {
+                        draw_coord_wavebox(ui, points, resolution);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label("Resolution");
+                            ui.add(egui::DragValue::new(resolution)).changed();
+                            ui.end_row();
+                            ui.label(format!("{} points", points.len()));
+                            if ui.button("+").clicked() {
+                                points.push(OsciPt {
+                                    x: points.last().map_or(0, |pt| pt.x) + 16,
+                                    y: 0,
+                                });
+                            }
+                            if ui.button("-").clicked() {
+                                points.pop();
+                            }
+                            ui.end_row();
+                            for pt in &mut *points {
+                                ui.add(egui::DragValue::new(&mut pt.x).prefix("x "))
+                                    .changed();
+                                ui.add(egui::DragValue::new(&mut pt.y).prefix("y "))
+                                    .changed();
+                            }
+                        });
+                    });
                 }
                 WaveData::Overtone { points } => {
-                    let size: u16 = 256;
-                    let (rect, _re) = ui.allocate_exact_size(
-                        egui::vec2(size as f32, size as f32),
-                        egui::Sense::click_and_drag(),
-                    );
-                    let p = ui.painter_at(rect);
-                    p.rect_filled(rect, 2.0, PAL.wave_bg);
-                    let lc = rect.left_center();
-                    let args = OsciArgs {
-                        volume: unit.volume,
-                        sample_num: size.into(),
-                    };
-                    let mut egui_points: Vec<egui::Pos2> = Vec::new();
-                    for i in 0..size + 1 {
-                        let amp = ptcow::overtone(args, points, i);
-                        let y = (amp * size as f64 / 2.0) as f32;
-                        egui_points.push(egui::pos2(lc.x + i as f32, lc.y - y));
-                    }
-                    p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
+                    ui.horizontal_top(|ui| {
+                        draw_overtone_wavebox(ui, unit.volume, points);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.style_mut().spacing.slider_width = 512.0;
+                            ui.label(format!("{} points", points.len()));
+                            if ui.button("+").clicked() {
+                                points.push(OsciPt {
+                                    x: points.last().map_or(0, |pt| pt.x) + 1,
+                                    y: 1,
+                                });
+                            }
+                            if ui.button("-").clicked() {
+                                points.pop();
+                            }
+                            ui.end_row();
+                            for pt in &mut *points {
+                                ui.add(egui::DragValue::new(&mut pt.x).range(1..=512).prefix("x "))
+                                    .changed();
+                                ui.add(egui::Slider::new(&mut pt.y, -128..=128).prefix("y "))
+                                    .changed();
+                                ui.end_row();
+                            }
+                        });
+                    });
                 }
-            }
+            };
+
             inst.recalc_wave_data(wave_data, unit.volume, unit.pan);
         }
         VoiceData::OggV(oggv) => {
@@ -673,6 +646,43 @@ fn voice_unit_ui(
             envelope_src_ui(unit, ui, x_cursor);
         }
     });
+}
+
+fn draw_overtone_wavebox(ui: &mut egui::Ui, volume: i16, points: &[OsciPt]) {
+    let size: u16 = 256;
+    let (rect, _re) = ui.allocate_exact_size(
+        egui::vec2(size as f32, size as f32),
+        egui::Sense::click_and_drag(),
+    );
+    let p = ui.painter_at(rect);
+    p.rect_filled(rect, 2.0, PAL.wave_bg);
+    let lc = rect.left_center();
+    let args = OsciArgs {
+        volume,
+        sample_num: size.into(),
+    };
+    let mut egui_points: Vec<egui::Pos2> = Vec::new();
+    for i in 0..size + 1 {
+        let amp = ptcow::overtone(args, points, i);
+        let y = (amp * size as f64 / 2.0) as f32;
+        egui_points.push(egui::pos2(lc.x + i as f32, lc.y - y));
+    }
+    p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
+}
+
+fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16) {
+    let reso = f32::from(*resolution);
+    let (rect, _re) = ui.allocate_exact_size(egui::vec2(reso, reso), egui::Sense::click_and_drag());
+    let p = ui.painter_at(rect);
+    p.rect_filled(rect, 2.0, PAL.wave_bg);
+    let lc = rect.left_center();
+    let mut egui_points: Vec<egui::Pos2> = points
+        .iter()
+        .map(|pt| egui::pos2(lc.x + pt.x as f32, lc.y - pt.y as f32))
+        .collect();
+    // pxtone Voice seems to add this point when drawing it
+    egui_points.push(rect.right_center());
+    p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
 }
 
 fn envelope_src_ui(unit: &mut VoiceUnit, ui: &mut egui::Ui, x_cursor: u16) {
