@@ -25,7 +25,7 @@ use {
     anyhow::Context,
     eframe::egui,
     egui_toast::{Toast, ToastKind, ToastOptions},
-    ptcow::{Event, EventPayload, SampleRate, SampleT, UnitIdx},
+    ptcow::{Event, EventPayload, NoiseTable, SampleRate, SampleT, UnitIdx},
     rustysynth::SoundFont,
     std::{
         fs::File,
@@ -279,7 +279,7 @@ impl App {
     }
 
     fn import_ptvoice(&mut self, data: Vec<u8>, path: &Path) {
-        match load_ptvoice(data, path) {
+        match load_and_recalc_voice(data, path, just_load_ptvoice, self.out.rate) {
             Ok(voice) => {
                 self.song.lock().unwrap().ins.voices.push(voice);
             }
@@ -288,7 +288,7 @@ impl App {
     }
 
     fn import_ptnoise(&mut self, data: Vec<u8>, path: &Path) {
-        match load_ptnoise(data, path) {
+        match load_and_recalc_voice(data, path, just_load_ptnoise, self.out.rate) {
             Ok(voice) => {
                 self.song.lock().unwrap().ins.voices.push(voice);
             }
@@ -297,7 +297,19 @@ impl App {
     }
 }
 
-fn load_ptvoice(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn load_and_recalc_voice(
+    data: Vec<u8>,
+    path: &Path,
+    loadfn: fn(Vec<u8>, &Path) -> ptcow::ReadResult<ptcow::Voice>,
+    out_rate: SampleRate,
+) -> ptcow::ReadResult<ptcow::Voice> {
+    let mut voice = loadfn(data, path)?;
+    let noise_tbl = NoiseTable::generate();
+    voice.recalculate(&noise_tbl, out_rate);
+    Ok(voice)
+}
+
+fn just_load_ptvoice(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let mut voice = ptcow::Voice::from_ptvoice(&data)?;
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
@@ -305,7 +317,7 @@ fn load_ptvoice(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     Ok(voice)
 }
 
-fn load_ptnoise(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn just_load_ptnoise(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let noise = ptcow::NoiseData::from_ptnoise(&data)?;
     let mut voice = ptcow::Voice::default();
     voice.allocate::<false>();
@@ -387,7 +399,7 @@ impl eframe::App for App {
                 }
                 FileOp::ReplacePtVoiceSingle(voice_idx) => {
                     let data = std::fs::read(&path).unwrap();
-                    match load_ptvoice(data, &path) {
+                    match load_and_recalc_voice(data, &path, just_load_ptvoice, self.out.rate) {
                         Ok(voice) => {
                             let mut song = self.song.lock().unwrap();
                             if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
@@ -403,7 +415,7 @@ impl eframe::App for App {
                 }
                 FileOp::ReplacePtNoiseSingle(voice_idx) => {
                     let data = std::fs::read(&path).unwrap();
-                    match load_ptnoise(data, &path) {
+                    match load_and_recalc_voice(data, &path, just_load_ptnoise, self.out.rate) {
                         Ok(voice) => {
                             let mut song = self.song.lock().unwrap();
                             if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
@@ -755,7 +767,8 @@ impl App {
                 data,
                 name,
                 voice_idx,
-            } => match load_ptvoice(data, name.as_ref()) {
+            } => match load_and_recalc_voice(data, name.as_ref(), just_load_ptvoice, self.out.rate)
+            {
                 Ok(voice) => {
                     let mut song = self.song.lock().unwrap();
                     if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
@@ -772,7 +785,8 @@ impl App {
                 data,
                 name,
                 voice_idx,
-            } => match load_ptnoise(data, name.as_ref()) {
+            } => match load_and_recalc_voice(data, name.as_ref(), just_load_ptnoise, self.out.rate)
+            {
                 Ok(voice) => {
                     let mut song = self.song.lock().unwrap();
                     if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
