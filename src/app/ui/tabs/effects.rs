@@ -27,8 +27,16 @@ pub fn ui(
     shared: &mut SharedUiState,
 ) {
     ui.horizontal(|ui| {
-        ui.selectable_value(&mut ui_state.tab, Tab::Delays, "Delays");
-        ui.selectable_value(&mut ui_state.tab, Tab::Overdrives, "Overdrives");
+        ui.selectable_value(
+            &mut ui_state.tab,
+            Tab::Delays,
+            format!("Delays ({})", song.herd.delays.len()),
+        );
+        ui.selectable_value(
+            &mut ui_state.tab,
+            Tab::Overdrives,
+            format!("Overdrives ({})", song.herd.overdrives.len()),
+        );
         ui.separator();
         if ui
             .add_enabled(
