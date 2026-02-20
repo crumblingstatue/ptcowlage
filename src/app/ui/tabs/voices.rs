@@ -595,7 +595,7 @@ fn voice_unit_ui(
                     let mut egui_points: Vec<egui::Pos2> = Vec::new();
                     for i in 0..size + 1 {
                         let amp = ptcow::overtone(args, points, i);
-                        let y = (amp * size as f64) as f32;
+                        let y = (amp * size as f64 / 2.0) as f32;
                         egui_points.push(egui::pos2(lc.x + i as f32, lc.y - y));
                     }
                     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
