@@ -492,6 +492,31 @@ fn voice_unit_ui(
         }
         VoiceData::Wave(wave_data) => {
             ui.horizontal_wrapped(|ui| {
+                ui.label("Kind");
+                if ui
+                    .selectable_label(
+                        matches!(*wave_data, WaveData::Coord { .. }),
+                        (img::SAXO, "Coordinate"),
+                    )
+                    .clicked()
+                {
+                    *wave_data = WaveData::Coord {
+                        points: Vec::new(),
+                        resolution: 64,
+                    };
+                }
+                if ui
+                    .selectable_label(
+                        matches!(wave_data, WaveData::Overtone { .. }),
+                        (img::ACCORDION, "Overtone"),
+                    )
+                    .clicked()
+                {
+                    *wave_data = WaveData::Overtone {
+                        points: vec![OsciPt { x: 1, y: 16 }],
+                    };
+                }
+                ui.end_row();
                 match wave_data {
                     WaveData::Coord { points, resolution } => {
                         ui.label(format!("{} points", points.len()));
@@ -535,32 +560,6 @@ fn voice_unit_ui(
                         }
                     }
                 };
-
-                ui.end_row();
-                ui.label("Kind");
-                if ui
-                    .selectable_label(
-                        matches!(*wave_data, WaveData::Coord { .. }),
-                        (img::SAXO, "Coordinate"),
-                    )
-                    .clicked()
-                {
-                    *wave_data = WaveData::Coord {
-                        points: Vec::new(),
-                        resolution: 64,
-                    };
-                }
-                if ui
-                    .selectable_label(
-                        matches!(wave_data, WaveData::Overtone { .. }),
-                        (img::ACCORDION, "Overtone"),
-                    )
-                    .clicked()
-                {
-                    *wave_data = WaveData::Overtone {
-                        points: vec![OsciPt { x: 1, y: 16 }],
-                    };
-                }
             });
 
             match wave_data {
