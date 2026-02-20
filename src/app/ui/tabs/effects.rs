@@ -1,10 +1,18 @@
 use {
-    crate::{app::ui::group_idx_slider, audio_out::SongState},
+    crate::{
+        app::ui::{SharedUiState, group_idx_slider},
+        audio_out::SongState,
+    },
     eframe::egui,
-    ptcow::{Delay, DelayUnit, Overdrive, SampleRate, Song},
+    ptcow::{Delay, DelayUnit, GroupIdx, Overdrive, SampleRate, Song, Unit, UnitIdx},
 };
 
-pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
+pub fn ui(
+    ui: &mut egui::Ui,
+    song: &mut SongState,
+    out_rate: SampleRate,
+    shared: &mut SharedUiState,
+) {
     if ui.button("Clear effects").clicked() {
         song.herd.delays.clear();
         song.herd.overdrives.clear();
@@ -15,7 +23,16 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
         .show(ui, |ui| {
             let mut msg = None;
             for (i, dela) in song.herd.delays.iter_mut().enumerate() {
-                delay_ui(ui, &song.song, out_rate, i, dela, &mut msg);
+                delay_ui(
+                    ui,
+                    &song.song,
+                    out_rate,
+                    i,
+                    dela,
+                    &mut msg,
+                    &song.herd.units,
+                    shared,
+                );
             }
 
             if ui
@@ -38,7 +55,7 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
                 song.herd.delays.push(delay);
             }
             for (i, ovr) in song.herd.overdrives.iter_mut().enumerate() {
-                ovr_ui(ui, i, ovr, &mut msg);
+                ovr_ui(ui, i, ovr, &mut msg, &song.herd.units, shared);
             }
             if ui
                 .add_enabled(
@@ -62,7 +79,14 @@ pub fn ui(ui: &mut egui::Ui, song: &mut SongState, out_rate: SampleRate) {
         });
 }
 
-fn ovr_ui(ui: &mut egui::Ui, i: usize, ovr: &mut Overdrive, msg: &mut Option<EffectsUiMsg>) {
+fn ovr_ui(
+    ui: &mut egui::Ui,
+    i: usize,
+    ovr: &mut Overdrive,
+    msg: &mut Option<EffectsUiMsg>,
+    units: &[Unit],
+    shared: &mut SharedUiState,
+) {
     ui.horizontal(|ui| {
         ui.heading(format!("Overdrive {i}"));
         if ui.button("-").clicked() {
@@ -89,12 +113,23 @@ fn ovr_ui(ui: &mut egui::Ui, i: usize, ovr: &mut Overdrive, msg: &mut Option<Eff
                     .drag_value_speed(0.001),
             );
             ui.end_row();
-            ui.label("Group");
-            group_idx_slider(ui, &mut ovr.group);
+            group_ui(&mut ovr.group, units, shared, ui);
             // Rebuild it continuously, it's not that expensive to rebuild
             ovr.rebuild();
         });
     });
+}
+
+fn group_ui(group: &mut GroupIdx, units: &[Unit], shared: &mut SharedUiState, ui: &mut egui::Ui) {
+    let mut g_hover = ui.label("Group").hovered();
+    g_hover |= group_idx_slider(ui, group).hovered();
+    if g_hover {
+        for (i, unit) in units.iter().enumerate() {
+            if unit.group == *group {
+                shared.highlight_set.insert(UnitIdx(i as u8));
+            }
+        }
+    }
 }
 
 enum EffectsUiMsg {
@@ -109,6 +144,8 @@ fn delay_ui(
     i: usize,
     dela: &mut Delay,
     msg: &mut Option<EffectsUiMsg>,
+    units: &[Unit],
+    shared: &mut SharedUiState,
 ) {
     ui.horizontal(|ui| {
         ui.heading(format!("Delay {i}"));
@@ -160,8 +197,7 @@ fn delay_ui(
                 dela.buf_len() * 4
             ));
         });
-        ui.label("Group");
-        group_idx_slider(ui, &mut dela.group);
+        group_ui(&mut dela.group, units, shared, ui);
         if changed {
             dela.rebuild(
                 song.master.timing.beats_per_meas,

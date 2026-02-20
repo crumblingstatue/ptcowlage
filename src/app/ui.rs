@@ -408,7 +408,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.cmd,
             &mut app.modal_payload,
         ),
-        Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate),
+        Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate, &mut app.ui_state.shared),
     }
     drop(song);
 }
@@ -644,6 +644,6 @@ pub(crate) fn sf2_import_ui(
     close
 }
 
-fn group_idx_slider(ui: &mut egui::Ui, group_idx: &mut GroupIdx) {
-    ui.add(egui::Slider::new(&mut group_idx.0, 0..=GroupIdx::MAX.0));
+fn group_idx_slider(ui: &mut egui::Ui, group_idx: &mut GroupIdx) -> egui::Response {
+    ui.add(egui::Slider::new(&mut group_idx.0, 0..=GroupIdx::MAX.0))
 }
