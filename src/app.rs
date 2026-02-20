@@ -573,6 +573,9 @@ impl eframe::App for App {
         }
         storage.set_string("out-buf-size", self.out.buf_size.to_string());
     }
+    fn persist_egui_memory(&self) -> bool {
+        false
+    }
 }
 
 fn import_voices(path: &Path, song: &mut SongState) {
