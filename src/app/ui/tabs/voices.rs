@@ -523,8 +523,8 @@ fn voice_unit_ui(
                         }
                         if ui.button("+").clicked() {
                             points.push(OsciPt {
-                                x: points.last().map_or(0, |pt| pt.x) + 16,
-                                y: 0,
+                                x: points.last().map_or(0, |pt| pt.x) + 1,
+                                y: 1,
                             });
                         }
                         if ui.button("-").clicked() {
