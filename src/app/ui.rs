@@ -10,8 +10,8 @@ use {
             SongState,
             ui::{
                 tabs::{
-                    events::RawEventsUiState, map::MapState, piano_roll::PianoRollState,
-                    voices::VoicesUiState,
+                    effects::EffectsUiState, events::RawEventsUiState, map::MapState,
+                    piano_roll::PianoRollState, voices::VoicesUiState,
                 },
                 unit::{unit_color, unit_voice_img},
             },
@@ -270,6 +270,7 @@ pub struct UiState {
     pub freeplay_piano: FreeplayPianoState,
     pub raw_events: RawEventsUiState,
     pub voices: VoicesUiState,
+    pub effects: EffectsUiState,
     pub shared: SharedUiState,
     pub sf2_import: Option<Sf2ImportDialog>,
 }
@@ -408,7 +409,13 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.cmd,
             &mut app.modal_payload,
         ),
-        Tab::Effects => tabs::effects::ui(ui, &mut song, app.out.rate, &mut app.ui_state.shared),
+        Tab::Effects => tabs::effects::ui(
+            ui,
+            &mut song,
+            app.out.rate,
+            &mut app.ui_state.effects,
+            &mut app.ui_state.shared,
+        ),
     }
     drop(song);
 }
@@ -645,5 +652,6 @@ pub(crate) fn sf2_import_ui(
 }
 
 fn group_idx_slider(ui: &mut egui::Ui, group_idx: &mut GroupIdx) -> egui::Response {
+    ui.style_mut().spacing.slider_width = 140.0;
     ui.add(egui::Slider::new(&mut group_idx.0, 0..=GroupIdx::MAX.0))
 }
