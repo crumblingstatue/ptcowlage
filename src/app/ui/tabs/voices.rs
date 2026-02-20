@@ -267,7 +267,7 @@ pub fn voice_ui_inner(
             ui.strong(format!("unit {}/{total}", i + 1));
         });
         ui.indent("vu", |ui| {
-            voice_unit_ui(ui, unit, inst, out_rate, voice_idx, ui_state, aux);
+            voice_unit_ui(ui, unit, inst, out_rate, voice_idx, ui_state, aux, i as u8);
         });
         ui.strong(format!("instance {}/{total}", i + 1));
         ui.indent("vi", |ui| {
@@ -408,6 +408,7 @@ fn voice_unit_ui(
     voice_idx: VoiceIdx,
     ui_state: &mut VoicesUiState,
     aux: &AuxAudioState,
+    unit_idx: u8,
 ) {
     match &mut unit.data {
         VoiceData::Noise(noise) => {
@@ -583,6 +584,7 @@ fn voice_unit_ui(
             ui.add(egui::DragValue::new(&mut oggv.sps2));
         }
     }
+    unit_envelope_ui(ui, unit, inst, out_rate, unit_idx);
     // If the sound is aux playing currently, update its buffer as well
     if let Some(key) = ui_state.playing_sounds.get(&voice_idx) {
         aux.send
@@ -610,7 +612,18 @@ fn voice_unit_ui(
         ui.add(egui::Slider::new(&mut unit.pan, 0..=128));
         ui.label("Tuning");
         ui.add(egui::DragValue::new(&mut unit.tuning).speed(0.001));
-        ui.end_row();
+    });
+}
+
+fn unit_envelope_ui(
+    ui: &mut egui::Ui,
+    unit: &mut VoiceUnit,
+    inst: &mut VoiceInstance,
+    out_rate: u16,
+    unit_idx: u8,
+) {
+    let env_w: u16 = unit.envelope.points.iter().map(|pt| pt.x).sum();
+    ui.horizontal(|ui| {
         ui.strong(format!("Envelope ({} points)", unit.envelope.points.len()));
         ui.label("fps");
         ui.add(egui::DragValue::new(&mut unit.envelope.seconds_per_point));
@@ -626,25 +639,25 @@ fn voice_unit_ui(
         if ui.button("Recalculate").clicked() {
             inst.recalc_envelope(unit, out_rate);
         }
-        ui.end_row();
-        let mut x_cursor = 0;
-        if let Some((last, init)) = unit.envelope.points.split_last_mut() {
-            for pt in init {
-                x_cursor += pt.x;
-                ui.label("x");
-                ui.add(egui::DragValue::new(&mut pt.x));
-                ui.label("y");
-                ui.add(egui::DragValue::new(&mut pt.y));
-            }
-            ui.label(format!("envelope width: {x_cursor}"));
-            ui.label("Tail");
-            ui.add(egui::DragValue::new(&mut last.x));
-            ui.add(egui::DragValue::new(&mut last.y));
-        }
-        ui.end_row();
+    });
+    ui.horizontal_top(|ui| {
         if !unit.envelope.points.is_empty() {
-            envelope_src_ui(unit, ui, x_cursor);
+            draw_envelope_src(unit, ui, env_w, unit_idx);
         }
+        ui.horizontal_wrapped(|ui| {
+            if let Some((last, init)) = unit.envelope.points.split_last_mut() {
+                for pt in init {
+                    ui.add(egui::DragValue::new(&mut pt.x).prefix("x "));
+                    ui.add(egui::DragValue::new(&mut pt.y).prefix("y "));
+                }
+                ui.end_row();
+                ui.label(format!("envelope width: {env_w}"));
+                ui.end_row();
+                ui.label("Tail");
+                ui.add(egui::DragValue::new(&mut last.x).prefix("x "));
+                ui.add(egui::DragValue::new(&mut last.y).prefix("y "));
+            }
+        });
     });
 }
 
@@ -685,25 +698,29 @@ fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
 }
 
-fn envelope_src_ui(unit: &mut VoiceUnit, ui: &mut egui::Ui, x_cursor: u16) {
-    let (rect, _re) = ui.allocate_exact_size(
-        egui::vec2(x_cursor as f32, 128.0),
-        egui::Sense::click_and_drag(),
-    );
-    let p = ui.painter_at(rect);
-    let lb = rect.left_bottom();
-    p.rect_filled(rect, 2.0, PAL.env_bg);
-    let mut x_cursor = 0;
-    let mut egui_points: Vec<egui::Pos2> = unit
-        .envelope
-        .points
-        .iter()
-        .map(|pt| {
-            x_cursor += pt.x;
-            egui::pos2(lb.x + x_cursor as f32, lb.y - pt.y as f32)
-        })
-        .collect();
-    // Ptvoice seems to have a point at (0, bottom) when drawing
-    egui_points.insert(0, egui::pos2(lb.x, lb.y));
-    p.line(egui_points, egui::Stroke::new(2.0, PAL.env_stroke));
+fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, unit_idx: u8) {
+    let w = width as f32;
+    egui::ScrollArea::horizontal()
+        .id_salt(unit_idx)
+        .max_width(384.0)
+        .show(ui, |ui| {
+            let (rect, _re) =
+                ui.allocate_exact_size(egui::vec2(w, 128.0), egui::Sense::click_and_drag());
+            let p = ui.painter_at(rect);
+            let lb = rect.left_bottom();
+            p.rect_filled(rect, 2.0, PAL.env_bg);
+            let mut x_cursor = 0;
+            let mut egui_points: Vec<egui::Pos2> = unit
+                .envelope
+                .points
+                .iter()
+                .map(|pt| {
+                    x_cursor += pt.x;
+                    egui::pos2(lb.x + x_cursor as f32, lb.y - pt.y as f32)
+                })
+                .collect();
+            // Ptvoice seems to have a point at (0, bottom) when drawing
+            egui_points.insert(0, egui::pos2(lb.x, lb.y));
+            p.line(egui_points, egui::Stroke::new(2.0, PAL.env_stroke));
+        });
 }
