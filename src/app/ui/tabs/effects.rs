@@ -13,10 +13,41 @@ pub fn ui(
     out_rate: SampleRate,
     shared: &mut SharedUiState,
 ) {
-    if ui.button("Clear effects").clicked() {
-        song.herd.delays.clear();
-        song.herd.overdrives.clear();
-    }
+    ui.horizontal(|ui| {
+        if ui
+            .add_enabled(
+                !song.herd.delays.is_full(),
+                egui::Button::new("+ Add delay"),
+            )
+            .clicked()
+        {
+            ui.separator();
+            let mut delay = Delay::default();
+            // Set some not too terrible sounding defaults
+            delay.rate = 30;
+            delay.freq = 2.0;
+            delay.rebuild(
+                song.song.master.timing.beats_per_meas,
+                song.song.master.timing.bpm,
+                out_rate,
+            );
+            song.herd.delays.push(delay);
+        }
+        if ui
+            .add_enabled(
+                !song.herd.overdrives.is_full(),
+                egui::Button::new("+ Add overdrive"),
+            )
+            .clicked()
+        {
+            song.herd.overdrives.push(Overdrive::default());
+        }
+        if ui.button("Clear effects").clicked() {
+            song.herd.delays.clear();
+            song.herd.overdrives.clear();
+        }
+    });
+
     ui.separator();
     egui::ScrollArea::vertical()
         .auto_shrink(false)
@@ -35,37 +66,10 @@ pub fn ui(
                 );
             }
 
-            if ui
-                .add_enabled(
-                    !song.herd.delays.is_full(),
-                    egui::Button::new("+ Add delay"),
-                )
-                .clicked()
-            {
-                ui.separator();
-                let mut delay = Delay::default();
-                // Set some not too terrible sounding defaults
-                delay.rate = 30;
-                delay.freq = 2.0;
-                delay.rebuild(
-                    song.song.master.timing.beats_per_meas,
-                    song.song.master.timing.bpm,
-                    out_rate,
-                );
-                song.herd.delays.push(delay);
-            }
             for (i, ovr) in song.herd.overdrives.iter_mut().enumerate() {
                 ovr_ui(ui, i, ovr, &mut msg, &song.herd.units, shared);
             }
-            if ui
-                .add_enabled(
-                    !song.herd.overdrives.is_full(),
-                    egui::Button::new("+ Add overdrive"),
-                )
-                .clicked()
-            {
-                song.herd.overdrives.push(Overdrive::default());
-            }
+
             if let Some(msg) = msg {
                 match msg {
                     EffectsUiMsg::RemoveDelay { idx } => {
