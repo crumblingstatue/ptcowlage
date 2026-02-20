@@ -22,8 +22,8 @@ use {
 
 #[derive(Default)]
 pub struct VoicesUiState {
-    pub selected_idx: usize,
-    dragged_idx: Option<usize>,
+    pub selected_idx: VoiceIdx,
+    dragged_idx: Option<VoiceIdx>,
     // Keep track of (preview) sounds playing for each voice
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
 }
@@ -85,36 +85,31 @@ pub fn ui(
                 app_cmd.push(Cmd::PromptReplaceAllPtcop);
             }
             if ui.button("Current from .ptvoice").clicked() {
-                app_cmd.push(Cmd::PromptReplacePtVoiceSingle(VoiceIdx(
-                    ui_state.selected_idx as u8,
-                )));
+                app_cmd.push(Cmd::PromptReplacePtVoiceSingle(ui_state.selected_idx));
             }
             if ui.button("Current from .ptnoise").clicked() {
-                app_cmd.push(Cmd::PromptReplacePtNoiseSingle(VoiceIdx(
-                    ui_state.selected_idx as u8,
-                )));
+                app_cmd.push(Cmd::PromptReplacePtNoiseSingle(ui_state.selected_idx));
             }
             if ui.button("Current from .sf2").clicked() {
-                app_cmd.push(Cmd::PromptReplaceSf2Single(VoiceIdx(
-                    ui_state.selected_idx as u8,
-                )));
+                app_cmd.push(Cmd::PromptReplaceSf2Single(ui_state.selected_idx));
             }
         });
         for (i, voice) in song.ins.voices.iter().enumerate() {
+            let idx = VoiceIdx(i as u8);
             let img = voice_img(voice);
-            let button = egui::Button::selectable(ui_state.selected_idx == i, (img, &voice.name))
+            let button = egui::Button::selectable(ui_state.selected_idx == idx, (img, &voice.name))
                 .sense(egui::Sense::click_and_drag());
             let re = ui.add(button);
             re.context_menu(|ui| {
                 if ui.button("Duplicate").clicked() {
-                    op = Some(VoiceUiOp::Duplicate(i));
+                    op = Some(VoiceUiOp::Duplicate(idx));
                 }
             });
             if re.clicked() {
-                ui_state.selected_idx = i;
+                ui_state.selected_idx = idx;
             }
             if re.drag_started() {
-                ui_state.dragged_idx = Some(i);
+                ui_state.dragged_idx = Some(idx);
             }
             if let Some(dragged_idx) = ui_state.dragged_idx
                 && re.contains_pointer()
@@ -127,13 +122,12 @@ pub fn ui(
                 );
                 if ui.input(|inp| inp.pointer.primary_released()) {
                     ui_state.dragged_idx = None;
-                    op = Some(VoiceUiOp::Swap(dragged_idx, i));
+                    op = Some(VoiceUiOp::Swap(dragged_idx, idx));
                 }
             }
             if re.hovered() {
-                let voice_idx = VoiceIdx(i as u8);
                 for (i, unit) in song.herd.units.iter().enumerate() {
-                    if unit.voice_idx == voice_idx {
+                    if unit.voice_idx == idx {
                         shared.highlight_set.insert(UnitIdx(i as u8));
                     }
                 }
@@ -144,7 +138,7 @@ pub fn ui(
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
-            if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
+            if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx.usize()) {
                 voice_ui(
                     ui,
                     voice,
@@ -161,49 +155,49 @@ pub fn ui(
     if let Some(op) = op {
         match op {
             VoiceUiOp::MoveUp(idx) => {
-                let voice = song.ins.voices.remove(idx);
-                song.ins.voices.insert(idx.saturating_sub(1), voice);
+                let voice = song.ins.voices.remove(idx.usize());
+                song.ins.voices.insert(idx.usize().saturating_sub(1), voice);
             }
             VoiceUiOp::MoveDown(idx) => {
-                let voice = song.ins.voices.remove(idx);
-                song.ins.voices.insert(idx + 1, voice);
+                let voice = song.ins.voices.remove(idx.usize());
+                song.ins.voices.insert(idx.usize() + 1, voice);
             }
             VoiceUiOp::MoveBegin(idx) => {
-                let voice = song.ins.voices.remove(idx);
+                let voice = song.ins.voices.remove(idx.usize());
                 song.ins.voices.insert(0, voice);
             }
             VoiceUiOp::MoveEnd(idx) => {
-                let voice = song.ins.voices.remove(idx);
+                let voice = song.ins.voices.remove(idx.usize());
                 song.ins.voices.push(voice);
             }
             VoiceUiOp::Swap(a, b) => {
-                song.ins.voices.swap(a, b);
+                song.ins.voices.swap(a.usize(), b.usize());
             }
             VoiceUiOp::Duplicate(idx) => {
-                let dup = song.ins.voices[idx].clone();
-                song.ins.voices.insert(idx, dup);
+                let dup = song.ins.voices[idx.usize()].clone();
+                song.ins.voices.insert(idx.usize(), dup);
             }
             VoiceUiOp::Delete(idx) => {
-                song.ins.voices.remove(idx);
+                song.ins.voices.remove(idx.usize());
             }
         }
     }
 }
 
 enum VoiceUiOp {
-    MoveUp(usize),
-    MoveDown(usize),
-    MoveBegin(usize),
-    MoveEnd(usize),
-    Delete(usize),
-    Swap(usize, usize),
-    Duplicate(usize),
+    MoveUp(VoiceIdx),
+    MoveDown(VoiceIdx),
+    MoveBegin(VoiceIdx),
+    MoveEnd(VoiceIdx),
+    Delete(VoiceIdx),
+    Swap(VoiceIdx, VoiceIdx),
+    Duplicate(VoiceIdx),
 }
 
 fn voice_ui(
     ui: &mut egui::Ui,
     voice: &mut Voice,
-    idx: usize,
+    idx: VoiceIdx,
     op: &mut Option<VoiceUiOp>,
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
@@ -215,7 +209,7 @@ fn voice_ui(
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut voice.name);
         for inst in voice.insts.iter() {
-            play_sound_ui(ui, aux, ui_state, VoiceIdx(idx as u8), &inst.sample_buf);
+            play_sound_ui(ui, aux, ui_state, idx, &inst.sample_buf);
         }
         if ui.button("⬆").clicked() {
             *op = Some(VoiceUiOp::MoveUp(idx));
@@ -237,19 +231,12 @@ fn voice_ui(
             let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
                 .color(unit_color(unit_idx.usize()));
             if ui.button(label).clicked() {
-                unit.voice_idx = VoiceIdx(idx as u8);
+                unit.voice_idx = idx;
             }
         }
     });
 
-    voice_ui_inner(
-        ui,
-        voice,
-        VoiceIdx(idx.try_into().unwrap()),
-        out_rate,
-        aux,
-        ui_state,
-    );
+    voice_ui_inner(ui, voice, idx, out_rate, aux, ui_state);
 }
 
 pub fn voice_ui_inner(

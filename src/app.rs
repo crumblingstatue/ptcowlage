@@ -641,7 +641,7 @@ impl App {
             }
             Cmd::OpenVoice(idx) => {
                 self.ui_state.tab = Tab::Voices;
-                self.ui_state.voices.selected_idx = idx.usize();
+                self.ui_state.voices.selected_idx = idx;
             }
             Cmd::OverwriteEvent { idx, payload } => {
                 let mut song = self.song.lock().unwrap();
