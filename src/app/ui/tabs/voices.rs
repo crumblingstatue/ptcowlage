@@ -13,8 +13,8 @@ use {
     eframe::egui,
     ptcow::{
         Bps, ChNum, EnvPt, NoiseData, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
-        NoiseTable, NoiseType, OsciPt, SampleRate, UnitIdx, Voice, VoiceData, VoiceFlags, VoiceIdx,
-        VoiceInstance, VoiceUnit, WaveData, noise_to_pcm,
+        NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, UnitIdx, Voice, VoiceData, VoiceFlags,
+        VoiceIdx, VoiceInstance, VoiceUnit, WaveData, noise_to_pcm,
     },
     rustc_hash::FxHashMap,
     std::iter::zip,
@@ -386,6 +386,20 @@ fn osci_ui(
     ser_clicked
 }
 
+struct Pal {
+    wave_bg: egui::Color32,
+    wave_stroke: egui::Color32,
+    env_bg: egui::Color32,
+    env_stroke: egui::Color32,
+}
+
+const PAL: Pal = Pal {
+    wave_bg: egui::Color32::from_rgb(0, 102, 67),
+    wave_stroke: egui::Color32::from_rgb(34, 204, 110),
+    env_bg: egui::Color32::from_rgb(102, 67, 0),
+    env_stroke: egui::Color32::from_rgb(204, 110, 34),
+};
+
 fn voice_unit_ui(
     ui: &mut egui::Ui,
     unit: &mut VoiceUnit,
@@ -544,23 +558,43 @@ fn voice_unit_ui(
                 }
             });
 
-            if let WaveData::Coord { points, resolution } = wave_data {
-                let reso = f32::from(*resolution);
-                let (rect, _re) =
-                    ui.allocate_exact_size(egui::vec2(reso, reso), egui::Sense::click_and_drag());
-                let p = ui.painter_at(rect);
-                p.rect_filled(rect, 2.0, egui::Color32::from_rgb(0, 102, 67));
-                let lc = rect.left_center();
-                let mut egui_points: Vec<egui::Pos2> = points
-                    .iter()
-                    .map(|pt| egui::pos2(lc.x + pt.x as f32, lc.y - pt.y as f32))
-                    .collect();
-                // pxtone Voice seems to add this point when drawing it
-                egui_points.push(rect.right_center());
-                p.line(
-                    egui_points,
-                    egui::Stroke::new(2.0, egui::Color32::from_rgb(34, 204, 110)),
-                );
+            match wave_data {
+                WaveData::Coord { points, resolution } => {
+                    let reso = f32::from(*resolution);
+                    let (rect, _re) = ui
+                        .allocate_exact_size(egui::vec2(reso, reso), egui::Sense::click_and_drag());
+                    let p = ui.painter_at(rect);
+                    p.rect_filled(rect, 2.0, PAL.wave_bg);
+                    let lc = rect.left_center();
+                    let mut egui_points: Vec<egui::Pos2> = points
+                        .iter()
+                        .map(|pt| egui::pos2(lc.x + pt.x as f32, lc.y - pt.y as f32))
+                        .collect();
+                    // pxtone Voice seems to add this point when drawing it
+                    egui_points.push(rect.right_center());
+                    p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
+                }
+                WaveData::Overtone { points } => {
+                    let size: u16 = 256;
+                    let (rect, _re) = ui.allocate_exact_size(
+                        egui::vec2(size as f32, size as f32),
+                        egui::Sense::click_and_drag(),
+                    );
+                    let p = ui.painter_at(rect);
+                    p.rect_filled(rect, 2.0, PAL.wave_bg);
+                    let lc = rect.left_center();
+                    let args = OsciArgs {
+                        volume: unit.volume,
+                        sample_num: size.into(),
+                    };
+                    let mut egui_points: Vec<egui::Pos2> = Vec::new();
+                    for i in 0..size + 1 {
+                        let amp = ptcow::overtone(args, points, i);
+                        let y = (amp * size as f64) as f32;
+                        egui_points.push(egui::pos2(lc.x + i as f32, lc.y - y));
+                    }
+                    p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
+                }
             }
             inst.recalc_wave_data(wave_data, unit.volume, unit.pan);
         }
@@ -644,7 +678,7 @@ fn envelope_src_ui(unit: &mut VoiceUnit, ui: &mut egui::Ui, x_cursor: u16) {
     );
     let p = ui.painter_at(rect);
     let lb = rect.left_bottom();
-    p.rect_filled(rect, 2.0, egui::Color32::from_rgb(102, 67, 0));
+    p.rect_filled(rect, 2.0, PAL.env_bg);
     let mut x_cursor = 0;
     let mut egui_points: Vec<egui::Pos2> = unit
         .envelope
@@ -657,8 +691,5 @@ fn envelope_src_ui(unit: &mut VoiceUnit, ui: &mut egui::Ui, x_cursor: u16) {
         .collect();
     // Ptvoice seems to have a point at (0, bottom) when drawing
     egui_points.insert(0, egui::pos2(lb.x, lb.y));
-    p.line(
-        egui_points,
-        egui::Stroke::new(2.0, egui::Color32::from_rgb(204, 110, 34)),
-    );
+    p.line(egui_points, egui::Stroke::new(2.0, PAL.env_stroke));
 }
