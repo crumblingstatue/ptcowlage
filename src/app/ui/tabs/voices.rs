@@ -514,13 +514,8 @@ fn voice_unit_ui(
                         ui.add(egui::DragValue::new(resolution)).changed();
                     }
                     WaveData::Overtone { points } => {
+                        ui.style_mut().spacing.slider_width = 512.0;
                         ui.label(format!("{} points", points.len()));
-                        for pt in &mut *points {
-                            ui.add(egui::DragValue::new(&mut pt.x).prefix("x "))
-                                .changed();
-                            ui.add(egui::DragValue::new(&mut pt.y).prefix("y "))
-                                .changed();
-                        }
                         if ui.button("+").clicked() {
                             points.push(OsciPt {
                                 x: points.last().map_or(0, |pt| pt.x) + 1,
@@ -529,6 +524,14 @@ fn voice_unit_ui(
                         }
                         if ui.button("-").clicked() {
                             points.pop();
+                        }
+                        ui.end_row();
+                        for pt in &mut *points {
+                            ui.add(egui::DragValue::new(&mut pt.x).range(1..=512).prefix("x "))
+                                .changed();
+                            ui.add(egui::Slider::new(&mut pt.y, -128..=128).prefix("y "))
+                                .changed();
+                            ui.end_row();
                         }
                     }
                 };
