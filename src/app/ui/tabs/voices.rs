@@ -65,6 +65,7 @@ pub fn ui(
                     points: Vec::new(),
                 });
                 song.ins.voices.push(voice);
+                ui_state.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
             }
             if ui.button((img::DRUM.smol(), "Noise")).clicked() {
                 let mut voice = Voice {
@@ -77,6 +78,7 @@ pub fn ui(
                 voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
                 voice.units[0].data = VoiceData::Noise(NoiseData::default());
                 song.ins.voices.push(voice);
+                ui_state.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
             }
         });
         ui.menu_button(" Import...", |ui| {

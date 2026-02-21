@@ -25,7 +25,7 @@ use {
     anyhow::Context,
     eframe::egui,
     egui_toast::{Toast, ToastKind, ToastOptions},
-    ptcow::{Event, EventPayload, NoiseTable, SampleRate, SampleT, UnitIdx},
+    ptcow::{Event, EventPayload, NoiseTable, SampleRate, SampleT, UnitIdx, VoiceIdx},
     rustysynth::SoundFont,
     std::{
         fs::File,
@@ -281,7 +281,9 @@ impl App {
     fn import_ptvoice(&mut self, data: Vec<u8>, path: &Path) {
         match load_and_recalc_voice(data, path, just_load_ptvoice, self.out.rate) {
             Ok(voice) => {
-                self.song.lock().unwrap().ins.voices.push(voice);
+                let mut song = self.song.lock().unwrap();
+                song.ins.voices.push(voice);
+                self.ui_state.voices.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
             }
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
         }
@@ -290,7 +292,9 @@ impl App {
     fn import_ptnoise(&mut self, data: Vec<u8>, path: &Path) {
         match load_and_recalc_voice(data, path, just_load_ptnoise, self.out.rate) {
             Ok(voice) => {
-                self.song.lock().unwrap().ins.voices.push(voice);
+                let mut song = self.song.lock().unwrap();
+                song.ins.voices.push(voice);
+                self.ui_state.voices.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
             }
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
         }
