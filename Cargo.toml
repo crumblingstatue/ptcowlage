@@ -20,7 +20,7 @@ ptcow.version = "0.4.0"
 ptcow.default-features = false
 tinyaudio = "2"
 anyhow = "1"
-bitflags.version = "2.10"
+bitflags.version = "2.11"
 # For midi conversion
 mid2ptcop.git = "https://github.com/crumblingstatue/mid2ptcop.git"
 # For PiyoPiyo conversion
