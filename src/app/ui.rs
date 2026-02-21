@@ -51,7 +51,8 @@ impl Default for FreeplayPianoState {
     fn default() -> Self {
         Self {
             toot: None,
-            duration: 512,
+            // Long enough for default "moo" noise :)
+            duration: 1024,
             play_octave: 7,
             record: false,
         }

@@ -1,6 +1,5 @@
 use {
-    crate::pxtone_misc::square_wave,
-    ptcow::{Herd, MooInstructions, MooPlan, SampleRate, Song, Unit, Voice, VoiceFlags},
+    ptcow::{Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, Voice},
     rustc_hash::FxHashMap,
     std::{
         cell::Cell,
@@ -69,14 +68,14 @@ impl SongState {
             ..Default::default()
         });
         let mut voice = Voice {
-            name: "Square wave".into(),
+            name: "Moo".into(),
             ..Default::default()
         };
+        let noise_data = NoiseData::from_ptnoise(include_bytes!("../res/cow.ptnoise")).unwrap();
         voice.allocate::<false>();
         voice.units[0].volume = 127;
         voice.units[0].pan = 64;
-        voice.units[0].data = ptcow::VoiceData::Wave(square_wave());
-        voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
+        voice.units[0].data = ptcow::VoiceData::Noise(noise_data);
         this.ins.voices.push(voice);
         this
     }
