@@ -39,7 +39,9 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     app.ui_state.voices.selected_idx,
                     song.song.master.timing,
                 );
+                let toot_idx = song.herd.units.len() as u8;
                 song.herd.units.push(unit);
+                app.ui_state.freeplay_piano.toot = Some(UnitIdx(toot_idx));
             }
         });
     });
