@@ -947,6 +947,8 @@ fn poly_migrate_single(
     for (idx, dup) in dups {
         song.song.events.eves.insert(idx, dup);
     }
+    // Since we inserted new events, we must now sort
+    song.song.events.sort();
     let from_name = &song.herd.units[migrate_from.usize()].name;
     let unit = ptcow::Unit {
         name: format!("{from_name}-p"),
