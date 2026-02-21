@@ -30,10 +30,15 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 .add_enabled(!song.herd.units.is_full(), egui::Button::new("+ New"))
                 .clicked()
             {
-                let unit = Unit {
+                let mut unit = Unit {
                     name: format!("New unit ({})", song.herd.units.len()),
                     ..Default::default()
                 };
+                unit.reset_voice(
+                    &song.ins,
+                    app.ui_state.voices.selected_idx,
+                    song.song.master.timing,
+                );
                 song.herd.units.push(unit);
             }
         });
