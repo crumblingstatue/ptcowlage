@@ -49,6 +49,10 @@ pub enum Cmd {
     OpenPtcopFromPath {
         path: std::path::PathBuf,
     },
+    ResetUnitVoice {
+        unit: ptcow::UnitIdx,
+        voice: VoiceIdx,
+    },
 }
 
 #[derive(Default)]

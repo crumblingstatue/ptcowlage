@@ -738,6 +738,13 @@ impl App {
                         Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
                 }
             }
+            Cmd::ResetUnitVoice { unit, voice } => {
+                let mut song = self.song.lock().unwrap();
+                let song = &mut *song;
+                if let Some(unit) = song.herd.units.get_mut(unit.usize()) {
+                    unit.reset_voice(&song.ins, voice, song.song.master.timing);
+                }
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]

@@ -212,6 +212,7 @@ pub fn ui(
                     ui_state,
                     piano_state,
                     &mut song.herd,
+                    app_cmd,
                 );
             }
         });
@@ -267,6 +268,7 @@ fn voice_ui(
     ui_state: &mut VoicesUiState,
     piano_state: &FreeplayPianoState,
     herd: &mut ptcow::Herd,
+    app_cmd: &mut CommandQueue,
 ) {
     let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
@@ -294,7 +296,10 @@ fn voice_ui(
             let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
                 .color(unit_color(unit_idx.usize()));
             if ui.button(label).clicked() {
-                unit.voice_idx = idx;
+                app_cmd.push(Cmd::ResetUnitVoice {
+                    unit: unit_idx,
+                    voice: idx,
+                });
             }
         }
     });
