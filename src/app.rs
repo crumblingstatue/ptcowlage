@@ -490,6 +490,7 @@ impl eframe::App for App {
                     match ptcow::serialize_project(&song.song, &song.herd, &song.ins) {
                         Ok(bytes) => {
                             std::fs::write(&path, bytes).unwrap();
+                            self.recently_opened.use_(path.clone());
                             self.open_file = Some(path);
                         }
                         Err(e) => {
