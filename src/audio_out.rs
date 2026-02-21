@@ -1,5 +1,6 @@
 use {
-    ptcow::{Herd, MooInstructions, MooPlan, SampleRate, Song},
+    crate::pxtone_misc::square_wave,
+    ptcow::{Herd, MooInstructions, MooPlan, SampleRate, Song, Unit, Voice, VoiceFlags},
     rustc_hash::FxHashMap,
     std::{
         cell::Cell,
@@ -56,13 +57,28 @@ pub struct SongState {
 
 impl SongState {
     pub fn new(sample_rate: SampleRate) -> Self {
-        Self {
+        let mut this = Self {
             herd: Herd::default(),
             song: Song::default(),
             ins: MooInstructions::new(sample_rate),
             pause: true,
             master_vol: 1.0,
-        }
+        };
+        this.herd.units.push(Unit {
+            name: "Cow".into(),
+            ..Default::default()
+        });
+        let mut voice = Voice {
+            name: "Square wave".into(),
+            ..Default::default()
+        };
+        voice.allocate::<false>();
+        voice.units[0].volume = 127;
+        voice.units[0].pan = 64;
+        voice.units[0].data = ptcow::VoiceData::Wave(square_wave());
+        voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
+        this.ins.voices.push(voice);
+        this
     }
     pub fn prepare(&mut self, sample_rate: SampleRate) {
         // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.

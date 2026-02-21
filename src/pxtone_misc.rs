@@ -1,6 +1,11 @@
 use std::collections::BTreeMap;
 
-use ptcow::{DEFAULT_KEY, EveList, Event, EventPayload, Song, Unit, UnitIdx, VoiceIdx};
+use arrayvec::ArrayVec;
+use ptcow::{
+    DEFAULT_KEY, EnvPt, EveList, Event, EventPayload, NoiseData, NoiseDesignOscillator,
+    NoiseDesignUnit, NoiseDesignUnitFlags, NoiseType, OsciPt, Song, Unit, UnitIdx, VoiceIdx,
+    WaveData,
+};
 
 use crate::audio_out::SongState;
 
@@ -202,5 +207,53 @@ pub fn reset_voice_for_units_with_voice_idx(song: &mut SongState, idx: VoiceIdx)
         if unit.voice_idx == idx {
             unit.reset_voice(&song.ins, idx, song.song.master.timing);
         }
+    }
+}
+
+pub fn square_wave() -> WaveData {
+    WaveData::Coord {
+        points: vec![
+            OsciPt { x: 0, y: 0 },
+            OsciPt { x: 1, y: 48 },
+            OsciPt { x: 99, y: 48 },
+            OsciPt { x: 100, y: -48 },
+            OsciPt { x: 199, y: -48 },
+        ],
+        resolution: 200,
+    }
+}
+
+pub fn bass_drum() -> NoiseData {
+    NoiseData {
+        smp_num_44k: 8000,
+        units: ArrayVec::try_from(
+            &[NoiseDesignUnit {
+                enves: [
+                    EnvPt { x: 1, y: 100 },
+                    EnvPt { x: 100, y: 20 },
+                    EnvPt { x: 200, y: 0 },
+                ]
+                .into(),
+
+                pan: 0,
+                main: NoiseDesignOscillator {
+                    type_: NoiseType::Sine,
+                    freq: 50.0,
+                    volume: 180.0,
+                    offset: 2.0,
+                    invert: false,
+                },
+                freq: NoiseDesignOscillator {
+                    type_: NoiseType::Saw,
+                    freq: 5.0,
+                    volume: 2.0,
+                    offset: 0.0,
+                    invert: false,
+                },
+                volu: NoiseDesignOscillator::default(),
+                ser_flags: NoiseDesignUnitFlags::OSC_MAIN,
+            }][..],
+        )
+        .unwrap(),
     }
 }

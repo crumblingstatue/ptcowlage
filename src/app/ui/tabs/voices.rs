@@ -8,13 +8,12 @@ use {
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
-        pxtone_misc::reset_voice_for_units_with_voice_idx,
+        pxtone_misc::{bass_drum, reset_voice_for_units_with_voice_idx, square_wave},
     },
-    arrayvec::ArrayVec,
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
-        Bps, ChNum, EnvPt, NoiseData, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
+        Bps, ChNum, EnvPt, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
         NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, UnitIdx, Voice, VoiceData, VoiceFlags,
         VoiceIdx, VoiceInstance, VoiceUnit, WaveData, noise_to_pcm,
     },
@@ -37,54 +36,6 @@ trait AtomExtExt<'a> {
 impl<'a, T: AtomExt<'a>> AtomExtExt<'a> for T {
     fn smol(self) -> egui::Atom<'a> {
         self.atom_size(egui::vec2(16.0, 16.0))
-    }
-}
-
-fn square_wave() -> WaveData {
-    WaveData::Coord {
-        points: vec![
-            OsciPt { x: 0, y: 0 },
-            OsciPt { x: 1, y: 48 },
-            OsciPt { x: 99, y: 48 },
-            OsciPt { x: 100, y: -48 },
-            OsciPt { x: 199, y: -48 },
-        ],
-        resolution: 200,
-    }
-}
-
-fn bass_drum() -> NoiseData {
-    NoiseData {
-        smp_num_44k: 8000,
-        units: ArrayVec::try_from(
-            &[NoiseDesignUnit {
-                enves: [
-                    EnvPt { x: 1, y: 100 },
-                    EnvPt { x: 100, y: 20 },
-                    EnvPt { x: 200, y: 0 },
-                ]
-                .into(),
-
-                pan: 0,
-                main: NoiseDesignOscillator {
-                    type_: NoiseType::Sine,
-                    freq: 50.0,
-                    volume: 180.0,
-                    offset: 2.0,
-                    invert: false,
-                },
-                freq: NoiseDesignOscillator {
-                    type_: NoiseType::Saw,
-                    freq: 5.0,
-                    volume: 2.0,
-                    offset: 0.0,
-                    invert: false,
-                },
-                volu: NoiseDesignOscillator::default(),
-                ser_flags: NoiseDesignUnitFlags::OSC_MAIN,
-            }][..],
-        )
-        .unwrap(),
     }
 }
 
