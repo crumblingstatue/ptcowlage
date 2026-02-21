@@ -38,6 +38,19 @@ impl<'a, T: AtomExt<'a>> AtomExtExt<'a> for T {
     }
 }
 
+fn square_wave() -> WaveData {
+    WaveData::Coord {
+        points: vec![
+            OsciPt { x: 0, y: 0 },
+            OsciPt { x: 1, y: 48 },
+            OsciPt { x: 99, y: 48 },
+            OsciPt { x: 100, y: -48 },
+            OsciPt { x: 199, y: -48 },
+        ],
+        resolution: 200,
+    }
+}
+
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
@@ -60,10 +73,7 @@ pub fn ui(
                 voice.units[0].pan = 64;
                 voice.units[0].volume = 127;
                 voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
-                voice.units[0].data = VoiceData::Wave(WaveData::Coord {
-                    resolution: 64,
-                    points: Vec::new(),
-                });
+                voice.units[0].data = VoiceData::Wave(square_wave());
                 song.ins.voices.push(voice);
                 ui_state.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
             }
@@ -539,10 +549,7 @@ fn voice_unit_ui(
                     )
                     .clicked()
                 {
-                    *wave_data = WaveData::Coord {
-                        points: Vec::new(),
-                        resolution: 64,
-                    };
+                    *wave_data = square_wave();
                 }
                 if ui
                     .selectable_label(
