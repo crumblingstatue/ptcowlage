@@ -541,11 +541,21 @@ fn voice_unit_ui(
                     {
                         unit.enves.push(EnvPt { x: 1, y: 1 });
                     }
+                    if ui
+                        .add_enabled(!unit.enves.is_empty(), egui::Button::new("-"))
+                        .clicked()
+                    {
+                        unit.enves.pop();
+                    }
                 });
-                for env_pt in &mut unit.enves {
-                    ui.add(egui::DragValue::new(&mut env_pt.x));
-                    ui.add(egui::DragValue::new(&mut env_pt.y));
-                }
+                ui.horizontal(|ui| {
+                    for env_pt in &mut unit.enves {
+                        ui.group(|ui| {
+                            ui.add(egui::DragValue::new(&mut env_pt.x).prefix("x "));
+                            ui.add(egui::DragValue::new(&mut env_pt.y).prefix("y "));
+                        });
+                    }
+                });
                 retain
             });
 
