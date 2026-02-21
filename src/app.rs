@@ -143,6 +143,8 @@ impl App {
             #[cfg(target_arch = "wasm32")]
             web_cmd: Default::default(),
         };
+        // SongState comes with a default unit by... default, so let's toot that
+        this.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
                 this.modal_payload =
@@ -736,6 +738,8 @@ impl App {
                 *song = SongState::new(self.out.rate);
                 song.prepare(self.out.rate);
                 self.open_file = None;
+                // Toot default unit that comes with clean state
+                self.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
             }
             #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {
