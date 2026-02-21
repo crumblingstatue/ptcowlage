@@ -10,7 +10,7 @@ use {
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
     },
     bitflags::Flags as _,
-    eframe::egui::{self, collapsing_header::CollapsingState},
+    eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
         Bps, ChNum, EnvPt, NoiseData, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
         NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, UnitIdx, Voice, VoiceData, VoiceFlags,
@@ -28,6 +28,16 @@ pub struct VoicesUiState {
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
 }
 
+trait AtomExtExt<'a> {
+    fn smol(self) -> egui::Atom<'a>;
+}
+
+impl<'a, T: AtomExt<'a>> AtomExtExt<'a> for T {
+    fn smol(self) -> egui::Atom<'a> {
+        self.atom_size(egui::vec2(16.0, 16.0))
+    }
+}
+
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
@@ -40,8 +50,8 @@ pub fn ui(
 ) {
     let mut op = None;
     ui.horizontal_wrapped(|ui| {
-        ui.menu_button("+ Add", |ui| {
-            if ui.button("Wave").clicked() {
+        ui.menu_button("✴ New...", |ui| {
+            if ui.button((img::SAXO.smol(), "Wave")).clicked() {
                 let mut voice = Voice {
                     name: format!("Wave {}", song.ins.voices.len()),
                     ..Default::default()
@@ -56,7 +66,7 @@ pub fn ui(
                 });
                 song.ins.voices.push(voice);
             }
-            if ui.button("Noise").clicked() {
+            if ui.button((img::DRUM.smol(), "Noise")).clicked() {
                 let mut voice = Voice {
                     name: format!("Noise {}", song.ins.voices.len()),
                     ..Default::default()
@@ -69,28 +79,34 @@ pub fn ui(
                 song.ins.voices.push(voice);
             }
         });
-        ui.menu_button("Import ->", |ui| {
-            if ui.button(".ptvoice").clicked() {
+        ui.menu_button(" Import...", |ui| {
+            if ui.button((img::SAXO.smol(), ".ptvoice")).clicked() {
                 app_cmd.push(Cmd::PromptImportPtVoice);
             }
-            if ui.button(".ptnoise").clicked() {
+            if ui.button((img::DRUM.smol(), ".ptnoise")).clicked() {
                 app_cmd.push(Cmd::PromptImportPtNoise);
             }
-            if ui.button("Single from .sf2").clicked() {
+            if ui.button("🎵 Single from .sf2").clicked() {
                 app_cmd.push(Cmd::PromptImportSf2Sound);
             }
         });
-        ui.menu_button("Replace ->", |ui| {
-            if ui.button("All from .ptcop...").clicked() {
+        ui.menu_button("🔁 Replace...", |ui| {
+            if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
                 app_cmd.push(Cmd::PromptReplaceAllPtcop);
             }
-            if ui.button("Current from .ptvoice").clicked() {
+            if ui
+                .button((img::SAXO.smol(), "Current from .ptvoice"))
+                .clicked()
+            {
                 app_cmd.push(Cmd::PromptReplacePtVoiceSingle(ui_state.selected_idx));
             }
-            if ui.button("Current from .ptnoise").clicked() {
+            if ui
+                .button((img::DRUM.smol(), "Current from .ptnoise"))
+                .clicked()
+            {
                 app_cmd.push(Cmd::PromptReplacePtNoiseSingle(ui_state.selected_idx));
             }
-            if ui.button("Current from .sf2").clicked() {
+            if ui.button("🎵 Current from .sf2").clicked() {
                 app_cmd.push(Cmd::PromptReplaceSf2Single(ui_state.selected_idx));
             }
         });
