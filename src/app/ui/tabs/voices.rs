@@ -9,6 +9,7 @@ use {
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
     },
+    arrayvec::ArrayVec,
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
@@ -51,6 +52,41 @@ fn square_wave() -> WaveData {
     }
 }
 
+fn bass_drum() -> NoiseData {
+    NoiseData {
+        smp_num_44k: 8000,
+        units: ArrayVec::try_from(
+            &[NoiseDesignUnit {
+                enves: [
+                    EnvPt { x: 1, y: 100 },
+                    EnvPt { x: 100, y: 20 },
+                    EnvPt { x: 200, y: 0 },
+                ]
+                .into(),
+
+                pan: 0,
+                main: NoiseDesignOscillator {
+                    type_: NoiseType::Sine,
+                    freq: 50.0,
+                    volume: 180.0,
+                    offset: 2.0,
+                    invert: false,
+                },
+                freq: NoiseDesignOscillator {
+                    type_: NoiseType::Saw,
+                    freq: 5.0,
+                    volume: 2.0,
+                    offset: 0.0,
+                    invert: false,
+                },
+                volu: NoiseDesignOscillator::default(),
+                ser_flags: NoiseDesignUnitFlags::OSC_MAIN,
+            }][..],
+        )
+        .unwrap(),
+    }
+}
+
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
@@ -85,8 +121,7 @@ pub fn ui(
                 voice.allocate::<false>();
                 voice.units[0].pan = 64;
                 voice.units[0].volume = 127;
-                voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
-                voice.units[0].data = VoiceData::Noise(NoiseData::default());
+                voice.units[0].data = VoiceData::Noise(bass_drum());
                 song.ins.voices.push(voice);
                 ui_state.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
             }
