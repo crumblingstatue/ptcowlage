@@ -57,11 +57,7 @@ pub fn ui(
                     name: format!("Wave {}", song.ins.voices.len()),
                     ..Default::default()
                 };
-                voice.allocate::<false>();
-                voice.units[0].pan = 64;
-                voice.units[0].volume = 127;
-                voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
-                voice.units[0].data = VoiceData::Wave(square_wave());
+                mk_square_wave(&mut voice);
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
                 ui_state.selected_idx = idx;
@@ -72,10 +68,7 @@ pub fn ui(
                     name: format!("Noise {}", song.ins.voices.len()),
                     ..Default::default()
                 };
-                voice.allocate::<false>();
-                voice.units[0].pan = 64;
-                voice.units[0].volume = 127;
-                voice.units[0].data = VoiceData::Noise(bass_drum());
+                mk_bass_drum(&mut voice);
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
                 ui_state.selected_idx = idx;
@@ -112,6 +105,20 @@ pub fn ui(
             if ui.button("🎵 Current from .sf2").clicked() {
                 app_cmd.push(Cmd::PromptReplaceSf2Single(ui_state.selected_idx));
             }
+            ui.menu_button("✴ Current with new", |ui| {
+                if ui.button((img::SAXO.smol(), "Wave")).clicked() {
+                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx.usize()) {
+                        mk_square_wave(voice);
+                        reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
+                    }
+                }
+                if ui.button((img::DRUM.smol(), "Noise")).clicked() {
+                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx.usize()) {
+                        mk_bass_drum(voice);
+                        reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
+                    }
+                }
+            });
         });
         for (i, voice) in song.ins.voices.iter().enumerate() {
             let idx = VoiceIdx(i as u8);
@@ -202,6 +209,23 @@ pub fn ui(
             }
         }
     }
+}
+
+fn mk_bass_drum(voice: &mut Voice) {
+    voice.allocate::<false>();
+    voice.units[0].pan = 64;
+    voice.units[0].volume = 127;
+    // Make sure `WAVE_LOOP` is not set
+    voice.units[0].flags &= !VoiceFlags::WAVE_LOOP;
+    voice.units[0].data = VoiceData::Noise(bass_drum());
+}
+
+fn mk_square_wave(voice: &mut Voice) {
+    voice.allocate::<false>();
+    voice.units[0].pan = 64;
+    voice.units[0].volume = 127;
+    voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
+    voice.units[0].data = VoiceData::Wave(square_wave());
 }
 
 enum VoiceUiOp {
