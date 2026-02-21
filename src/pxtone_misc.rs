@@ -196,3 +196,11 @@ fn next_on(eves: &[Event], idx: usize) -> Option<usize> {
         .position(|eve| matches!(eve.payload, EventPayload::On { .. }))
         .map(|off| idx + off)
 }
+
+pub fn reset_voice_for_units_with_voice_idx(song: &mut SongState, idx: VoiceIdx) {
+    for unit in song.herd.units.iter_mut() {
+        if unit.voice_idx == idx {
+            unit.reset_voice(&song.ins, idx, song.song.master.timing);
+        }
+    }
+}

@@ -20,7 +20,7 @@ use {
             AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
         },
         evilscript,
-        pxtone_misc::poly_migrate_units,
+        pxtone_misc::{poly_migrate_units, reset_voice_for_units_with_voice_idx},
     },
     anyhow::Context,
     eframe::egui,
@@ -283,7 +283,9 @@ impl App {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
-                self.ui_state.voices.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                reset_voice_for_units_with_voice_idx(&mut song, idx);
+                self.ui_state.voices.selected_idx = idx;
             }
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
         }
@@ -294,7 +296,9 @@ impl App {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
-                self.ui_state.voices.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                reset_voice_for_units_with_voice_idx(&mut song, idx);
+                self.ui_state.voices.selected_idx = idx;
             }
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
         }
@@ -411,6 +415,7 @@ impl eframe::App for App {
                             } else {
                                 song.ins.voices.push(voice);
                             }
+                            reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                         }
                         Err(e) => {
                             self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
@@ -427,6 +432,7 @@ impl eframe::App for App {
                             } else {
                                 song.ins.voices.push(voice);
                             }
+                            reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                         }
                         Err(e) => {
                             self.modal_payload = Some(ModalPayload::Msg(e.to_string()));

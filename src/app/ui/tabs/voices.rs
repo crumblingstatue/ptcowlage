@@ -8,6 +8,7 @@ use {
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
+        pxtone_misc::reset_voice_for_units_with_voice_idx,
     },
     arrayvec::ArrayVec,
     bitflags::Flags as _,
@@ -111,7 +112,9 @@ pub fn ui(
                 voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
                 voice.units[0].data = VoiceData::Wave(square_wave());
                 song.ins.voices.push(voice);
-                ui_state.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                ui_state.selected_idx = idx;
+                reset_voice_for_units_with_voice_idx(song, idx);
             }
             if ui.button((img::DRUM.smol(), "Noise")).clicked() {
                 let mut voice = Voice {
@@ -123,7 +126,9 @@ pub fn ui(
                 voice.units[0].volume = 127;
                 voice.units[0].data = VoiceData::Noise(bass_drum());
                 song.ins.voices.push(voice);
-                ui_state.selected_idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                ui_state.selected_idx = idx;
+                reset_voice_for_units_with_voice_idx(song, idx);
             }
         });
         ui.menu_button(" Import...", |ui| {
