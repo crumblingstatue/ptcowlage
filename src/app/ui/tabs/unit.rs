@@ -25,8 +25,8 @@ pub fn ui(
     let mut cmd = None;
     egui::ScrollArea::vertical()
         .auto_shrink(false)
-        .show(ui, |ui| {
-            if let Some(unit_idx) = shared.active_unit {
+        .show(ui, |ui| match shared.active_unit {
+            Some(unit_idx) => {
                 let Some(unit) = song.herd.units.get_mut(unit_idx.usize()) else {
                     ui.label("Invalid selected unit");
                     return;
@@ -40,6 +40,9 @@ pub fn ui(
                     app_cmd,
                     &song.song.events,
                 );
+            }
+            None => {
+                ui.label("Select a unit from the left panel");
             }
         });
     handle_units_command(cmd, song, app_modal_payload);
