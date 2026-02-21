@@ -440,6 +440,7 @@ fn osci_ui(
     });
     ui.indent("osci", |ui| {
         ui.horizontal_wrapped(|ui| {
+            ui.style_mut().spacing.slider_width = ui.available_width() - 160.0;
             ui.selectable_value(&mut osci.type_, NoiseType::Sine, "Sine");
             ui.selectable_value(&mut osci.type_, NoiseType::Saw, "Saw");
             ui.selectable_value(&mut osci.type_, NoiseType::Rect, "Rect");
@@ -458,11 +459,19 @@ fn osci_ui(
             ui.selectable_value(&mut osci.type_, NoiseType::Saw8, "Saw8");
             ui.end_row();
             ui.label("freq");
-            ui.add(egui::DragValue::new(&mut osci.freq));
+            ui.add(
+                egui::DragValue::new(&mut osci.freq)
+                    .range(0.0..=44100.0)
+                    .speed(0.1),
+            );
+            ui.label("Hz");
+            ui.end_row();
             ui.label("volume");
-            ui.add(egui::DragValue::new(&mut osci.volume));
+            ui.add(egui::Slider::new(&mut osci.volume, 0.0..=200.0));
+            ui.end_row();
             ui.label("offset");
-            ui.add(egui::DragValue::new(&mut osci.offset));
+            ui.add(egui::Slider::new(&mut osci.offset, 0.0..=100.0));
+            ui.end_row();
             ui.checkbox(&mut osci.invert, "invert");
         });
     });
@@ -511,7 +520,7 @@ fn voice_unit_ui(
                 ui.indent(egui::Id::new("du").with(i), |ui| {
                     ui.horizontal(|ui| {
                         ui.label("pan");
-                        ui.add(egui::DragValue::new(&mut unit.pan));
+                        ui.add(egui::Slider::new(&mut unit.pan, -100..=100));
                     });
                     let clicked = osci_ui(
                         ui,
