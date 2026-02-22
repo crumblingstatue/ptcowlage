@@ -861,7 +861,7 @@ impl App {
     /// IMPORTANT: This should be called *OUTSIDE* of any critical section involving the song state handle
     /// Otherwise, a deadlock can happen.
     ///
-    /// You should probably be sending [crate::app::command_queue::Cmd::ReplaceAudioThread] instead.
+    /// You should probably be sending [`crate::app::command_queue::Cmd::ReplaceAudioThread`] instead.
     fn replace_pt_audio_thread(
         app_pt_audio_dev: &mut Option<OutputDevice>,
         app_out: OutParams,
