@@ -78,7 +78,7 @@ fn unit_ui(
     ui: &mut egui::Ui,
     ins: &mut MooInstructions,
     cmd: &mut Option<UnitsCmd>,
-    n_units: usize,
+    n_units: u8,
     i: usize,
     unit: &mut ptcow::Unit,
     app_cmd: &mut CommandQueue,
@@ -152,7 +152,7 @@ fn unit_ui(
                 ui_state.piano_roll.hidden_units.remove(&(i as u8));
                 // All muted except one (us)
                 let already_solo =
-                    ui_state.piano_roll.hidden_units.len() == n_units.saturating_sub(1);
+                    ui_state.piano_roll.hidden_units.len() as u8 == n_units.saturating_sub(1);
                 // If already solo, unmute all units
                 if already_solo {
                     ui_state.piano_roll.hidden_units.clear();

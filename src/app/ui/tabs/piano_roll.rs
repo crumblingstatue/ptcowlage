@@ -319,7 +319,7 @@ fn roll_ui_inner(
     );
     // INVARIANT/TODO: This assumes there are enough units in the herd so no event refers to an
     // out of bounds index. Might not always hold true. Especially if deleting units is allowed.
-    let mut unit_key_ys = vec![default_y; song.herd.units.len()];
+    let mut unit_key_ys = vec![default_y; usize::from(song.herd.units.len())];
     let [mut rects_drawn, mut circles_drawn, mut lines_drawn] = [0; _];
     let mut hovered_events = Vec::new();
     for (ev_idx, ev) in song.song.events.iter().enumerate() {

@@ -95,13 +95,13 @@ fn piano_freeplay_ui(
         .show_ui(ui, |ui| {
             ui.selectable_value(&mut state.toot, None, "None");
             for unit_idx in 0..song.herd.units.len() {
-                let unit = &song.herd.units[unit_idx];
+                let unit = &song.herd.units[usize::from(unit_idx)];
                 ui.selectable_value(
                     &mut state.toot,
-                    Some(UnitIdx(unit_idx as u8)),
+                    Some(UnitIdx(unit_idx)),
                     (
                         unit_voice_img(&song.ins, unit).atom_size(egui::vec2(14.0, 14.0)),
-                        egui::RichText::new(&unit.name).color(unit_color(unit_idx)),
+                        egui::RichText::new(&unit.name).color(unit_color(usize::from(unit_idx))),
                     ),
                 );
             }

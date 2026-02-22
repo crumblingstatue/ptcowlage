@@ -289,7 +289,7 @@ pub fn handle_units_command(
                 song.herd.units[idx.usize()].mute = false;
                 // Unmute all units if we were already solo
                 if already_solo {
-                    for unit in &mut *song.herd.units {
+                    for unit in song.herd.units.iter_mut() {
                         unit.mute = false;
                     }
                 }
