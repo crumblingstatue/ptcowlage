@@ -311,7 +311,7 @@ pub struct SharedUiState {
 impl Default for SharedUiState {
     fn default() -> Self {
         Self {
-            active_unit: Default::default(),
+            active_unit: None,
             toasts: Toasts::new()
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
