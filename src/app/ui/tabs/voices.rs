@@ -667,7 +667,7 @@ fn voice_unit_ui(
                         });
                     });
                 }
-            };
+            }
 
             inst.recalc_wave_data(wave_data, unit.volume, unit.pan);
         }

@@ -439,7 +439,7 @@ fn roll_ui_inner(
                 title: "Clicked events",
                 indices: hovered_events.clone(),
                 pos: mp,
-            })
+            });
         }
     }
 

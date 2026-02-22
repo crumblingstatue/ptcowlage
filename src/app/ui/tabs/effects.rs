@@ -241,5 +241,5 @@ fn delay_ui(
             song.master.timing.bpm,
             out_rate,
         );
-    };
+    }
 }

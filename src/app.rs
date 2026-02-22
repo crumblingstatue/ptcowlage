@@ -85,7 +85,7 @@ impl App {
                 Err(e) => {
                     modal_payload = Some(ModalPayload::Msg(e.to_string()));
                 }
-            };
+            }
         }
         if let Some(path) = args.piyo_import {
             let piyo_data = std::fs::read(&path).unwrap();
@@ -156,7 +156,7 @@ impl App {
                 this.modal_payload =
                     Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
             } else {
-                this.open_file = Some(song.0.into())
+                this.open_file = Some(song.0.into());
             }
         }
         // Do some EvilScript on the final state before running the app
@@ -699,7 +699,7 @@ impl App {
                 self.open_file_prompt(file_ops::FILT_SF2, FileOp::ImportSf2Single, false);
             }
             Cmd::PromptReplaceAllPtcop => {
-                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ReplaceVoicesPtcop, false)
+                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ReplaceVoicesPtcop, false);
             }
             Cmd::PromptReplacePtVoiceSingle(voice_idx) => {
                 self.open_file_prompt(
@@ -870,7 +870,7 @@ impl App {
         // Drop the old handle, so the thread can join, and we avoid a deadlock.
         *app_pt_audio_dev = None;
         // Now we can spawn the new thread
-        *app_pt_audio_dev = Some(spawn_ptcow_audio_thread(app_out, app_song))
+        *app_pt_audio_dev = Some(spawn_ptcow_audio_thread(app_out, app_song));
     }
 }
 
@@ -909,7 +909,7 @@ fn do_tick0_events(song: &mut SongState) {
             EventPayload::Velocity(vel) => unit.velocity = vel,
             EventPayload::Volume(vol) => unit.volume = vol,
             EventPayload::SetVoice(idx) => {
-                unit.reset_voice(&song.ins, idx, song.song.master.timing)
+                unit.reset_voice(&song.ins, idx, song.song.master.timing);
             }
             EventPayload::SetGroup(group_idx) => unit.group = group_idx,
             _ => {}

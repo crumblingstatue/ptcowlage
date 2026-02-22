@@ -156,7 +156,7 @@ pub fn spawn_aux_audio_thread(out_rate: SampleRate, out_buf_size: usize) -> AuxA
             Ok(msg) => match msg {
                 AuxMsg::PlaySamples16 { key, sample_data } => match playing.entry(key) {
                     Entry::Occupied(mut occupied_entry) => {
-                        occupied_entry.get_mut().samp_data = sample_data
+                        occupied_entry.get_mut().samp_data = sample_data;
                     }
                     Entry::Vacant(vacant_entry) => {
                         vacant_entry.insert(SamplePlayer::new(sample_data));
