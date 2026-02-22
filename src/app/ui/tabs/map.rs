@@ -109,7 +109,7 @@ fn roll_ui_inner(
     let [mod_shift, mod_alt] = ui.input(|inp| [inp.modifiers.shift, inp.modifiers.alt]);
     let n_units = song.herd.units.len();
     let (rect, re) = ui.allocate_exact_size(
-        egui::vec2(approx_end, n_units as f32 * state.row_size),
+        egui::vec2(approx_end, f32::from(n_units) * state.row_size),
         egui::Sense::click(),
     );
     let pnt = ui.painter_at(rect);
@@ -118,7 +118,7 @@ fn roll_ui_inner(
     let cr = ui.clip_rect();
     // Draw guide lines
     for unit_no in 0..n_units {
-        let y = unit_no as f32 * state.row_size;
+        let y = f32::from(unit_no) * state.row_size;
         let y = rect.min.y + y;
         let sharp = unit_no % 2 == 0;
         if sharp {
@@ -331,7 +331,7 @@ fn left_side_units_ui(
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
         .show(ui, |ui| {
             let (rect, _re) = ui.allocate_exact_size(
-                egui::vec2(96.0, unit_no as f32 * state.row_size),
+                egui::vec2(96.0, f32::from(unit_no) * state.row_size),
                 egui::Sense::click(),
             );
             let pnt = ui.painter_at(rect);
@@ -340,7 +340,7 @@ fn left_side_units_ui(
             // Draw keys
             for unit_idx in 0..unit_no {
                 // Draw guide lines
-                let y = unit_idx as f32 * state.row_size;
+                let y = f32::from(unit_idx) * state.row_size;
                 let y = rect.min.y + y;
                 let sharp = unit_idx % 2 == 0;
                 let key_rect = egui::Rect::from_min_max(
