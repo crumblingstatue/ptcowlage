@@ -305,6 +305,134 @@ impl App {
             Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn desktop_handle_file_op(&mut self, path: PathBuf, op: FileOp) {
+        match op {
+            FileOp::OpenProj => {
+                if let Err(e) = self.load_song_from_path(path) {
+                    self.modal_payload =
+                        Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                }
+            }
+            FileOp::ReplaceVoicesPtcop => {
+                let mut song = self.song.lock().unwrap();
+                import_voices(&path, &mut song);
+            }
+            FileOp::ReplacePtVoiceSingle(voice_idx) => {
+                let data = std::fs::read(&path).unwrap();
+                match load_and_recalc_voice(data, &path, just_load_ptvoice, self.out.rate) {
+                    Ok(voice) => {
+                        let mut song = self.song.lock().unwrap();
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                            *voice_of_idx = voice;
+                        } else {
+                            song.ins.voices.push(voice);
+                        }
+                        reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    }
+                }
+            }
+            FileOp::ReplacePtNoiseSingle(voice_idx) => {
+                let data = std::fs::read(&path).unwrap();
+                match load_and_recalc_voice(data, &path, just_load_ptnoise, self.out.rate) {
+                    Ok(voice) => {
+                        let mut song = self.song.lock().unwrap();
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                            *voice_of_idx = voice;
+                        } else {
+                            song.ins.voices.push(voice);
+                        }
+                        reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    }
+                }
+            }
+            FileOp::ReplaceSf2Single(voice_idx) => {
+                let mut sf2_file = File::open(path).unwrap();
+                match SoundFont::new(&mut sf2_file) {
+                    Ok(soundfont) => {
+                        self.ui_state.sf2_import =
+                            Some(ui::Sf2ImportDialog::new(soundfont, Some(voice_idx)));
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    }
+                }
+            }
+            FileOp::ImportSf2Single => {
+                let mut sf2_file = File::open(path).unwrap();
+                match SoundFont::new(&mut sf2_file) {
+                    Ok(soundfont) => {
+                        self.ui_state.sf2_import = Some(ui::Sf2ImportDialog::new(soundfont, None));
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    }
+                }
+            }
+            FileOp::ImportPtVoice => {
+                let data = std::fs::read(&path).unwrap();
+                self.import_ptvoice(data, &path);
+            }
+            FileOp::ImportPtNoise => {
+                let data = std::fs::read(&path).unwrap();
+                self.import_ptnoise(data, &path);
+            }
+            FileOp::ImportMidi => {
+                let mid_data = std::fs::read(&path).unwrap();
+                self.import_midi_from_bytes(&mid_data);
+            }
+            FileOp::ImportPiyoPiyo => {
+                let data = std::fs::read(&path).unwrap();
+                self.import_piyopiyo_from_bytes(&data);
+            }
+            FileOp::ImportOrganya => {
+                let data = std::fs::read(&path).unwrap();
+                self.import_organya_from_bytes(&data);
+            }
+            FileOp::SaveProjAs => {
+                let song = self.song.lock().unwrap();
+                match ptcow::serialize_project(&song.song, &song.herd, &song.ins) {
+                    Ok(bytes) => {
+                        std::fs::write(&path, bytes).unwrap();
+                        self.recently_opened.use_(path.clone());
+                        self.open_file = Some(path);
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    }
+                }
+                drop(song);
+            }
+            FileOp::ExportWav => {
+                // Disable audio device for export duration
+                self.pt_audio_dev = None;
+                let mut song = self.song.lock().unwrap();
+                match crate::util::export_wav(&mut song) {
+                    Ok(data) => {
+                        if let Err(e) = std::fs::write(path, data) {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    }
+                }
+                // We can restart audio thread now
+                self.cmd.push(Cmd::ReplaceAudioThread);
+                post_load_prep(
+                    &mut song,
+                    self.out.rate,
+                    &mut self.ui_state.freeplay_piano.toot,
+                );
+            }
+        }
+    }
 }
 
 fn load_and_recalc_voice(
@@ -393,135 +521,11 @@ impl eframe::App for App {
             }
         });
 
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(path) = picked_path
             && let Some(op) = file_op
         {
-            match op {
-                FileOp::OpenProj => {
-                    if let Err(e) = self.load_song_from_path(path) {
-                        self.modal_payload =
-                            Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
-                    }
-                }
-                FileOp::ReplaceVoicesPtcop => {
-                    let mut song = self.song.lock().unwrap();
-                    import_voices(&path, &mut song);
-                }
-                FileOp::ReplacePtVoiceSingle(voice_idx) => {
-                    let data = std::fs::read(&path).unwrap();
-                    match load_and_recalc_voice(data, &path, just_load_ptvoice, self.out.rate) {
-                        Ok(voice) => {
-                            let mut song = self.song.lock().unwrap();
-                            if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
-                                *voice_of_idx = voice;
-                            } else {
-                                song.ins.voices.push(voice);
-                            }
-                            reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
-                }
-                FileOp::ReplacePtNoiseSingle(voice_idx) => {
-                    let data = std::fs::read(&path).unwrap();
-                    match load_and_recalc_voice(data, &path, just_load_ptnoise, self.out.rate) {
-                        Ok(voice) => {
-                            let mut song = self.song.lock().unwrap();
-                            if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
-                                *voice_of_idx = voice;
-                            } else {
-                                song.ins.voices.push(voice);
-                            }
-                            reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
-                }
-                FileOp::ReplaceSf2Single(voice_idx) => {
-                    let mut sf2_file = File::open(path).unwrap();
-                    match SoundFont::new(&mut sf2_file) {
-                        Ok(soundfont) => {
-                            self.ui_state.sf2_import =
-                                Some(ui::Sf2ImportDialog::new(soundfont, Some(voice_idx)));
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
-                }
-                FileOp::ImportSf2Single => {
-                    let mut sf2_file = File::open(path).unwrap();
-                    match SoundFont::new(&mut sf2_file) {
-                        Ok(soundfont) => {
-                            self.ui_state.sf2_import =
-                                Some(ui::Sf2ImportDialog::new(soundfont, None));
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
-                }
-                FileOp::ImportPtVoice => {
-                    let data = std::fs::read(&path).unwrap();
-                    self.import_ptvoice(data, &path);
-                }
-                FileOp::ImportPtNoise => {
-                    let data = std::fs::read(&path).unwrap();
-                    self.import_ptnoise(data, &path);
-                }
-                FileOp::ImportMidi => {
-                    let mid_data = std::fs::read(&path).unwrap();
-                    self.import_midi_from_bytes(&mid_data);
-                }
-                FileOp::ImportPiyoPiyo => {
-                    let data = std::fs::read(&path).unwrap();
-                    self.import_piyopiyo_from_bytes(&data);
-                }
-                FileOp::ImportOrganya => {
-                    let data = std::fs::read(&path).unwrap();
-                    self.import_organya_from_bytes(&data);
-                }
-                FileOp::SaveProjAs => {
-                    let song = self.song.lock().unwrap();
-                    match ptcow::serialize_project(&song.song, &song.herd, &song.ins) {
-                        Ok(bytes) => {
-                            std::fs::write(&path, bytes).unwrap();
-                            self.recently_opened.use_(path.clone());
-                            self.open_file = Some(path);
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
-                    drop(song);
-                }
-                FileOp::ExportWav => {
-                    // Disable audio device for export duration
-                    self.pt_audio_dev = None;
-                    let mut song = self.song.lock().unwrap();
-                    match crate::util::export_wav(&mut song) {
-                        Ok(data) => {
-                            if let Err(e) = std::fs::write(path, data) {
-                                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                            }
-                        }
-                        Err(e) => {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                        }
-                    }
-                    // We can restart audio thread now
-                    self.cmd.push(Cmd::ReplaceAudioThread);
-                    post_load_prep(
-                        &mut song,
-                        self.out.rate,
-                        &mut self.ui_state.freeplay_piano.toot,
-                    );
-                }
-            }
+            self.desktop_handle_file_op(path, op);
         }
         if let Some(payload) = &mut self.modal_payload {
             let mut close = false;
