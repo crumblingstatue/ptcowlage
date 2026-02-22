@@ -647,7 +647,7 @@ impl App {
                 };
                 let cont = |eve: &Event| eve.tick == target_ev.tick;
                 let mut indices = crate::util::domain_expansion(eves, idx, cont, coll);
-                indices.sort();
+                indices.sort_unstable();
                 // Remove indices in reverse order to not invalidate indices
                 for idx in indices.iter().rev() {
                     eves.remove(*idx);
