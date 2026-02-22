@@ -124,21 +124,8 @@ pub fn import(
         for i in 0..units_needed {
             herd.units.push(Unit {
                 name: format!("Melody {m_i}-{i}"),
-                key_now: 0,
-                key_start: 0,
-                key_margin: 0,
-                porta_pos: 0,
-                porta_destination: 0,
-                pan_vols: Default::default(),
-                pan_time_offs: Default::default(),
-                pan_time_bufs: [[0; _]; _],
-                volume: Default::default(),
-                velocity: Default::default(),
-                group: Default::default(),
-                tuning: Default::default(),
                 voice_idx: ptcow::VoiceIdx(m_i.try_into().unwrap()),
-                tones: Default::default(),
-                mute: Default::default(),
+                ..Default::default()
             });
             song.events.push(Event {
                 payload: EventPayload::SetVoice(ptcow::VoiceIdx(m_i.try_into().unwrap())),
@@ -179,21 +166,7 @@ pub fn import(
     for i in 0..units_needed {
         herd.units.push(Unit {
             name: format!("Drum {i}"),
-            key_now: 0,
-            key_start: 0,
-            key_margin: 0,
-            porta_pos: 0,
-            porta_destination: 0,
-            pan_vols: Default::default(),
-            pan_time_offs: Default::default(),
-            pan_time_bufs: [[0; _]; _],
-            volume: Default::default(),
-            velocity: Default::default(),
-            group: Default::default(),
-            tuning: Default::default(),
-            voice_idx: VoiceIdx(0),
-            tones: Default::default(),
-            mute: Default::default(),
+            ..Default::default()
         });
         let mut vol = piyo.percussion_track.base.vol as i16 / 4;
         // Drum sample volumes are weird in PiyoPiyo.
