@@ -354,7 +354,7 @@ fn left_side_units_ui(
                 // Draw text
                 // We limit max font size so sharp key text won't stretch out of bounds.
                 let font_size = f32::min(state.row_size - 4.0, 14.0);
-                let unit_name = &song.herd.units[usize::from(unit_idx)].name;
+                let unit_name = &song.herd.units[unit_idx].name;
                 pnt.text(
                     egui::pos2(rect.min.x + 2.0, y),
                     egui::Align2::LEFT_TOP,

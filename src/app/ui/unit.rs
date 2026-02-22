@@ -273,7 +273,7 @@ pub fn handle_units_command(
     if let Some(cmd) = cmd {
         match cmd {
             UnitsCmd::ToggleSolo { idx } => {
-                let me_playing = !song.herd.units[idx.usize()].mute;
+                let me_playing = !song.herd.units[idx].mute;
                 let mut any_playing = false;
                 for (i, unit) in song.herd.units.iter_mut().enumerate() {
                     if i == idx.usize() {
@@ -286,7 +286,7 @@ pub fn handle_units_command(
                 }
                 let already_solo = me_playing && !any_playing;
                 // Unmute me always for solo
-                song.herd.units[idx.usize()].mute = false;
+                song.herd.units[idx].mute = false;
                 // Unmute all units if we were already solo
                 if already_solo {
                     for unit in song.herd.units.iter_mut() {

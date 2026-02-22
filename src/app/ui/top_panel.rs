@@ -136,7 +136,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 let orig_n_units: u8 = song.herd.units.len().try_into().unwrap();
                 for mut migrate_from in (0..orig_n_units).map(UnitIdx) {
                     // Skip muted units
-                    if song.herd.units[migrate_from.usize()].mute {
+                    if song.herd.units[migrate_from].mute {
                         continue;
                     }
                     while let Some(out) =

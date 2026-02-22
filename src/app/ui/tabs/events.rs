@@ -310,7 +310,7 @@ pub fn ui(
                             ui.label("Volume");
                             let changed = ui.add(egui::Slider::new(vol, 0..=256)).changed();
                             if changed && ui_state.preview_unit_changes {
-                                song.herd.units[ev.unit.usize()].volume = *vol;
+                                song.herd.units[ev.unit].volume = *vol;
                             }
                         });
                     }
@@ -358,7 +358,7 @@ pub fn ui(
                                     {
                                         *v_idx = VoiceIdx(i as u8);
                                         if ui_state.preview_unit_changes {
-                                            song.herd.units[ev.unit.usize()].voice_idx = *v_idx;
+                                            song.herd.units[ev.unit].voice_idx = *v_idx;
                                         }
                                     }
                                 }
@@ -386,7 +386,7 @@ pub fn ui(
                             let changed =
                                 ui.add(crate::app::ui::unit::pan_time_slider(val)).changed();
                             if changed && ui_state.preview_unit_changes {
-                                song.herd.units[ev.unit.usize()].pan_time_offs =
+                                song.herd.units[ev.unit].pan_time_offs =
                                     val.to_lr_offsets(out_rate);
                             }
                         });

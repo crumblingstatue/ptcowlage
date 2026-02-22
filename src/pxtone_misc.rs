@@ -108,8 +108,8 @@ pub(crate) fn split_unit_events_by_key(song: &mut SongState, idx: UnitIdx) {
         assert_eq!(eves[off.on].unit, idx);
         eves[off.key].payload = EventPayload::Key(DEFAULT_KEY);
     }
-    let name = song.herd.units[idx.usize()].name.clone();
-    song.herd.units[idx.usize()]
+    let name = song.herd.units[idx].name.clone();
+    song.herd.units[idx]
         .name
         .push_str(&format!("-{}", fst_key / 256));
     let fst_voice_idx = eves

@@ -95,7 +95,7 @@ fn piano_freeplay_ui(
         .show_ui(ui, |ui| {
             ui.selectable_value(&mut state.toot, None, "None");
             for unit_idx in 0..song.herd.units.len() {
-                let unit = &song.herd.units[usize::from(unit_idx)];
+                let unit = &song.herd.units[unit_idx];
                 ui.selectable_value(
                     &mut state.toot,
                     Some(UnitIdx(unit_idx)),
