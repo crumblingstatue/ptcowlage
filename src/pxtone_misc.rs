@@ -124,7 +124,7 @@ pub(crate) fn split_unit_events_by_key(song: &mut SongState, idx: UnitIdx) {
             }
         })
         .unwrap_or(VoiceIdx(0));
-    let mut unit_idx_counter = UnitIdx(song.herd.units.len() as u8);
+    let mut unit_idx_counter = UnitIdx(song.herd.units.len());
     let mut events_to_insert = Vec::new();
     for (key, offs) in key_map.into_iter().skip(1) {
         for off in offs {

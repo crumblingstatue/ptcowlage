@@ -71,7 +71,7 @@ pub fn import(
         ins.voices.push(voice);
         let mut time_ms = 1;
         let mut units_needed = 0;
-        let n_units = herd.units.len() as u8;
+        let n_units = herd.units.len();
         let note_duration = u32::from(tr.len) / 22;
         let mut unit_end_ticks = FxHashMap::default();
         for ev in &tr.base.events {
@@ -139,7 +139,7 @@ pub fn import(
             });
         }
     }
-    let n_units = herd.units.len() as u8;
+    let n_units = herd.units.len();
     let mut time_ms = 0;
     let mut units_needed = 0;
     for ev in &piyo.percussion_track.base.events {

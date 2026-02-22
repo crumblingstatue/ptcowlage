@@ -926,7 +926,7 @@ fn poly_migrate_single(
     song: &mut SongState,
     migrate_from: UnitIdx,
 ) -> Option<UnitIdx> {
-    let migrate_to = UnitIdx(song.herd.units.len().try_into().unwrap());
+    let migrate_to = UnitIdx(song.herd.units.len());
     if migrate_to.0 >= 50 {
         *app_modal_payload = Some(ModalPayload::Msg(
             "Error: Cannot create more units than 50".to_string(),

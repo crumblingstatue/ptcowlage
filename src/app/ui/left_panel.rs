@@ -39,7 +39,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     app.ui_state.voices.selected_idx,
                     song.song.master.timing,
                 );
-                let toot_idx = song.herd.units.len() as u8;
+                let toot_idx = song.herd.units.len();
                 song.herd.units.push(unit);
                 app.ui_state.freeplay_piano.toot = Some(UnitIdx(toot_idx));
             }
@@ -159,7 +159,7 @@ fn unit_ui(
                 } else {
                     // Insert all units
                     for i in 0..n_units {
-                        ui_state.piano_roll.hidden_units.insert(i as u8);
+                        ui_state.piano_roll.hidden_units.insert(i);
                     }
                     // But remove self
                     ui_state.piano_roll.hidden_units.remove(&(i as u8));
