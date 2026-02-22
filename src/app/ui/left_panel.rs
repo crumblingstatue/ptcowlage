@@ -49,7 +49,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
         .max_height(ui.available_height() - 96.0)
         .auto_shrink(false)
         .show(ui, |ui| {
-            for (i, unit) in song.herd.units.iter_mut().enumerate() {
+            for (i, unit) in song.herd.units.enumerated_mut() {
                 unit_ui(
                     &mut app.ui_state,
                     ui,
@@ -79,19 +79,19 @@ fn unit_ui(
     ins: &mut MooInstructions,
     cmd: &mut Option<UnitsCmd>,
     n_units: u8,
-    i: usize,
+    i: UnitIdx,
     unit: &mut ptcow::Unit,
     app_cmd: &mut CommandQueue,
     evelist: &EveList,
 ) {
-    let c = unit_color(i);
+    let c = unit_color(usize::from(i.0));
     let n: i32 = unit.pan_time_bufs.iter().flatten().copied().sum();
     ui.horizontal(|ui| {
         let mut any_hovered = false;
         if unit.mute {
             any_hovered |= ui.label("m").contains_pointer();
         }
-        if ui_state.piano_roll.hidden_units.contains(&(i as u8)) {
+        if ui_state.piano_roll.hidden_units.contains(&i) {
             any_hovered |= ui.label("h").contains_pointer();
         }
         any_hovered |= ui
@@ -112,44 +112,42 @@ fn unit_ui(
             );
         }
         if let Some(idx) = ui_state.shared.active_unit
-            && idx.usize() == i
+            && idx == i
         {
             ui.painter().debug_rect(re.rect, egui::Color32::YELLOW, "");
         }
-        if ui_state.shared.highlight_set.contains(&UnitIdx(i as u8)) {
+        if ui_state.shared.highlight_set.contains(&i) {
             ui.painter().debug_rect(re.rect, egui::Color32::WHITE, "");
         }
         if re.clicked() {
-            ui_state.shared.active_unit = Some(UnitIdx(i as u8));
+            ui_state.shared.active_unit = Some(i);
         }
         // Got to "Unit" tab on double click
         if re.double_clicked() {
             ui_state.tab = super::Tab::Unit;
         }
-        unit_popup_ctx_menu(&re, UnitIdx(i as u8), unit, ins, cmd, app_cmd, evelist);
+        unit_popup_ctx_menu(&re, i, unit, ins, cmd, app_cmd, evelist);
         any_hovered |= re.contains_pointer();
         if any_hovered {
             // Toggle unit solo/mute
             if ui.input(|inp| inp.key_pressed(egui::Key::S)) {
-                *cmd = Some(UnitsCmd::ToggleSolo {
-                    idx: UnitIdx(i as u8),
-                });
+                *cmd = Some(UnitsCmd::ToggleSolo { idx: i });
             }
             if ui.input(|inp| inp.key_pressed(egui::Key::M)) {
                 unit.mute ^= true;
             }
             // Toggle unit hide
             if ui.input(|inp| inp.key_pressed(egui::Key::H)) {
-                if ui_state.piano_roll.hidden_units.contains(&(i as u8)) {
-                    ui_state.piano_roll.hidden_units.remove(&(i as u8));
+                if ui_state.piano_roll.hidden_units.contains(&i) {
+                    ui_state.piano_roll.hidden_units.remove(&i);
                 } else {
-                    ui_state.piano_roll.hidden_units.insert(i as u8);
+                    ui_state.piano_roll.hidden_units.insert(i);
                 }
             }
             // Toggle visual solo
             if ui.input(|inp| inp.key_pressed(egui::Key::V)) {
                 // We always remove ourselves from being hidden since it's solo
-                ui_state.piano_roll.hidden_units.remove(&(i as u8));
+                ui_state.piano_roll.hidden_units.remove(&i);
                 // All muted except one (us)
                 let already_solo =
                     ui_state.piano_roll.hidden_units.len() as u8 == n_units.saturating_sub(1);
@@ -159,10 +157,10 @@ fn unit_ui(
                 } else {
                     // Insert all units
                     for i in 0..n_units {
-                        ui_state.piano_roll.hidden_units.insert(i);
+                        ui_state.piano_roll.hidden_units.insert(UnitIdx(i));
                     }
                     // But remove self
-                    ui_state.piano_roll.hidden_units.remove(&(i as u8));
+                    ui_state.piano_roll.hidden_units.remove(&i);
                 }
             }
         }

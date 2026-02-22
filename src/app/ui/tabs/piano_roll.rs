@@ -31,7 +31,7 @@ pub struct PianoRollState {
     interact_mode: InteractMode,
     draw_debug_info: bool,
     // TODO: Implement Hash for `UnitIdx`
-    pub hidden_units: FxHashSet<u8>,
+    pub hidden_units: FxHashSet<UnitIdx>,
     draw_meas_lines: bool,
     ui_cmd: Option<UiCmd>,
     /// Which events to show info/edit popup for, if any
@@ -323,7 +323,7 @@ fn roll_ui_inner(
     let [mut rects_drawn, mut circles_drawn, mut lines_drawn] = [0; _];
     let mut hovered_events = Vec::new();
     for (ev_idx, ev) in song.song.events.iter().enumerate() {
-        if state.hidden_units.contains(&ev.unit.0) {
+        if state.hidden_units.contains(&ev.unit) {
             continue;
         }
         let clock_approx = ev.tick as f32 / state.tick_div;
