@@ -6,7 +6,7 @@ use ptcow::{
 };
 
 fn org_tempo_to_bpm(tempo: u16, steps_per_beat: u8) -> f32 {
-    60000. / (tempo as f32 * steps_per_beat as f32)
+    60000. / (f32::from(tempo) * f32::from(steps_per_beat))
 }
 const DRUM_DATA: &[u8] = include_bytes!("../res/org-drums.pcm");
 const WAVE_DATA: &[u8] = include_bytes!("../res/org-wave.pcm");
@@ -20,8 +20,8 @@ pub fn import(
 ) {
     song.master.timing.beats_per_meas = org.beats_per_measure;
     song.master.timing.bpm = org_tempo_to_bpm(org.tempo_ms, org.steps_per_beat);
-    song.master.timing.ticks_per_beat = org.steps_per_beat as u16 * 120;
-    let time_div = org.beats_per_measure as u32 * org.steps_per_beat as u32;
+    song.master.timing.ticks_per_beat = u16::from(org.steps_per_beat) * 120;
+    let time_div = u32::from(org.beats_per_measure) * u32::from(org.steps_per_beat);
     song.master.loop_points.repeat = org.repeat_start / time_div;
     song.master.loop_points.last = NonZeroU32::new(org.repeat_end / time_div);
     let out_ev = &mut song.events;
@@ -58,21 +58,21 @@ pub fn import(
             let len_mul = if is_wave { 120 } else { 480 };
             out_ev.push(Event {
                 payload: EventPayload::On {
-                    duration: ev.length as u32 * len_mul,
+                    duration: u32::from(ev.length) * len_mul,
                 },
                 unit,
                 tick,
             });
             if ev.pitch != organyacat::PROPERTY_UNUSED {
                 out_ev.push(Event {
-                    payload: EventPayload::Key(base_key + ev.pitch as i32 * 256),
+                    payload: EventPayload::Key(base_key + i32::from(ev.pitch) * 256),
                     unit,
                     tick,
                 });
             }
             if ev.volume != organyacat::PROPERTY_UNUSED {
                 out_ev.push(Event {
-                    payload: EventPayload::Volume(ev.volume as i16 / 2),
+                    payload: EventPayload::Volume(i16::from(ev.volume) / 2),
                     unit,
                     tick,
                 });

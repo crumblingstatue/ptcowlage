@@ -235,7 +235,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         ui.add(
             egui::Slider::new(&mut song_g.master_vol, 0.0..=1.0)
                 .custom_formatter(|val, _| ((val * 100.0).round() as u8).to_string())
-                .custom_parser(|text| text.parse::<u8>().ok().map(|val| val as f64 / 100.0))
+                .custom_parser(|text| text.parse::<u8>().ok().map(|val| f64::from(val) / 100.0))
                 .update_while_editing(false),
         );
         ui.separator();

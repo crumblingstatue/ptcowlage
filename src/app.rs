@@ -494,7 +494,7 @@ impl eframe::App for App {
                         };
                     }
                 } else if let Some(bytes) = &dropfile.bytes {
-                    if let Some((name, ext)) = dropfile.name.split_once(".") {
+                    if let Some((name, ext)) = dropfile.name.split_once('.') {
                         match ext {
                             "ptcop" | "pttune" => {
                                 // Web version loads dropped files directly as bytes
@@ -831,7 +831,7 @@ impl App {
         }
     }
     fn reload_current_file(&mut self) {
-        match self.open_file.as_ref().cloned() {
+        match self.open_file.clone() {
             Some(path) => match self.load_song_from_path(path.clone()) {
                 Ok(()) => {
                     self.cmd

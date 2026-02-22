@@ -128,10 +128,10 @@ fn piano_freeplay_ui(
 fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
     let t = t.clamp(0.0, 1.0);
     egui::Color32::from_rgba_unmultiplied(
-        egui::lerp(a.r() as f32..=b.r() as f32, t) as u8,
-        egui::lerp(a.g() as f32..=b.g() as f32, t) as u8,
-        egui::lerp(a.b() as f32..=b.b() as f32, t) as u8,
-        egui::lerp(a.a() as f32..=b.a() as f32, t) as u8,
+        egui::lerp(f32::from(a.r())..=f32::from(b.r()), t) as u8,
+        egui::lerp(f32::from(a.g())..=f32::from(b.g()), t) as u8,
+        egui::lerp(f32::from(a.b())..=f32::from(b.b()), t) as u8,
+        egui::lerp(f32::from(a.a())..=f32::from(b.a()), t) as u8,
     )
 }
 
@@ -493,7 +493,7 @@ pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, 
     let points: Vec<egui::Pos2> = samples
         .iter()
         .enumerate()
-        .map(|(i, val)| egui::Pos2::new(lt.x + i as f32 * hor_ratio, lt.y + *val as f32))
+        .map(|(i, val)| egui::Pos2::new(lt.x + i as f32 * hor_ratio, lt.y + f32::from(*val)))
         .collect();
 
     painter.line(points, egui::Stroke::new(1.0, egui::Color32::YELLOW));
@@ -606,7 +606,7 @@ pub(crate) fn sf2_import_ui(
                     // Coarse tune (semitone)
                     vu.basic_key -= region.get_coarse_tune() * 256;
                     // Fine tune (cent)
-                    vu.basic_key -= (region.get_fine_tune() as f64 * 2.56) as i32;
+                    vu.basic_key -= (f64::from(region.get_fine_tune()) * 2.56) as i32;
                     let mut song = song.lock().unwrap();
                     let song = &mut *song;
                     if let Some(target_idx) = sf2.target_voice_idx {

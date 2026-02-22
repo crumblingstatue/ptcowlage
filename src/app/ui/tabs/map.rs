@@ -157,7 +157,7 @@ fn roll_ui_inner(
         #[expect(clippy::single_match)]
         match ev.payload {
             EventPayload::On { duration } => {
-                let y = rect.min.y + ev.unit.0 as f32 * state.row_size;
+                let y = rect.min.y + f32::from(ev.unit.0) * state.row_size;
                 // We don't want the rects to overlap the guide lines, so we leave a bit of a margin
                 let margin = 2.0;
                 let rect = egui::Rect::from_min_max(

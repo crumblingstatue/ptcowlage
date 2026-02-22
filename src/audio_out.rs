@@ -38,7 +38,7 @@ impl OutParams {
         let ch = 2.0;
         // 16 bit samples
         let samp = 2.0;
-        (self.buf_size as f32 * 1000.) / (ch * samp * self.rate as f32)
+        (self.buf_size as f32 * 1000.) / (ch * samp * f32::from(self.rate))
     }
 }
 

@@ -253,7 +253,7 @@ fn voice_ui(
     let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut voice.name);
-        for inst in voice.insts.iter() {
+        for inst in &voice.insts {
             play_sound_ui(ui, aux, ui_state, idx, &inst.sample_buf);
         }
         if ui.button("⬆").clicked() {
@@ -759,7 +759,7 @@ fn unit_envelope_ui(
 fn draw_overtone_wavebox(ui: &mut egui::Ui, volume: i16, points: &[OsciPt]) {
     let size: u16 = 256;
     let (rect, _re) = ui.allocate_exact_size(
-        egui::vec2(size as f32, size as f32),
+        egui::vec2(f32::from(size), f32::from(size)),
         egui::Sense::click_and_drag(),
     );
     let p = ui.painter_at(rect);
@@ -770,10 +770,10 @@ fn draw_overtone_wavebox(ui: &mut egui::Ui, volume: i16, points: &[OsciPt]) {
         sample_num: size.into(),
     };
     let mut egui_points: Vec<egui::Pos2> = Vec::new();
-    for i in 0..size + 1 {
+    for i in 0..=size {
         let amp = ptcow::overtone(args, points, i);
-        let y = (amp * size as f64 / 2.0) as f32;
-        egui_points.push(egui::pos2(lc.x + i as f32, lc.y - y));
+        let y = (amp * f64::from(size) / 2.0) as f32;
+        egui_points.push(egui::pos2(lc.x + f32::from(i), lc.y - y));
     }
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
 }
@@ -786,7 +786,7 @@ fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16
     let lc = rect.left_center();
     let mut egui_points: Vec<egui::Pos2> = points
         .iter()
-        .map(|pt| egui::pos2(lc.x + pt.x as f32, lc.y - pt.y as f32))
+        .map(|pt| egui::pos2(lc.x + f32::from(pt.x), lc.y - f32::from(pt.y)))
         .collect();
     // pxtone Voice seems to add this point when drawing it
     egui_points.push(rect.right_center());
@@ -794,7 +794,7 @@ fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16
 }
 
 fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, unit_idx: u8) {
-    let w = width as f32;
+    let w = f32::from(width);
     egui::ScrollArea::horizontal()
         .id_salt(unit_idx)
         .max_width(384.0)
@@ -811,7 +811,7 @@ fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, unit_i
                 .iter()
                 .map(|pt| {
                     x_cursor += pt.x;
-                    egui::pos2(lb.x + x_cursor as f32, lb.y - pt.y as f32)
+                    egui::pos2(lb.x + f32::from(x_cursor), lb.y - f32::from(pt.y))
                 })
                 .collect();
             // Ptvoice seems to have a point at (0, bottom) when drawing

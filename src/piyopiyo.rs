@@ -43,7 +43,7 @@ pub fn import(
             .enumerate()
             .map(|(i, v)| OsciPt {
                 x: i as u16,
-                y: *v as i16,
+                y: i16::from(*v),
             })
             .collect();
         let wave = WaveData::Coord {
@@ -63,7 +63,7 @@ pub fn import(
             .iter()
             .map(|val| EnvPt {
                 x: 1,
-                y: (*val as f64 * env_scale) as u8,
+                y: (f64::from(*val) * env_scale) as u8,
             })
             .collect();
         voice.units[0].envelope.seconds_per_point = 64;
@@ -72,7 +72,7 @@ pub fn import(
         let mut time_ms = 1;
         let mut units_needed = 0;
         let n_units = herd.units.len() as u8;
-        let note_duration = tr.len as u32 / 22;
+        let note_duration = u32::from(tr.len) / 22;
         let mut unit_end_ticks = FxHashMap::default();
         for ev in &tr.base.events {
             let mut unit_counter = 0;
@@ -90,8 +90,8 @@ pub fn import(
                         }
                     }
                     let base_key = 75 * 256;
-                    let octave_shift = tr.octave as i32 * (12 * 256);
-                    let ev_key = base_key + octave_shift + key as i32 * 256;
+                    let octave_shift = i32::from(tr.octave) * (12 * 256);
+                    let ev_key = base_key + octave_shift + i32::from(key) * 256;
                     let pan = if let Some(pan) = ev.pan() {
                         piyo_pan_to_pxtone_pan(pan)
                     } else {

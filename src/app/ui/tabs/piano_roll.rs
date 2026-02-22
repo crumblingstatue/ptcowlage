@@ -240,7 +240,7 @@ fn roll_ui_inner(
     let clock = ptcow::current_tick(&song.herd, &song.ins);
     let [mod_shift, mod_alt] = ui.input(|inp| [inp.modifiers.shift, inp.modifiers.alt]);
     let (rect, re) = ui.allocate_exact_size(
-        egui::vec2(approx_end, state.n_rows as f32 * state.row_size),
+        egui::vec2(approx_end, f32::from(state.n_rows) * state.row_size),
         egui::Sense::click(),
     );
     let pnt = ui.painter_at(rect);
@@ -268,7 +268,7 @@ fn roll_ui_inner(
     }
     for key in 0..state.n_rows {
         let info = key_info(state.lowest_semitone, key);
-        let y = key as f32 * state.row_size;
+        let y = f32::from(key) * state.row_size;
         let y = rect.max.y - y;
         let sharp = [
             false, true, false, true, false, false, true, false, true, false, true, false,
@@ -611,7 +611,7 @@ fn roll_ui_inner(
                         return;
                     };
                     let key = piano_key * 256;
-                    let ticks_per_q_beat = song.song.master.timing.ticks_per_beat as u32 / 4;
+                    let ticks_per_q_beat = u32::from(song.song.master.timing.ticks_per_beat) / 4;
                     let tick = if state.snap_to_quarter_beat {
                         (scaled as u32 / ticks_per_q_beat) * ticks_per_q_beat
                     } else {
@@ -624,7 +624,7 @@ fn roll_ui_inner(
         }
         if let Some(placed) = &state.just_placed_note {
             'block: {
-                let ticks_per_q_beat = song.song.master.timing.ticks_per_beat as u32 / 4;
+                let ticks_per_q_beat = u32::from(song.song.master.timing.ticks_per_beat) / 4;
                 let end_tick = if state.snap_to_quarter_beat {
                     ((scaled as u32).div_ceil(ticks_per_q_beat)) * ticks_per_q_beat
                 } else {
@@ -777,7 +777,7 @@ fn piano_key_from_y(
         return None;
     };
     let kb_key = kb_key.saturating_add(1);
-    let piano_key = kb_key as i32 + state.lowest_semitone as i32;
+    let piano_key = i32::from(kb_key) + i32::from(state.lowest_semitone);
     Some(piano_key)
 }
 
@@ -828,7 +828,8 @@ fn draw_meas_lines(
                 mouse_tick_meas(mouse_pos, rect, state.tick_div, song.song.master.timing);
             if mouse_meas == meas {
                 // Draw beat lines
-                let beatline_gap = song.song.master.timing.ticks_per_beat as f32 / state.tick_div;
+                let beatline_gap =
+                    f32::from(song.song.master.timing.ticks_per_beat) / state.tick_div;
                 let mut beatline_x = x;
                 let min_draw_gap = 5.0;
                 for _ in 0..song.song.master.timing.beats_per_meas {
@@ -875,7 +876,7 @@ fn draw_meas_lines(
 
 fn key_y(lowest_semitone: u8, row_size: f32, rect: egui::Rect, k: i32) -> f32 {
     let semitone = k as f32 / 256.0;
-    let y_offset = (semitone - lowest_semitone as f32) * row_size;
+    let y_offset = (semitone - f32::from(lowest_semitone)) * row_size;
     rect.max.y - y_offset
 }
 
@@ -893,7 +894,7 @@ fn piano_ui(
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
         .show(ui, |ui| {
             let (rect, _re) = ui.allocate_exact_size(
-                egui::vec2(64.0, state.n_rows as f32 * state.row_size),
+                egui::vec2(64.0, f32::from(state.n_rows) * state.row_size),
                 egui::Sense::click(),
             );
             let black_color = egui::Color32::from_rgb(8, 8, 12);
@@ -908,14 +909,14 @@ fn piano_ui(
                     c_scale_idx,
                     octave,
                 } = key_info(state.lowest_semitone, key);
-                let y = key as f32 * state.row_size;
+                let y = f32::from(key) * state.row_size;
                 let y = rect.max.y - y;
                 let names = [
                     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
                 ];
 
                 let notation = names[c_scale_idx as usize];
-                let sharp = notation.contains("#");
+                let sharp = notation.contains('#');
                 let bg_color = if sharp { black_color } else { white_color };
                 let text_color = if sharp { white_color } else { black_color };
                 // Draw sharp keys shorter, and have a little shortening for white keys
@@ -933,7 +934,7 @@ fn piano_ui(
                 // Display highlight for up to 4 simultaneously playing units
                 let mut playing_colors = ArrayVec::<_, 4>::new();
                 for (i, unit) in song.herd.units.iter().enumerate() {
-                    if unit.key_now / 256 == semitone as i32 && !unit.mute && unit_alive(unit) {
+                    if unit.key_now / 256 == i32::from(semitone) && !unit.mute && unit_alive(unit) {
                         if playing_colors.is_full() {
                             break;
                         }
@@ -971,7 +972,7 @@ fn piano_ui(
                         inp.pointer.primary_pressed() || inp.key_pressed(mouse_toot_key)
                     })
                 {
-                    let piano_key = key as i32 + state.lowest_semitone as i32;
+                    let piano_key = i32::from(key) + i32::from(state.lowest_semitone);
                     if key_rect.y_range().contains(mouse_pos.y) {
                         piano_freeplay_play_note(song, dst_sps, piano_state, piano_key, unit_no);
                     }
@@ -1000,8 +1001,8 @@ struct KeyInfo {
 fn key_info(lowest_semitone: u8, key: u8) -> KeyInfo {
     let semitone = lowest_semitone + key;
     let name_offset = 9;
-    let c_scale_idx = (semitone as u16 + name_offset) % 12;
-    let octave = ((semitone as i16 + name_offset as i16) / 12) - 4;
+    let c_scale_idx = (u16::from(semitone) + name_offset) % 12;
+    let octave = ((i16::from(semitone) + name_offset as i16) / 12) - 4;
     KeyInfo {
         semitone,
         c_scale_idx,
