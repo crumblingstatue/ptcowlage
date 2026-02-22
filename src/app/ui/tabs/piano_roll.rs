@@ -470,7 +470,7 @@ fn roll_ui_inner(
                         continue;
                     }
                 };
-                let unit_name = match song.herd.units.get(ev.unit.usize()) {
+                let unit_name = match song.herd.units.get(ev.unit) {
                     Some(unit) => unit.name.clone(),
                     None => format!("No such unit: {}", ev.unit.0),
                 };
@@ -735,7 +735,7 @@ fn events_window_inner_ui(
             ui.label("<unresolved event (oob)>");
             continue;
         };
-        if let Some(unit) = song.herd.units.get(ev.unit.usize()) {
+        if let Some(unit) = song.herd.units.get(ev.unit) {
             ui.colored_label(unit_color(ev.unit), &unit.name);
         } else {
             ui.label("<unresolved unit>");

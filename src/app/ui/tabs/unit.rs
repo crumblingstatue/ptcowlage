@@ -27,7 +27,7 @@ pub fn ui(
         .auto_shrink(false)
         .show(ui, |ui| match shared.active_unit {
             Some(unit_idx) => {
-                let Some(unit) = song.herd.units.get_mut(unit_idx.usize()) else {
+                let Some(unit) = song.herd.units.get_mut(unit_idx) else {
                     ui.label("Invalid selected unit");
                     return;
                 };

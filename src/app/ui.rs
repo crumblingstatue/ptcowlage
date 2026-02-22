@@ -79,14 +79,14 @@ fn piano_freeplay_ui(
         (
             song.herd
                 .units
-                .get(idx.usize())
+                .get(idx)
                 .map_or("<invalid>", |unit| &unit.name),
             unit_color(idx),
         )
     });
     ui.label("🎹").on_hover_text("Piano freeplay UI");
     if let Some(toot) = state.toot
-        && let Some(unit) = song.herd.units.get(toot.usize())
+        && let Some(unit) = song.herd.units.get(toot)
     {
         ui.image(unit_voice_img(&song.ins, unit));
     }

@@ -176,9 +176,9 @@ pub fn unit_ui(
         ui.label("voice index");
         ui.add(egui::Slider::new(
             &mut unit.voice_idx.0,
-            0..=ins.voices.len().saturating_sub(1).try_into().unwrap(),
+            0..=ins.voices.len().saturating_sub(1),
         ));
-        if let Some(voice) = ins.voices.get(unit.voice_idx.usize()) {
+        if let Some(voice) = ins.voices.get(unit.voice_idx) {
             ui.image(voice_img(voice));
             if ui.link(&voice.name).clicked() {
                 app_cmd.push(Cmd::OpenVoice(unit.voice_idx));
@@ -201,14 +201,14 @@ pub fn unit_ui(
                 && let EventPayload::SetVoice(voic) = &ev.payload
             {
                 any_voice_ev = true;
-                let Some(voice) = &ins.voices.get(voic.usize()) else {
+                let Some(voice) = &ins.voices.get(*voic) else {
                     ui.label("Invalid voice index");
                     return;
                 };
                 ui.menu_button(
                     (&ev.tick.to_string(), voice_img(voice), &voice.name),
                     |ui| {
-                        for (i, voice) in ins.voices.iter().enumerate() {
+                        for (i, voice) in ins.voices.enumerated() {
                             if ui
                                 .button((
                                     voice_img(voice).atom_size(egui::vec2(16.0, 16.0)),
@@ -218,7 +218,7 @@ pub fn unit_ui(
                             {
                                 app_cmd.push(Cmd::OverwriteEvent {
                                     idx: ev_idx,
-                                    payload: EventPayload::SetVoice(VoiceIdx(i as u8)),
+                                    payload: EventPayload::SetVoice(i),
                                 });
                             }
                         }
@@ -399,9 +399,7 @@ pub fn unit_voice_img(
     ins: &ptcow::MooInstructions,
     unit: &ptcow::Unit,
 ) -> egui::ImageSource<'static> {
-    ins.voices
-        .get(unit.voice_idx.usize())
-        .map_or(img::X, |voic| voice_img(voic))
+    ins.voices.get(unit.voice_idx).map_or(img::X, voice_img)
 }
 
 pub fn unit_mute_unmute_all_ui(ui: &mut egui::Ui, units: &mut [ptcow::Unit]) {

@@ -14,7 +14,7 @@ use {
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
         Bps, ChNum, EnvPt, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
-        NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, UnitIdx, Voice, VoiceData, VoiceFlags,
+        NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags,
         VoiceIdx, VoiceInstance, VoiceUnit, WaveData, noise_to_pcm,
     },
     rustc_hash::FxHashMap,
@@ -59,7 +59,7 @@ pub fn ui(
                 };
                 mk_square_wave(&mut voice);
                 song.ins.voices.push(voice);
-                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() - 1);
                 ui_state.selected_idx = idx;
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
@@ -70,7 +70,7 @@ pub fn ui(
                 };
                 mk_bass_drum(&mut voice);
                 song.ins.voices.push(voice);
-                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() - 1);
                 ui_state.selected_idx = idx;
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
@@ -107,35 +107,34 @@ pub fn ui(
             }
             ui.menu_button("✴ Current with new", |ui| {
                 if ui.button((img::SAXO.smol(), "Wave")).clicked() {
-                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx.usize()) {
+                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
                         mk_square_wave(voice);
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
                     }
                 }
                 if ui.button((img::DRUM.smol(), "Noise")).clicked() {
-                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx.usize()) {
+                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
                         mk_bass_drum(voice);
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
                     }
                 }
             });
         });
-        for (i, voice) in song.ins.voices.iter().enumerate() {
-            let idx = VoiceIdx(i as u8);
+        for (i, voice) in song.ins.voices.enumerated() {
             let img = voice_img(voice);
-            let button = egui::Button::selectable(ui_state.selected_idx == idx, (img, &voice.name))
+            let button = egui::Button::selectable(ui_state.selected_idx == i, (img, &voice.name))
                 .sense(egui::Sense::click_and_drag());
             let re = ui.add(button);
             re.context_menu(|ui| {
                 if ui.button("Duplicate").clicked() {
-                    op = Some(VoiceUiOp::Duplicate(idx));
+                    op = Some(VoiceUiOp::Duplicate(i));
                 }
             });
             if re.clicked() {
-                ui_state.selected_idx = idx;
+                ui_state.selected_idx = i;
             }
             if re.drag_started() {
-                ui_state.dragged_idx = Some(idx);
+                ui_state.dragged_idx = Some(i);
             }
             if let Some(dragged_idx) = ui_state.dragged_idx
                 && re.contains_pointer()
@@ -148,13 +147,13 @@ pub fn ui(
                 );
                 if ui.input(|inp| inp.pointer.primary_released()) {
                     ui_state.dragged_idx = None;
-                    op = Some(VoiceUiOp::Swap(dragged_idx, idx));
+                    op = Some(VoiceUiOp::Swap(dragged_idx, i));
                 }
             }
             if re.hovered() {
-                for (i, unit) in song.herd.units.iter().enumerate() {
-                    if unit.voice_idx == idx {
-                        shared.highlight_set.insert(UnitIdx(i as u8));
+                for (unit_i, unit) in song.herd.units.enumerated() {
+                    if unit.voice_idx == i {
+                        shared.highlight_set.insert(unit_i);
                     }
                 }
             }
@@ -164,7 +163,7 @@ pub fn ui(
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
-            if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx.usize()) {
+            if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
                 voice_ui(
                     ui,
                     voice,

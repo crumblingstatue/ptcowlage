@@ -210,7 +210,7 @@ pub fn ui(
                         ));
                     }
                 });
-                row.col(|ui| match song.herd.units.get_mut(ev.unit.usize()) {
+                row.col(|ui| match song.herd.units.get_mut(ev.unit) {
                     Some(unit) => {
                         #[derive(Clone, Copy)]
                         enum PopupKind {
@@ -337,7 +337,7 @@ pub fn ui(
                     }
                     EventPayload::SetVoice(v_idx) => {
                         ui.horizontal(|ui| {
-                            let v_opt = song.ins.voices.get(v_idx.usize());
+                            let v_opt = song.ins.voices.get(*v_idx);
                             let mut s = String::new();
                             let name = v_opt.map_or_else(
                                 || {
@@ -348,7 +348,7 @@ pub fn ui(
                             );
                             ui.label("Voice");
                             ui.menu_button((voice_img_opt(v_opt), name), |ui| {
-                                for (i, voice) in song.ins.voices.iter().enumerate() {
+                                for (i, voice) in song.ins.voices.enumerated() {
                                     if ui
                                         .button((
                                             voice_img(voice).atom_size(egui::vec2(16.0, 16.0)),
@@ -356,7 +356,7 @@ pub fn ui(
                                         ))
                                         .clicked()
                                     {
-                                        *v_idx = VoiceIdx(i as u8);
+                                        *v_idx = i;
                                         if ui_state.preview_unit_changes {
                                             song.herd.units[ev.unit].voice_idx = *v_idx;
                                         }
@@ -490,7 +490,7 @@ fn top_ui(
                 *u,
                 song.herd
                     .units
-                    .get(u.usize())
+                    .get(*u)
                     .map_or("unresolved", |unit| &unit.name),
             ),
             None => "Off".into(),
@@ -505,16 +505,15 @@ fn top_ui(
                     ui_state.filter.unit = None;
                     ui_state.filter_needs_recalc = true;
                 }
-                for (i, unit) in song.herd.units.iter().enumerate() {
-                    let idx = UnitIdx(i as u8);
+                for (i, unit) in song.herd.units.enumerated() {
                     if ui
                         .selectable_label(
-                            ui_state.filter.unit == Some(idx),
-                            unit_rich_text(idx, &unit.name),
+                            ui_state.filter.unit == Some(i),
+                            unit_rich_text(i, &unit.name),
                         )
                         .clicked()
                     {
-                        ui_state.filter.unit = Some(idx);
+                        ui_state.filter.unit = Some(i);
                         ui_state.filter_needs_recalc = true;
                     }
                 }

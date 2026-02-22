@@ -110,7 +110,7 @@ fn playback_cows_ui(
             );
             // Make the left cow's instrument represent the voice unit 1,
             // and right cow unit 2, if exists. Otherwise, right cow represents unit 1 as well.
-            let opt_voice = song.ins.voices.get(unit.voice_idx.usize());
+            let opt_voice = song.ins.voices.get(unit.voice_idx);
             let vu1_img = opt_voice.map_or(img::X, |voice| voice_data_img(&voice.units[0].data));
             ui.add(egui::Image::new(vu1_img.clone()).hflip());
             let p = ui.painter();

@@ -4,7 +4,7 @@ use {
         audio_out::SongState,
     },
     eframe::egui,
-    ptcow::{Delay, DelayUnit, GroupIdx, Overdrive, SampleRate, Song, Unit, UnitIdx},
+    ptcow::{Delay, DelayUnit, GroupIdx, Overdrive, SampleRate, Song},
 };
 
 #[derive(Default)]
@@ -119,7 +119,7 @@ fn ovr_ui(
     i: usize,
     ovr: &mut Overdrive,
     msg: &mut Option<EffectsUiMsg>,
-    units: &[Unit],
+    units: &ptcow::Units,
     shared: &mut SharedUiState,
 ) {
     ui.horizontal(|ui| {
@@ -157,13 +157,18 @@ fn ovr_ui(
     });
 }
 
-fn group_ui(group: &mut GroupIdx, units: &[Unit], shared: &mut SharedUiState, ui: &mut egui::Ui) {
+fn group_ui(
+    group: &mut GroupIdx,
+    units: &ptcow::Units,
+    shared: &mut SharedUiState,
+    ui: &mut egui::Ui,
+) {
     let mut g_hover = ui.label("Group").hovered();
     g_hover |= group_idx_slider(ui, group).hovered();
     if g_hover {
-        for (i, unit) in units.iter().enumerate() {
+        for (i, unit) in units.enumerated() {
             if unit.group == *group {
-                shared.highlight_set.insert(UnitIdx(i as u8));
+                shared.highlight_set.insert(i);
             }
         }
     }
@@ -181,7 +186,7 @@ fn delay_ui(
     i: usize,
     dela: &mut Delay,
     msg: &mut Option<EffectsUiMsg>,
-    units: &[Unit],
+    units: &ptcow::Units,
     shared: &mut SharedUiState,
 ) {
     let mut changed = false;

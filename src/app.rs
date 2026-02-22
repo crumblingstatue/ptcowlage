@@ -285,7 +285,7 @@ impl App {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
-                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() - 1);
                 reset_voice_for_units_with_voice_idx(&mut song, idx);
                 self.ui_state.voices.selected_idx = idx;
             }
@@ -298,7 +298,7 @@ impl App {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
-                let idx = VoiceIdx(song.ins.voices.len() as u8 - 1);
+                let idx = VoiceIdx(song.ins.voices.len() - 1);
                 reset_voice_for_units_with_voice_idx(&mut song, idx);
                 self.ui_state.voices.selected_idx = idx;
             }
@@ -323,7 +323,7 @@ impl App {
                 match load_and_recalc_voice(&data, &path, just_load_ptvoice, self.out.rate) {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
-                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx) {
                             *voice_of_idx = voice;
                         } else {
                             song.ins.voices.push(voice);
@@ -340,7 +340,7 @@ impl App {
                 match load_and_recalc_voice(&data, &path, just_load_ptnoise, self.out.rate) {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
-                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx) {
                             *voice_of_idx = voice;
                         } else {
                             song.ins.voices.push(voice);
@@ -756,7 +756,7 @@ impl App {
             Cmd::ResetUnitVoice { unit, voice } => {
                 let mut song = self.song.lock().unwrap();
                 let song = &mut *song;
-                if let Some(unit) = song.herd.units.get_mut(unit.usize()) {
+                if let Some(unit) = song.herd.units.get_mut(unit) {
                     unit.reset_voice(&song.ins, voice, song.song.master.timing);
                 }
             }
@@ -906,7 +906,7 @@ fn post_load_prep(
 // Apply things like setting initial voices for units on tick 0
 fn do_tick0_events(song: &mut SongState) {
     for ev in song.song.events.iter().take_while(|ev| ev.tick == 0) {
-        let Some(unit) = song.herd.units.get_mut(ev.unit.usize()) else {
+        let Some(unit) = song.herd.units.get_mut(ev.unit) else {
             continue;
         };
         match ev.payload {
