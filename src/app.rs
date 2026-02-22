@@ -281,7 +281,7 @@ impl App {
     }
 
     fn import_ptvoice(&mut self, data: &[u8], path: &Path) {
-        match load_and_recalc_voice(&data, path, just_load_ptvoice, self.out.rate) {
+        match load_and_recalc_voice(data, path, just_load_ptvoice, self.out.rate) {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
@@ -294,7 +294,7 @@ impl App {
     }
 
     fn import_ptnoise(&mut self, data: &[u8], path: &Path) {
-        match load_and_recalc_voice(&data, path, just_load_ptnoise, self.out.rate) {
+        match load_and_recalc_voice(data, path, just_load_ptnoise, self.out.rate) {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
@@ -448,7 +448,7 @@ fn load_and_recalc_voice(
 }
 
 fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
-    let mut voice = ptcow::Voice::from_ptvoice(&data)?;
+    let mut voice = ptcow::Voice::from_ptvoice(data)?;
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
     }
@@ -456,7 +456,7 @@ fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
 }
 
 fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
-    let noise = ptcow::NoiseData::from_ptnoise(&data)?;
+    let noise = ptcow::NoiseData::from_ptnoise(data)?;
     let mut voice = ptcow::Voice::default();
     voice.allocate::<false>();
     voice.units[0].data = ptcow::VoiceData::Noise(noise);
