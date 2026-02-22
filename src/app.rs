@@ -801,7 +801,7 @@ impl App {
                 {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
-                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx) {
                             *voice_of_idx = voice;
                         } else {
                             song.ins.voices.push(voice);
@@ -821,7 +821,7 @@ impl App {
                 {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
-                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx) {
                             *voice_of_idx = voice;
                         } else {
                             song.ins.voices.push(voice);
