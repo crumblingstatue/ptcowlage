@@ -58,7 +58,7 @@ pub struct Filter {
 }
 
 impl Filter {
-    const fn is_active(&self) -> bool {
+    const fn is_active(self) -> bool {
         self.unit.is_some() || self.event.is_some()
     }
 }

@@ -280,8 +280,8 @@ impl App {
         }
     }
 
-    fn import_ptvoice(&mut self, data: Vec<u8>, path: &Path) {
-        match load_and_recalc_voice(data, path, just_load_ptvoice, self.out.rate) {
+    fn import_ptvoice(&mut self, data: &[u8], path: &Path) {
+        match load_and_recalc_voice(&data, path, just_load_ptvoice, self.out.rate) {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
@@ -293,8 +293,8 @@ impl App {
         }
     }
 
-    fn import_ptnoise(&mut self, data: Vec<u8>, path: &Path) {
-        match load_and_recalc_voice(data, path, just_load_ptnoise, self.out.rate) {
+    fn import_ptnoise(&mut self, data: &[u8], path: &Path) {
+        match load_and_recalc_voice(&data, path, just_load_ptnoise, self.out.rate) {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
                 song.ins.voices.push(voice);
@@ -320,7 +320,7 @@ impl App {
             }
             FileOp::ReplacePtVoiceSingle(voice_idx) => {
                 let data = std::fs::read(&path).unwrap();
-                match load_and_recalc_voice(data, &path, just_load_ptvoice, self.out.rate) {
+                match load_and_recalc_voice(&data, &path, just_load_ptvoice, self.out.rate) {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
                         if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
@@ -337,7 +337,7 @@ impl App {
             }
             FileOp::ReplacePtNoiseSingle(voice_idx) => {
                 let data = std::fs::read(&path).unwrap();
-                match load_and_recalc_voice(data, &path, just_load_ptnoise, self.out.rate) {
+                match load_and_recalc_voice(&data, &path, just_load_ptnoise, self.out.rate) {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
                         if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
@@ -377,11 +377,11 @@ impl App {
             }
             FileOp::ImportPtVoice => {
                 let data = std::fs::read(&path).unwrap();
-                self.import_ptvoice(data, &path);
+                self.import_ptvoice(&data, &path);
             }
             FileOp::ImportPtNoise => {
                 let data = std::fs::read(&path).unwrap();
-                self.import_ptnoise(data, &path);
+                self.import_ptnoise(&data, &path);
             }
             FileOp::ImportMidi => {
                 let mid_data = std::fs::read(&path).unwrap();
@@ -436,9 +436,9 @@ impl App {
 }
 
 fn load_and_recalc_voice(
-    data: Vec<u8>,
+    data: &[u8],
     path: &Path,
-    loadfn: fn(Vec<u8>, &Path) -> ptcow::ReadResult<ptcow::Voice>,
+    loadfn: fn(&[u8], &Path) -> ptcow::ReadResult<ptcow::Voice>,
     out_rate: SampleRate,
 ) -> ptcow::ReadResult<ptcow::Voice> {
     let mut voice = loadfn(data, path)?;
@@ -447,7 +447,7 @@ fn load_and_recalc_voice(
     Ok(voice)
 }
 
-fn just_load_ptvoice(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let mut voice = ptcow::Voice::from_ptvoice(&data)?;
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
@@ -455,7 +455,7 @@ fn just_load_ptvoice(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voi
     Ok(voice)
 }
 
-fn just_load_ptnoise(data: Vec<u8>, path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let noise = ptcow::NoiseData::from_ptnoise(&data)?;
     let mut voice = ptcow::Voice::default();
     voice.allocate::<false>();
@@ -782,10 +782,10 @@ impl App {
                 self.import_organya_from_bytes(&data);
             }
             WebCmd::ImportPtVoice { data, name } => {
-                self.import_ptvoice(data, name.as_ref());
+                self.import_ptvoice(&data, name.as_ref());
             }
             WebCmd::ImportPtNoise { data, name } => {
-                self.import_ptnoise(data, name.as_ref());
+                self.import_ptnoise(&data, name.as_ref());
             }
             WebCmd::ReplaceVoicesPtCop { data } => {
                 let (_, _, ins) = ptcow::read_song(&data, 44_100).unwrap();
@@ -796,38 +796,42 @@ impl App {
                 data,
                 name,
                 voice_idx,
-            } => match load_and_recalc_voice(data, name.as_ref(), just_load_ptvoice, self.out.rate)
-            {
-                Ok(voice) => {
-                    let mut song = self.song.lock().unwrap();
-                    if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
-                        *voice_of_idx = voice;
-                    } else {
-                        song.ins.voices.push(voice);
+            } => {
+                match load_and_recalc_voice(&data, name.as_ref(), just_load_ptvoice, self.out.rate)
+                {
+                    Ok(voice) => {
+                        let mut song = self.song.lock().unwrap();
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                            *voice_of_idx = voice;
+                        } else {
+                            song.ins.voices.push(voice);
+                        }
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
                     }
                 }
-                Err(e) => {
-                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                }
-            },
+            }
             WebCmd::ReplacePtNoiseSingle {
                 data,
                 name,
                 voice_idx,
-            } => match load_and_recalc_voice(data, name.as_ref(), just_load_ptnoise, self.out.rate)
-            {
-                Ok(voice) => {
-                    let mut song = self.song.lock().unwrap();
-                    if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
-                        *voice_of_idx = voice;
-                    } else {
-                        song.ins.voices.push(voice);
+            } => {
+                match load_and_recalc_voice(&data, name.as_ref(), just_load_ptnoise, self.out.rate)
+                {
+                    Ok(voice) => {
+                        let mut song = self.song.lock().unwrap();
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx.usize()) {
+                            *voice_of_idx = voice;
+                        } else {
+                            song.ins.voices.push(voice);
+                        }
+                    }
+                    Err(e) => {
+                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
                     }
                 }
-                Err(e) => {
-                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
-                }
-            },
+            }
         }
     }
     fn reload_current_file(&mut self) {

@@ -17,6 +17,7 @@ pub enum FileOp {
     ImportPtVoice,
 }
 
+#[derive(Clone, Copy)]
 pub struct FileFilt {
     pub name: &'static str,
     pub ext: &'static str,
