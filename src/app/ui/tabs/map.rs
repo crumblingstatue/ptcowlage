@@ -152,7 +152,7 @@ fn roll_ui_inner(
         if x > cr.max.x {
             break;
         }
-        let clr = unit_color(ev.unit.usize());
+        let clr = unit_color(ev.unit);
         let mut interact_rect = None;
         #[expect(clippy::single_match)]
         match ev.payload {

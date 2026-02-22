@@ -81,7 +81,7 @@ fn piano_freeplay_ui(
                 .units
                 .get(idx.usize())
                 .map_or("<invalid>", |unit| &unit.name),
-            unit_color(idx.usize()),
+            unit_color(idx),
         )
     });
     ui.label("🎹").on_hover_text("Piano freeplay UI");
@@ -94,14 +94,13 @@ fn piano_freeplay_ui(
         .selected_text(egui::RichText::new(selected_text).color(selected_color))
         .show_ui(ui, |ui| {
             ui.selectable_value(&mut state.toot, None, "None");
-            for unit_idx in 0..song.herd.units.len() {
-                let unit = &song.herd.units[unit_idx];
+            for (unit_idx, unit) in song.herd.units.enumerated() {
                 ui.selectable_value(
                     &mut state.toot,
-                    Some(UnitIdx(unit_idx)),
+                    Some(unit_idx),
                     (
                         unit_voice_img(&song.ins, unit).atom_size(egui::vec2(14.0, 14.0)),
-                        egui::RichText::new(&unit.name).color(unit_color(usize::from(unit_idx))),
+                        egui::RichText::new(&unit.name).color(unit_color(unit_idx)),
                     ),
                 );
             }

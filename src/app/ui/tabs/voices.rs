@@ -274,7 +274,7 @@ fn voice_ui(
         if let Some(unit_idx) = piano_state.toot {
             let unit = &mut herd.units[unit_idx];
             let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
-                .color(unit_color(unit_idx.usize()));
+                .color(unit_color(unit_idx));
             if ui.button(label).clicked() {
                 app_cmd.push(Cmd::ResetUnitVoice {
                     unit: unit_idx,

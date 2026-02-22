@@ -84,7 +84,7 @@ fn unit_ui(
     app_cmd: &mut CommandQueue,
     evelist: &EveList,
 ) {
-    let c = unit_color(usize::from(i.0));
+    let c = unit_color(i);
     let n: i32 = unit.pan_time_bufs.iter().flatten().copied().sum();
     ui.horizontal(|ui| {
         let mut any_hovered = false;

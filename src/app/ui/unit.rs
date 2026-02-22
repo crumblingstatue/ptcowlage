@@ -391,8 +391,8 @@ const UNIT_COLORS: [egui::Color32; 22] = [
     egui::Color32::from_rgb(40, 40, 80),
 ];
 
-pub fn unit_color(idx: usize) -> egui::Color32 {
-    UNIT_COLORS[idx % UNIT_COLORS.len()]
+pub fn unit_color(idx: UnitIdx) -> egui::Color32 {
+    UNIT_COLORS[idx.usize() % UNIT_COLORS.len()]
 }
 
 pub fn unit_voice_img(

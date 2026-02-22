@@ -334,7 +334,7 @@ fn roll_ui_inner(
         if x > cr.max.x {
             break;
         }
-        let clr = unit_color(ev.unit.usize());
+        let clr = unit_color(ev.unit);
         let mut interact_rect = None;
         match ev.payload {
             EventPayload::On { duration } => {
@@ -476,7 +476,7 @@ fn roll_ui_inner(
                 };
                 ui.horizontal(|ui| {
                     ui.label(ev.tick.to_string());
-                    ui.colored_label(unit_color(ev.unit.usize()), unit_name);
+                    ui.colored_label(unit_color(ev.unit), unit_name);
                     ui.label(payload_text);
                 });
             }
@@ -645,7 +645,7 @@ fn roll_ui_inner(
                     egui::pos2(x, y),
                     egui::pos2(x + dura_w, y + state.row_size),
                 );
-                pnt.debug_rect(rect, unit_color(placed.unit.usize()), "Just placed");
+                pnt.debug_rect(rect, unit_color(placed.unit), "Just placed");
                 // "Finalize" note when lmb is released
                 if lmb_released {
                     song.song.events.push(ptcow::Event {
@@ -736,7 +736,7 @@ fn events_window_inner_ui(
             continue;
         };
         if let Some(unit) = song.herd.units.get(ev.unit.usize()) {
-            ui.colored_label(unit_color(ev.unit.usize()), &unit.name);
+            ui.colored_label(unit_color(ev.unit), &unit.name);
         } else {
             ui.label("<unresolved unit>");
         }
@@ -933,7 +933,7 @@ fn piano_ui(
                 pnt.rect_filled(key_rect, 3.0, bg_color);
                 // Display highlight for up to 4 simultaneously playing units
                 let mut playing_colors = ArrayVec::<_, 4>::new();
-                for (i, unit) in song.herd.units.iter().enumerate() {
+                for (i, unit) in song.herd.units.enumerated() {
                     if unit.key_now / 256 == i32::from(semitone) && !unit.mute && unit_alive(unit) {
                         if playing_colors.is_full() {
                             break;

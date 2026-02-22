@@ -259,7 +259,7 @@ pub fn ui(
                                             if ui
                                                 .button(
                                                     egui::RichText::new(unit_name)
-                                                        .color(unit_color(idx)),
+                                                        .color(unit_color(UnitIdx(idx as u8))),
                                                 )
                                                 .clicked()
                                             {
@@ -608,7 +608,7 @@ const fn ev_discr_name(discr: u8) -> &'static str {
 }
 
 fn unit_rich_text(idx: UnitIdx, text: &str) -> egui::RichText {
-    let color = unit_color(idx.usize());
+    let color = unit_color(idx);
     egui::RichText::new(text)
         .color(invert_color(color))
         .background_color(color)

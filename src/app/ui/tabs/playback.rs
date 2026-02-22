@@ -12,7 +12,6 @@ use {
         egui_ext::ImageExt as _,
     },
     eframe::egui,
-    ptcow::UnitIdx,
 };
 
 pub fn ui(
@@ -70,13 +69,13 @@ fn playback_cows_ui(
     app_modal_payload: &mut Option<ModalPayload>,
 ) {
     let mut cmd = None;
-    for (i, unit) in song.herd.units.iter_mut().enumerate() {
+    for (i, unit) in song.herd.units.enumerated_mut() {
         ui.horizontal(|ui| {
             ui.set_height(32.0);
             ui.scope(|ui| {
                 ui.set_width(120.0);
                 ui.label(egui::RichText::new(&unit.name).color(unit_color(i)));
-                if piano_state.toot == Some(UnitIdx(i as u8)) {
+                if piano_state.toot == Some(i) {
                     ui.label("*");
                 }
                 if unit.mute {
@@ -90,12 +89,10 @@ fn playback_cows_ui(
             );
             if re.contains_pointer() {
                 if ui.input(|inp| inp.pointer.primary_clicked()) {
-                    piano_state.toot = Some(UnitIdx(i as u8));
+                    piano_state.toot = Some(i);
                 }
                 if ui.input(|inp| inp.key_pressed(egui::Key::S)) {
-                    cmd = Some(UnitsCmd::ToggleSolo {
-                        idx: UnitIdx(i as u8),
-                    });
+                    cmd = Some(UnitsCmd::ToggleSolo { idx: i });
                 }
                 if ui.input(|inp| inp.key_pressed(egui::Key::M)) {
                     unit.mute ^= true;
@@ -104,7 +101,7 @@ fn playback_cows_ui(
 
             crate::app::ui::unit::unit_popup_ctx_menu(
                 &re,
-                UnitIdx(i as u8),
+                i,
                 unit,
                 &mut song.ins,
                 &mut cmd,
@@ -138,7 +135,7 @@ fn playback_cows_ui(
             let re = ui.add(egui::Image::new(img::COW).sense(egui::Sense::click()));
             crate::app::ui::unit::unit_popup_ctx_menu(
                 &re,
-                UnitIdx(i as u8),
+                i,
                 unit,
                 &mut song.ins,
                 &mut cmd,
