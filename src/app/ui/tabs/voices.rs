@@ -200,7 +200,7 @@ pub fn ui(
                 song.ins.voices.swap(a.usize(), b.usize());
             }
             VoiceUiOp::Duplicate(idx) => {
-                let dup = song.ins.voices[idx.usize()].clone();
+                let dup = song.ins.voices[idx].clone();
                 song.ins.voices.insert(idx.usize(), dup);
             }
             VoiceUiOp::Delete(idx) => {

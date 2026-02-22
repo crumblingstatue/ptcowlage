@@ -609,7 +609,7 @@ pub(crate) fn sf2_import_ui(
                     let mut song = song.lock().unwrap();
                     let song = &mut *song;
                     if let Some(target_idx) = sf2.target_voice_idx {
-                        song.ins.voices[target_idx.usize()] = voice;
+                        song.ins.voices[target_idx] = voice;
                     } else {
                         song.ins.voices.push(voice);
                     }
