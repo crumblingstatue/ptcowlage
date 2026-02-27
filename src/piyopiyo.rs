@@ -1,7 +1,7 @@
 use piyopiyo::{DRUM_SAMPLES, piano_keys};
 use ptcow::{
     EnvPt, Event, EventPayload, Herd, MooInstructions, OsciPt, PcmData, SampleRate, Song, Unit,
-    UnitIdx, Voice, VoiceFlags, VoiceIdx, WaveData,
+    UnitIdx, Voice, VoiceFlags, VoiceIdx, VoiceUnit, WaveData,
 };
 use rustc_hash::FxHashMap;
 
@@ -50,15 +50,16 @@ pub fn import(
             points,
             resolution: 256,
         };
-        let mut voice = Voice::default();
-        voice.allocate::<false>();
-        voice.units[0].data = ptcow::VoiceData::Wave(wave);
-        voice.units[0].volume = 32;
-        voice.units[0].pan = 64;
-        voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
+        let mut unit = VoiceUnit {
+            volume: 32,
+            pan: 64,
+            flags: VoiceFlags::WAVE_LOOP,
+            data: ptcow::VoiceData::Wave(wave),
+            ..VoiceUnit::defaults()
+        };
         // Seems like envelope values need to be scaled a bit to be more accurate
         let env_scale = 1.5;
-        voice.units[0].envelope.points = tr
+        unit.envelope.points = tr
             .envelope
             .iter()
             .map(|val| EnvPt {
@@ -66,7 +67,8 @@ pub fn import(
                 y: (f64::from(*val) * env_scale) as u8,
             })
             .collect();
-        voice.units[0].envelope.seconds_per_point = 64;
+        unit.envelope.seconds_per_point = 64;
+        let mut voice = Voice::from_unit(unit);
         voice.name = format!("Melody {m_i}");
         ins.voices.push(voice);
         let mut time_ms = 1;
@@ -188,10 +190,7 @@ pub fn import(
             smp: samp_data.to_vec(),
             ..Default::default()
         };
-        let mut voice = Voice::default();
-        voice.allocate::<false>();
-        voice.units[0].data = ptcow::VoiceData::Pcm(pcm);
-        voice.units[0].pan = 64;
+        let mut voice = Voice::from_data(ptcow::VoiceData::Pcm(pcm));
         voice.name = format!("Drum {i}");
         ins.voices.push(voice);
     }

@@ -111,7 +111,8 @@ fn playback_cows_ui(
             // Make the left cow's instrument represent the voice unit 1,
             // and right cow unit 2, if exists. Otherwise, right cow represents unit 1 as well.
             let opt_voice = song.ins.voices.get(unit.voice_idx);
-            let vu1_img = opt_voice.map_or(img::X, |voice| voice_data_img(&voice.units[0].data));
+            let vu1_img =
+                opt_voice.map_or(img::X, |voice| voice_data_img(&voice.slots[0].unit.data));
             ui.add(egui::Image::new(vu1_img.clone()).hflip());
             let p = ui.painter();
             let mut offs = ui.cursor().left_center();
@@ -129,8 +130,8 @@ fn playback_cows_ui(
             ui.add_space(408.0);
             ui.add(egui::Image::new(
                 opt_voice
-                    .and_then(|voice| voice.units.get(1))
-                    .map_or(vu1_img, |vu| voice_data_img(&vu.data)),
+                    .and_then(|voice| voice.slots.get(1))
+                    .map_or(vu1_img, |slot| voice_data_img(&slot.unit.data)),
             ));
             let re = ui.add(egui::Image::new(img::COW).sense(egui::Sense::click()));
             crate::app::ui::unit::unit_popup_ctx_menu(

@@ -67,15 +67,9 @@ impl SongState {
             name: "Cow".into(),
             ..Default::default()
         });
-        let mut voice = Voice {
-            name: "Moo".into(),
-            ..Default::default()
-        };
         let noise_data = NoiseData::from_ptnoise(include_bytes!("../res/cow.ptnoise")).unwrap();
-        voice.allocate::<false>();
-        voice.units[0].volume = 127;
-        voice.units[0].pan = 64;
-        voice.units[0].data = ptcow::VoiceData::Noise(noise_data);
+        let mut voice = Voice::from_data(ptcow::VoiceData::Noise(noise_data));
+        voice.name = "Moo".into();
         this.ins.voices.push(voice);
         this
     }

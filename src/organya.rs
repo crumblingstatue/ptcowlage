@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use ptcow::{
     Event, EventPayload, Herd, MooInstructions, PcmData, SampleRate, Song, Unit, UnitIdx, Voice,
-    VoiceFlags,
+    VoiceFlags, VoiceUnit,
 };
 
 fn org_tempo_to_bpm(tempo: u16, steps_per_beat: u8) -> f32 {
@@ -98,9 +98,6 @@ pub fn import(
 }
 
 fn wave_voice(ch: &organyacat::Channel) -> Voice {
-    let mut voice = Voice::default();
-    voice.allocate::<false>();
-    voice.name = format!("org wave {}", ch.instrument);
     let ins_offset = ch.instrument as usize * 256;
     let smp: Vec<u8> = WAVE_DATA[ins_offset..ins_offset + 256]
         .iter()
@@ -113,20 +110,21 @@ fn wave_voice(ch: &organyacat::Channel) -> Voice {
         num_samples: 256,
         smp,
     };
-    voice.units[0].data = ptcow::VoiceData::Pcm(pcm);
-    voice.units[0].flags.insert(VoiceFlags::WAVE_LOOP);
-    voice.units[0].flags.insert(VoiceFlags::SMOOTH);
-    // We tweak the basic key of the voices a bit to make the pitches for the instruments sound right.
-    // This is probably a hack, but sounds close enough
-    voice.units[0].basic_key = 17664 - (4 * 256);
+    let unit = VoiceUnit {
+        // We tweak the basic key of the voices a bit to make the pitches for the instruments sound right.
+        // This is probably a hack, but sounds close enough
+        basic_key: 17664 - (4 * 256),
+        flags: VoiceFlags::WAVE_LOOP | VoiceFlags::SMOOTH,
+        data: ptcow::VoiceData::Pcm(pcm),
+        ..VoiceUnit::defaults()
+    };
+    let mut voice = Voice::from_unit(unit);
+    voice.name = format!("org wave {}", ch.instrument);
     voice
 }
 
 fn drum_voice(ch: &organyacat::Channel) -> Voice {
-    let mut voice = Voice::default();
-    voice.allocate::<false>();
     let smp = find_drum_sample(ch.instrument).to_vec();
-    voice.name = format!("org drum {}", ch.instrument);
     let pcm = PcmData {
         ch: ptcow::ChNum::Mono,
         sps: 22050,
@@ -134,8 +132,13 @@ fn drum_voice(ch: &organyacat::Channel) -> Voice {
         num_samples: smp.len() as u32,
         smp,
     };
-    voice.units[0].data = ptcow::VoiceData::Pcm(pcm);
-    voice.units[0].flags.insert(VoiceFlags::SMOOTH);
+    let unit = VoiceUnit {
+        data: ptcow::VoiceData::Pcm(pcm),
+        flags: VoiceFlags::SMOOTH,
+        ..VoiceUnit::defaults()
+    };
+    let mut voice = Voice::from_unit(unit);
+    voice.name = format!("org drum {}", ch.instrument);
     voice
 }
 

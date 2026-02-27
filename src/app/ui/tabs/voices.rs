@@ -53,22 +53,16 @@ pub fn ui(
     ui.horizontal_wrapped(|ui| {
         ui.menu_button("✴ New...", |ui| {
             if ui.button((img::SAXO.smol(), "Wave")).clicked() {
-                let mut voice = Voice {
-                    name: format!("Wave {}", song.ins.voices.len()),
-                    ..Default::default()
-                };
-                mk_square_wave(&mut voice);
+                let mut voice = Voice::from_unit(square_wave_vu());
+                voice.name = format!("Wave {}", song.ins.voices.len());
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
                 ui_state.selected_idx = idx;
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
             if ui.button((img::DRUM.smol(), "Noise")).clicked() {
-                let mut voice = Voice {
-                    name: format!("Noise {}", song.ins.voices.len()),
-                    ..Default::default()
-                };
-                mk_bass_drum(&mut voice);
+                let mut voice = Voice::from_unit(bass_drum_vu());
+                voice.name = format!("Noise {}", song.ins.voices.len());
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
                 ui_state.selected_idx = idx;
@@ -108,13 +102,13 @@ pub fn ui(
             ui.menu_button("✴ Current with new", |ui| {
                 if ui.button((img::SAXO.smol(), "Wave")).clicked() {
                     if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        mk_square_wave(voice);
+                        voice.slots[0].unit = square_wave_vu();
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
                     }
                 }
                 if ui.button((img::DRUM.smol(), "Noise")).clicked() {
                     if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        mk_bass_drum(voice);
+                        voice.slots[0].unit = bass_drum_vu();
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
                     }
                 }
@@ -206,21 +200,23 @@ pub fn ui(
     }
 }
 
-fn mk_bass_drum(voice: &mut Voice) {
-    voice.allocate::<false>();
-    voice.units[0].pan = 64;
-    voice.units[0].volume = 127;
-    // Make sure `WAVE_LOOP` is not set
-    voice.units[0].flags &= !VoiceFlags::WAVE_LOOP;
-    voice.units[0].data = VoiceData::Noise(bass_drum());
+fn bass_drum_vu() -> VoiceUnit {
+    VoiceUnit {
+        pan: 64,
+        volume: 127,
+        data: VoiceData::Noise(bass_drum()),
+        ..VoiceUnit::defaults()
+    }
 }
 
-fn mk_square_wave(voice: &mut Voice) {
-    voice.allocate::<false>();
-    voice.units[0].pan = 64;
-    voice.units[0].volume = 127;
-    voice.units[0].flags |= VoiceFlags::WAVE_LOOP;
-    voice.units[0].data = VoiceData::Wave(square_wave());
+fn square_wave_vu() -> VoiceUnit {
+    VoiceUnit {
+        pan: 64,
+        volume: 127,
+        flags: VoiceFlags::WAVE_LOOP,
+        data: VoiceData::Wave(square_wave()),
+        ..VoiceUnit::defaults()
+    }
 }
 
 enum VoiceUiOp {
@@ -248,8 +244,8 @@ fn voice_ui(
     let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut voice.name);
-        for inst in &voice.insts {
-            play_sound_ui(ui, aux, ui_state, idx, &inst.sample_buf);
+        for slot in &voice.slots {
+            play_sound_ui(ui, aux, ui_state, idx, &slot.inst.sample_buf);
         }
         if ui.button("⬆").clicked() {
             *op = Some(VoiceUiOp::MoveUp(idx));
@@ -277,7 +273,7 @@ fn voice_ui(
                 });
             }
         }
-        match &voice.units[0].data {
+        match &voice.slots[0].unit.data {
             VoiceData::Noise(_) => {
                 if ui.button("Export .ptnoise").clicked() {
                     app_cmd.push(Cmd::PromptExportPtnoise { voice: idx });
@@ -304,12 +300,12 @@ pub fn voice_ui_inner(
     ui_state: &mut VoicesUiState,
 ) {
     ui.horizontal(|ui| {
-        for (i, unit) in voice.units.iter().enumerate() {
+        for (i, slot) in voice.slots.iter().enumerate() {
             ui.selectable_value(
                 &mut ui_state.selected_vu,
                 i as u8,
                 (
-                    egui::Image::new(voice_data_img(&unit.data)),
+                    egui::Image::new(voice_data_img(&slot.unit.data)),
                     format!("Unit {i}"),
                 ),
             );
@@ -317,45 +313,42 @@ pub fn voice_ui_inner(
         ui.separator();
         if ui
             .add_enabled(
-                voice.insts.len() < 2 && voice.units.len() < 2,
+                voice.slots.len() < 2 && voice.slots.len() < 2,
                 egui::Button::new("+"),
             )
             .clicked()
         {
-            voice.units.push(voice.units[0].clone());
-            voice.insts.push(VoiceInstance::default());
+            voice.slots.push(voice.slots[0].clone());
         }
         if ui
             .add_enabled(
-                voice.insts.len() > 1 && voice.units.len() > 1,
+                voice.slots.len() > 1 && voice.slots.len() > 1,
                 egui::Button::new("-"),
             )
             .clicked()
         {
-            voice.insts.pop();
-            voice.units.pop();
+            voice.slots.pop();
         }
     });
     ui.separator();
     // Ensure no out of bounds indexing (there is always at least one unit)
-    if ui_state.selected_vu as usize >= voice.units.len() {
+    if ui_state.selected_vu as usize >= voice.slots.len() {
         ui_state.selected_vu = 0;
     }
-    let unit = &mut voice.units[ui_state.selected_vu as usize];
-    let inst = &mut voice.insts[ui_state.selected_vu as usize];
+    let slot = &mut voice.slots[ui_state.selected_vu as usize];
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
             voice_unit_ui(
                 ui,
-                unit,
-                inst,
+                slot,
                 out_rate,
                 voice_idx,
                 ui_state,
                 aux,
                 ui_state.selected_vu,
             );
+            let inst = &mut slot.inst;
             let id = ui.make_persistent_id("inst");
             CollapsingState::load_with_default_open(ui.ctx(), id, false)
                 .show_header(ui, |ui| {
@@ -491,14 +484,15 @@ const PAL: Pal = Pal {
 
 fn voice_unit_ui(
     ui: &mut egui::Ui,
-    unit: &mut VoiceUnit,
-    inst: &mut VoiceInstance,
+    slot: &mut ptcow::VoiceSlot,
     out_rate: SampleRate,
     voice_idx: VoiceIdx,
     ui_state: &mut VoicesUiState,
     aux: &AuxAudioState,
     unit_idx: u8,
 ) {
+    let unit = &mut slot.unit;
+    let inst = &mut slot.inst;
     match &mut unit.data {
         VoiceData::Noise(noise) => {
             ui.label("smp num 44k");

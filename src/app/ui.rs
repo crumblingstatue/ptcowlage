@@ -24,6 +24,7 @@ use {
     egui_toast::Toasts,
     ptcow::{
         Event, EventPayload, GroupIdx, PcmData, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
+        VoiceUnit,
     },
     rustc_hash::FxHashSet,
     rustysynth::SoundFont,
@@ -531,7 +532,7 @@ fn line_points_between(a: egui::Pos2, b: egui::Pos2) -> impl Iterator<Item = egu
 }
 
 fn voice_img(voice: &Voice) -> egui::ImageSource<'static> {
-    voice_data_img(&voice.units[0].data)
+    voice_data_img(&voice.slots[0].unit.data)
 }
 
 fn voice_data_img(data: &VoiceData) -> egui::ImageSource<'static> {
@@ -595,13 +596,10 @@ pub(crate) fn sf2_import_ui(
                         smp: bytemuck::pod_collect_to_vec(&sample_data),
                     };
                     let data = VoiceData::Pcm(pcm);
-                    let mut voice = Voice {
-                        name: ins.get_name().to_string(),
-                        ..Default::default()
+                    let mut vu = VoiceUnit {
+                        data,
+                        ..VoiceUnit::defaults()
                     };
-                    voice.allocate::<false>();
-                    let vu = &mut voice.units[0];
-                    vu.data = data;
                     // The way basic key works, the lower the basic key, the higher the pitch
                     // So if we want to increase the pitch by 1 semitone, we need to subtract 256.
                     // So we subtract the fine tune values, rather than adding
@@ -611,6 +609,8 @@ pub(crate) fn sf2_import_ui(
                     vu.basic_key -= (f64::from(region.get_fine_tune()) * 2.56) as i32;
                     let mut song = song.lock().unwrap();
                     let song = &mut *song;
+                    let mut voice = Voice::from_unit(vu);
+                    voice.name = ins.get_name().to_string();
                     if let Some(target_idx) = sf2.target_voice_idx {
                         song.ins.voices[target_idx] = voice;
                     } else {

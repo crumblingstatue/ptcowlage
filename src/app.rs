@@ -270,7 +270,8 @@ impl App {
                     }
                     FileOp::ExportPtnoise { voice } => {
                         let song = self.song.lock().unwrap();
-                        let ptcow::VoiceData::Noise(noise) = &song.ins.voices[voice].units[0].data
+                        let ptcow::VoiceData::Noise(noise) =
+                            &song.ins.voices[voice].slots[0].unit.data
                         else {
                             return;
                         };
@@ -472,7 +473,7 @@ impl App {
 
                 let song = self.song.lock().unwrap();
                 let voice = &song.ins.voices[voice];
-                let VoiceData::Noise(noise) = &voice.units[0].data else {
+                let VoiceData::Noise(noise) = &voice.slots[0].unit.data else {
                     self.modal_payload = Some(ModalPayload::Msg("Voice not a noise".into()));
                     return;
                 };
@@ -511,9 +512,7 @@ fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
 
 fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let noise = ptcow::NoiseData::from_ptnoise(data)?;
-    let mut voice = ptcow::Voice::default();
-    voice.allocate::<false>();
-    voice.units[0].data = ptcow::VoiceData::Noise(noise);
+    let mut voice = ptcow::Voice::from_data(ptcow::VoiceData::Noise(noise));
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
     }
