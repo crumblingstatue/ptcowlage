@@ -160,24 +160,20 @@ pub fn ui(
         }
     });
     ui.separator();
-    egui::ScrollArea::vertical()
-        .auto_shrink(false)
-        .show(ui, |ui| {
-            if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                voice_ui(
-                    ui,
-                    voice,
-                    ui_state.selected_idx,
-                    &mut op,
-                    out_rate,
-                    aux,
-                    ui_state,
-                    piano_state,
-                    &mut song.herd,
-                    app_cmd,
-                );
-            }
-        });
+    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
+        voice_ui(
+            ui,
+            voice,
+            ui_state.selected_idx,
+            &mut op,
+            out_rate,
+            aux,
+            ui_state,
+            piano_state,
+            &mut song.herd,
+            app_cmd,
+        );
+    }
     if let Some(op) = op {
         match op {
             VoiceUiOp::MoveUp(idx) => {
@@ -347,51 +343,55 @@ pub fn voice_ui_inner(
     }
     let unit = &mut voice.units[ui_state.selected_vu as usize];
     let inst = &mut voice.insts[ui_state.selected_vu as usize];
-    voice_unit_ui(
-        ui,
-        unit,
-        inst,
-        out_rate,
-        voice_idx,
-        ui_state,
-        aux,
-        ui_state.selected_vu,
-    );
-    let id = ui.make_persistent_id("inst");
-    CollapsingState::load_with_default_open(ui.ctx(), id, false)
-        .show_header(ui, |ui| {
-            ui.strong("Instance");
-        })
-        .body(|ui| {
-            ui.horizontal(|ui| {
-                ui.label("Sample buf");
-                play_sound_ui(ui, aux, ui_state, voice_idx, &inst.sample_buf);
-                let mut len = inst.sample_buf.len();
-                if ui
-                    .add(egui::DragValue::new(&mut len).update_while_editing(false))
-                    .changed()
-                {
-                    inst.sample_buf.resize(len, 0);
-                }
-                ui.label("Number of samples");
-                ui.add(egui::DragValue::new(&mut inst.num_samples));
-            });
-            waveform_edit_widget(ui, &mut inst.sample_buf, 256., egui::Id::new("smp_buf"));
-            ui.horizontal(|ui| {
-                ui.label("Envelope");
-                let mut len = inst.env.len();
-                if ui
-                    .add(egui::DragValue::new(&mut len).update_while_editing(false))
-                    .changed()
-                {
-                    inst.env.resize(len, 0);
-                }
-            });
-            if !inst.env.is_empty() {
-                waveform_edit_widget(ui, &mut inst.env, 256.0, egui::Id::new("env_buf"));
-            }
-            ui.label("Envelope release");
-            ui.add(egui::DragValue::new(&mut inst.env_release));
+    egui::ScrollArea::vertical()
+        .auto_shrink(false)
+        .show(ui, |ui| {
+            voice_unit_ui(
+                ui,
+                unit,
+                inst,
+                out_rate,
+                voice_idx,
+                ui_state,
+                aux,
+                ui_state.selected_vu,
+            );
+            let id = ui.make_persistent_id("inst");
+            CollapsingState::load_with_default_open(ui.ctx(), id, false)
+                .show_header(ui, |ui| {
+                    ui.strong("Instance");
+                })
+                .body(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Sample buf");
+                        play_sound_ui(ui, aux, ui_state, voice_idx, &inst.sample_buf);
+                        let mut len = inst.sample_buf.len();
+                        if ui
+                            .add(egui::DragValue::new(&mut len).update_while_editing(false))
+                            .changed()
+                        {
+                            inst.sample_buf.resize(len, 0);
+                        }
+                        ui.label("Number of samples");
+                        ui.add(egui::DragValue::new(&mut inst.num_samples));
+                    });
+                    waveform_edit_widget(ui, &mut inst.sample_buf, 256., egui::Id::new("smp_buf"));
+                    ui.horizontal(|ui| {
+                        ui.label("Envelope");
+                        let mut len = inst.env.len();
+                        if ui
+                            .add(egui::DragValue::new(&mut len).update_while_editing(false))
+                            .changed()
+                        {
+                            inst.env.resize(len, 0);
+                        }
+                    });
+                    if !inst.env.is_empty() {
+                        waveform_edit_widget(ui, &mut inst.env, 256.0, egui::Id::new("env_buf"));
+                    }
+                    ui.label("Envelope release");
+                    ui.add(egui::DragValue::new(&mut inst.env_release));
+                });
         });
 }
 
