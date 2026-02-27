@@ -15,6 +15,8 @@ pub enum FileOp {
     ImportSf2Single,
     ImportPtNoise,
     ImportPtVoice,
+    ExportPtvoice { voice: VoiceIdx },
+    ExportPtnoise { voice: VoiceIdx },
 }
 
 #[derive(Clone, Copy)]

@@ -53,6 +53,12 @@ pub enum Cmd {
         unit: ptcow::UnitIdx,
         voice: VoiceIdx,
     },
+    PromptExportPtnoise {
+        voice: VoiceIdx,
+    },
+    PromptExportPtvoice {
+        voice: VoiceIdx,
+    },
 }
 
 #[derive(Default)]

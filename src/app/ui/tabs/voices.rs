@@ -281,6 +281,19 @@ fn voice_ui(
                 });
             }
         }
+        match &voice.units[0].data {
+            VoiceData::Noise(_) => {
+                if ui.button("Export .ptnoise").clicked() {
+                    app_cmd.push(Cmd::PromptExportPtnoise { voice: idx });
+                }
+            }
+            VoiceData::Wave(_) => {
+                if ui.button("Export .ptvoice").clicked() {
+                    app_cmd.push(Cmd::PromptExportPtvoice { voice: idx });
+                }
+            }
+            _ => {}
+        }
     });
 
     voice_ui_inner(ui, voice, idx, out_rate, aux, ui_state);

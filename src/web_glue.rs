@@ -128,6 +128,8 @@ impl WebCmd {
                 name,
                 voice_idx,
             },
+            FileOp::ExportPtvoice { voice } => todo!(),
+            FileOp::ExportPtnoise { voice } => todo!(),
         }
     }
 }

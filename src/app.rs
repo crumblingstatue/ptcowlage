@@ -122,6 +122,8 @@ impl App {
                 .add_file_filter_extensions(FILT_PTCOP.name, vec![FILT_PTCOP.ext])
                 .add_save_extension(FILT_PTCOP.name, FILT_PTCOP.ext)
                 .add_save_extension(FILT_WAV.name, FILT_WAV.ext)
+                .add_save_extension(FILT_PTVOICE.name, FILT_PTVOICE.ext)
+                .add_save_extension(FILT_PTNOISE.name, FILT_PTNOISE.ext)
                 .add_file_filter_extensions(FILT_MIDI.name, vec![FILT_MIDI.ext])
                 .add_file_filter_extensions(FILT_PIYOPIYO.name, vec![FILT_PIYOPIYO.ext])
                 .add_file_filter_extensions(FILT_ORGANYA.name, vec![FILT_ORGANYA.ext])
@@ -431,6 +433,40 @@ impl App {
                     &mut self.ui_state.freeplay_piano.toot,
                 );
             }
+            FileOp::ExportPtvoice { voice } => {
+                let song = self.song.lock().unwrap();
+                match song.ins.voices[voice].to_ptvoice() {
+                    Ok(data) => {
+                        if let Err(e) = std::fs::write(&path, data) {
+                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        }
+                    }
+                    Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+                }
+                self.cmd.toast(
+                    ToastKind::Success,
+                    format!("Exported to {}", path.display()),
+                    5.0,
+                );
+            }
+            FileOp::ExportPtnoise { voice } => {
+                use ptcow::VoiceData;
+
+                let song = self.song.lock().unwrap();
+                let voice = &song.ins.voices[voice];
+                let VoiceData::Noise(noise) = &voice.units[0].data else {
+                    self.modal_payload = Some(ModalPayload::Msg("Voice not a noise".into()));
+                    return;
+                };
+                if let Err(e) = std::fs::write(&path, noise.to_ptnoise()) {
+                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                }
+                self.cmd.toast(
+                    ToastKind::Success,
+                    format!("Exported to {}", path.display()),
+                    5.0,
+                );
+            }
         }
     }
 }
@@ -737,6 +773,20 @@ impl App {
             }
             Cmd::PromptExportWav => {
                 self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWav, true);
+            }
+            Cmd::PromptExportPtnoise { voice } => {
+                self.open_file_prompt(
+                    file_ops::FILT_PTNOISE,
+                    FileOp::ExportPtnoise { voice },
+                    true,
+                );
+            }
+            Cmd::PromptExportPtvoice { voice } => {
+                self.open_file_prompt(
+                    file_ops::FILT_PTVOICE,
+                    FileOp::ExportPtvoice { voice },
+                    true,
+                );
             }
             Cmd::PromptOpenPtcop => {
                 self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::OpenProj, false);
