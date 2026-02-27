@@ -22,10 +22,10 @@ pub fn ui(
     app_modal_payload: &mut Option<ModalPayload>,
 ) {
     if !song.song.text.name.is_empty() {
-        ui.label(&song.song.text.name);
+        ui.strong(&song.song.text.name);
     }
     if !song.song.text.comment.is_empty() {
-        ui.label(&song.song.text.comment);
+        ui.small(&song.song.text.comment);
     }
     ui.horizontal(|ui| {
         ui.style_mut().spacing.slider_width = ui.available_width() - 400.0;
