@@ -3,6 +3,7 @@ mod img;
 pub mod left_panel;
 pub mod top_panel;
 mod unit;
+pub mod windows;
 
 use {
     crate::{
@@ -14,6 +15,7 @@ use {
                     piano_roll::PianoRollState, voices::VoicesUiState,
                 },
                 unit::{unit_color, unit_voice_img},
+                windows::Windows,
             },
         },
         audio_out::{AuxAudioState, AuxMsg, SongStateHandle},
@@ -273,6 +275,7 @@ pub struct UiState {
     pub effects: EffectsUiState,
     pub shared: SharedUiState,
     pub sf2_import: Option<Sf2ImportDialog>,
+    pub windows: Windows,
 }
 
 pub struct Sf2ImportDialog {

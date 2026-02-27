@@ -474,6 +474,9 @@ impl eframe::App for App {
             egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));
         }
         egui::CentralPanel::default().show(ctx, |ui| ui::central_panel(self, ui));
+        self.ui_state
+            .windows
+            .update(ctx, &mut self.song.lock().unwrap());
 
         #[cfg(not(target_arch = "wasm32"))]
         let (mut picked_path, mut file_op) = self.handle_file_dia_update(ctx);

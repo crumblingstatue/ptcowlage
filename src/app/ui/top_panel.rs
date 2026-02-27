@@ -4,7 +4,7 @@ use {
             ModalPayload, SongState,
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{Tab, piano_freeplay_ui},
+            ui::{Tab, piano_freeplay_ui, windows::TitleAndCommentWindow},
         },
         audio_out::{OutParams, prepare_song},
     },
@@ -151,6 +151,10 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     app.out.rate,
                     &mut app.ui_state.freeplay_piano.toot,
                 );
+            }
+            ui.separator();
+            if ui.button("Title and comment").clicked() {
+                app.ui_state.windows.toggle::<TitleAndCommentWindow>();
             }
         });
         let button = MenuButton::new("Timing").config(
