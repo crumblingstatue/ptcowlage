@@ -268,6 +268,24 @@ impl App {
                         self.cmd.push(Cmd::ReplaceAudioThread);
                         (wav, "out.wav")
                     }
+                    FileOp::ExportPtnoise { voice } => {
+                        let song = self.song.lock().unwrap();
+                        let ptcow::VoiceData::Noise(noise) = &song.ins.voices[voice].units[0].data
+                        else {
+                            return;
+                        };
+                        (noise.to_ptnoise(), "out.ptnoise")
+                    }
+                    FileOp::ExportPtvoice { voice } => {
+                        let song = self.song.lock().unwrap();
+                        match song.ins.voices[voice].to_ptvoice() {
+                            Ok(data) => (data, "out.ptvoice"),
+                            Err(e) => {
+                                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                                return;
+                            }
+                        }
+                    }
                     _ => return,
                 };
                 crate::web_glue::save_file(&data, filename);
