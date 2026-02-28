@@ -54,9 +54,13 @@ recently_used_list.git = "https://github.com/crumblingstatue/recently_used_list.
 [profile.dev]
 debug = "line-tables-only"
 opt-level = 1
+# Abort on dev profile too, just for the sake of consistent behavior
+panic = "abort"
 
 [profile.release]
 lto = "thin"
+# On wasm32, panic is just abort regardless of what we set here, so let's just abort everywhere
+# for consistent behavior.
 panic = "abort"
 
 # TODO: New ptcow release
