@@ -27,6 +27,7 @@ pub struct RawEventsUiState {
     cmd_string_buf: String,
     pub filter_needs_recalc: bool,
     preview_unit_changes: bool,
+    cut_event: Option<Event>,
 }
 
 impl Default for RawEventsUiState {
@@ -40,6 +41,7 @@ impl Default for RawEventsUiState {
             cmd_string_buf: String::new(),
             filter_needs_recalc: true,
             preview_unit_changes: true,
+            cut_event: None,
         }
     }
 }
@@ -49,6 +51,7 @@ enum EventListCmd {
     Insert { idx: usize, event: Event },
     Swap(usize, usize),
     TruncateAfter(usize),
+    Cut { idx: usize },
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -169,6 +172,9 @@ pub fn ui(
                             if ui.button("Delete").clicked() {
                                 ev_list_cmd = Some(EventListCmd::Remove { idx });
                             }
+                            if ui.button("Cut").clicked() {
+                                ev_list_cmd = Some(EventListCmd::Cut { idx })
+                            }
                             ui.menu_button("Insert", |ui| {
                                 let mut payload = None;
                                 if ui.button("Volume").clicked() {
@@ -179,6 +185,12 @@ pub fn ui(
                                 }
                                 if ui.button("Group").clicked() {
                                     payload = Some(EventPayload::SetGroup(GroupIdx(0)));
+                                }
+                                if let Some(event) = ui_state.cut_event {
+                                    if ui.button("Paste cut event").clicked() {
+                                        ev_list_cmd = Some(EventListCmd::Insert { idx, event });
+                                        ui_state.cut_event = None;
+                                    }
                                 }
                                 if let Some(payload) = payload {
                                     let event = Event {
@@ -445,6 +457,9 @@ pub fn ui(
             EventListCmd::Remove { idx } => {
                 song.song.events.remove(idx);
             }
+            EventListCmd::Cut { idx } => {
+                ui_state.cut_event = Some(song.song.events.remove(idx));
+            }
             EventListCmd::Insert { idx, event } => {
                 song.song.events.insert(idx, event);
             }
@@ -579,6 +594,14 @@ fn top_ui(
                 })
                 .collect();
             ui_state.filter_needs_recalc = false;
+        }
+    });
+    ui.horizontal(|ui| {
+        if let Some(event) = ui_state.cut_event {
+            ui.strong(format!(
+                "Cut event at tick {} for unit {}",
+                event.tick, event.unit.0
+            ));
         }
     });
 }
