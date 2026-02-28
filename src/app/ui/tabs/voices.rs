@@ -15,7 +15,7 @@ use {
     ptcow::{
         Bps, ChNum, EnvPt, EnvelopeSrc, NoiseDesignOscillator, NoiseDesignUnit,
         NoiseDesignUnitFlags, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice,
-        VoiceData, VoiceFlags, VoiceIdx, VoiceUnit, WaveDataPoints, noise_to_pcm,
+        VoiceData, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints, noise_to_pcm,
     },
     rustc_hash::FxHashMap,
 };
@@ -30,7 +30,7 @@ pub struct VoicesUiState {
 }
 
 #[derive(Default, PartialEq, Hash, Clone, Copy)]
-enum SelectedSlot {
+pub enum SelectedSlot {
     #[default]
     Base,
     Extra,
@@ -294,7 +294,7 @@ fn voice_ui(
         }
     });
 
-    voice_ui_inner(ui, voice, idx, out_rate, aux, ui_state);
+    voice_ui_inner(ui, voice, idx, out_rate, aux, ui_state, app_cmd);
 }
 
 pub fn voice_ui_inner(
@@ -304,6 +304,7 @@ pub fn voice_ui_inner(
     out_rate: SampleRate,
     aux: &mut AuxAudioState,
     ui_state: &mut VoicesUiState,
+    app_cmd: &mut CommandQueue,
 ) {
     // Add a slot selection UI for wave voices
     if let VoiceData::Wave(_) = &voice.base.data {
@@ -352,6 +353,7 @@ pub fn voice_ui_inner(
                 ui_state,
                 aux,
                 ui_state.sel_slot,
+                app_cmd,
             );
             let id = ui.make_persistent_id("inst");
             CollapsingState::load_with_default_open(ui.ctx(), id, false)
@@ -504,6 +506,7 @@ fn voice_unit_ui(
     ui_state: &mut VoicesUiState,
     aux: &AuxAudioState,
     sel_slot: SelectedSlot,
+    app_cmd: &mut CommandQueue,
 ) {
     match &mut slot.data {
         VoiceData::Noise(noise) => {
@@ -617,7 +620,9 @@ fn voice_unit_ui(
                     )
                     .clicked()
                 {
-                    *wave_data = square_wave();
+                    app_cmd.modal(move |m| {
+                        m.replace_wave_data_slot(voice_idx, sel_slot, square_wave())
+                    });
                 }
                 if ui
                     .selectable_label(
@@ -626,9 +631,20 @@ fn voice_unit_ui(
                     )
                     .clicked()
                 {
-                    wave_data.points = WaveDataPoints::Overtone {
-                        points: vec![OsciPt { x: 1, y: 16 }],
-                    };
+                    app_cmd.modal(move |m| {
+                        m.replace_wave_data_slot(
+                            voice_idx,
+                            sel_slot,
+                            WaveData {
+                                points: WaveDataPoints::Overtone {
+                                    points: vec![OsciPt { x: 1, y: 16 }],
+                                },
+                                envelope: EnvelopeSrc::default(),
+                                volume: 127,
+                                pan: 64,
+                            },
+                        )
+                    });
                 }
             });
             match &mut wave_data.points {

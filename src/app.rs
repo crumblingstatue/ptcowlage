@@ -795,6 +795,9 @@ impl App {
                     unit.reset_voice(&song.ins, voice, song.song.master.timing);
                 }
             }
+            Cmd::Modal(f) => {
+                f(&mut self.modal);
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]

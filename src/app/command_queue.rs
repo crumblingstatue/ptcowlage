@@ -1,4 +1,5 @@
 use {
+    crate::app::ui::modal::Modal,
     egui_toast::ToastKind,
     ptcow::{EventPayload, VoiceIdx},
     std::collections::VecDeque,
@@ -59,6 +60,7 @@ pub enum Cmd {
     PromptExportPtvoice {
         voice: VoiceIdx,
     },
+    Modal(Box<dyn FnOnce(&mut Modal)>),
 }
 
 #[derive(Default)]
@@ -79,5 +81,8 @@ impl CommandQueue {
             text,
             duration,
         });
+    }
+    pub fn modal(&mut self, f: impl FnOnce(&mut Modal) + 'static) {
+        self.push(Cmd::Modal(Box::new(f)));
     }
 }

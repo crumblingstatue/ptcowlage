@@ -1,4 +1,7 @@
-use {crate::audio_out::SongStateHandle, eframe::egui};
+use {
+    crate::{app::ui::tabs::voices::SelectedSlot, audio_out::SongStateHandle},
+    eframe::egui,
+};
 
 #[derive(Default)]
 pub struct Modal {
@@ -11,6 +14,18 @@ impl Modal {
     }
     pub fn seek_to_sample(&mut self, t: ptcow::SampleT) {
         self.payload = Some(Payload::SeekToSamplePrompt(t));
+    }
+    pub(crate) fn replace_wave_data_slot(
+        &mut self,
+        voice_idx: ptcow::VoiceIdx,
+        slot: SelectedSlot,
+        with: ptcow::WaveData,
+    ) {
+        self.payload = Some(Payload::ReplaceWaveDataSlot {
+            voice_idx,
+            slot,
+            with,
+        });
     }
     pub fn update(&mut self, ctx: &egui::Context, song: &SongStateHandle) {
         if let Some(payload) = &mut self.payload {
@@ -33,6 +48,24 @@ impl Modal {
                         close = true;
                     }
                 }
+                Payload::ReplaceWaveDataSlot {
+                    voice_idx,
+                    slot,
+                    with,
+                } => {
+                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                    ui.label("Replace existing data?");
+                    ui.horizontal(|ui| {
+                        if ui.button("Yes").clicked() {
+                            voice_slot(&mut song.lock().unwrap().ins.voices, *voice_idx, *slot)
+                                .data = ptcow::VoiceData::Wave(with.clone());
+                            close = true;
+                        }
+                        if ui.button("No").clicked() {
+                            close = true;
+                        }
+                    });
+                }
             });
             if close {
                 self.payload = None;
@@ -41,7 +74,24 @@ impl Modal {
     }
 }
 
+fn voice_slot(
+    voices: &mut ptcow::Voices,
+    idx: ptcow::VoiceIdx,
+    slot: SelectedSlot,
+) -> &mut ptcow::VoiceSlot {
+    let voice = &mut voices[idx];
+    match slot {
+        SelectedSlot::Base => &mut voice.base,
+        SelectedSlot::Extra => voice.extra.as_mut().unwrap(),
+    }
+}
+
 enum Payload {
     Msg(String),
     SeekToSamplePrompt(ptcow::SampleT),
+    ReplaceWaveDataSlot {
+        voice_idx: ptcow::VoiceIdx,
+        slot: SelectedSlot,
+        with: ptcow::WaveData,
+    },
 }
