@@ -760,7 +760,7 @@ fn slot_wave_extra_ui(
     ui.horizontal(|ui| {
         ui.strong(format!("Envelope ({} points)", data.envelope.points.len()));
         ui.label("fps");
-        ui.add(egui::DragValue::new(&mut data.envelope.seconds_per_point));
+        ui.add(egui::DragValue::new(&mut data.envelope.seconds_per_point).range(1..=999_999));
         if ui.button("+").clicked() {
             data.envelope.points.push(EnvPt {
                 x: data.envelope.points.last().map_or(0, |pt| pt.x) + 16,
