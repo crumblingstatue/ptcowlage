@@ -690,7 +690,7 @@ fn voice_unit_ui(
             ui.add(egui::DragValue::new(&mut oggv.sps2));
         }
     }
-    unit_envelope_ui(ui, slot, out_rate, sel_slot);
+    slot_wave_extra_ui(ui, slot, out_rate, sel_slot);
     // If the sound is aux playing currently, update its buffer as well
     if let Some(key) = ui_state.playing_sounds.get(&voice_idx) {
         aux.send
@@ -716,7 +716,7 @@ fn voice_unit_ui(
     });
 }
 
-fn unit_envelope_ui(
+fn slot_wave_extra_ui(
     ui: &mut egui::Ui,
     slot: &mut ptcow::VoiceSlot,
     out_rate: u16,
@@ -725,10 +725,12 @@ fn unit_envelope_ui(
     let VoiceData::Wave(data) = &mut slot.data else {
         return;
     };
-    ui.label("Volume");
-    ui.add(egui::DragValue::new(&mut data.volume));
-    ui.label("Pan");
-    ui.add(egui::Slider::new(&mut data.pan, 0..=128));
+    ui.horizontal(|ui| {
+        ui.label("Volume");
+        ui.add(egui::DragValue::new(&mut data.volume));
+        ui.label("Pan");
+        ui.add(egui::Slider::new(&mut data.pan, 0..=128));
+    });
     let env_w: u16 = data.envelope.points.iter().map(|pt| pt.x).sum();
     ui.horizontal(|ui| {
         ui.strong(format!("Envelope ({} points)", data.envelope.points.len()));
