@@ -318,19 +318,13 @@ pub fn voice_ui_inner(
                 SelectedSlot::Extra,
                 (voice_data_img(&extra.data), "Extra"),
             );
-        }
-        ui.separator();
-        if ui
-            .add_enabled(voice.extra.is_none(), egui::Button::new("+"))
-            .clicked()
-        {
-            voice.extra = Some(voice.base.clone());
-        }
-        if ui
-            .add_enabled(voice.extra.is_some(), egui::Button::new("-"))
-            .clicked()
-        {
-            voice.extra = None;
+            if ui.button("-").clicked() {
+                voice.extra = None;
+            }
+        } else {
+            if ui.button("+").clicked() {
+                voice.extra = Some(voice.base.clone());
+            }
         }
     });
     ui.separator();
