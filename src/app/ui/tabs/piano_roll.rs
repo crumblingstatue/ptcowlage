@@ -489,22 +489,24 @@ fn roll_ui_inner(
             .default_pos(popup.pos)
             .open(&mut open)
             .show(ui.ctx(), |ui| {
-                if ui.button("Up 1 key").clicked() {
-                    for &idx in &popup.indices {
-                        let ev = &mut song.song.events[idx];
-                        if let EventPayload::Key(key) = &mut ev.payload {
-                            *key += 256;
+                ui.horizontal(|ui| {
+                    if ui.button("Up 1 key").clicked() {
+                        for &idx in &popup.indices {
+                            let ev = &mut song.song.events[idx];
+                            if let EventPayload::Key(key) = &mut ev.payload {
+                                *key += 256;
+                            }
                         }
                     }
-                }
-                if ui.button("Down 1 key").clicked() {
-                    for &idx in &popup.indices {
-                        let ev = &mut song.song.events[idx];
-                        if let EventPayload::Key(key) = &mut ev.payload {
-                            *key -= 256;
+                    if ui.button("Down 1 key").clicked() {
+                        for &idx in &popup.indices {
+                            let ev = &mut song.song.events[idx];
+                            if let EventPayload::Key(key) = &mut ev.payload {
+                                *key -= 256;
+                            }
                         }
                     }
-                }
+                });
                 ui.separator();
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     egui::Grid::new("events_win_events")
