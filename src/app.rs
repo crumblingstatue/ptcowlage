@@ -473,7 +473,7 @@ impl App {
 
                 let song = self.song.lock().unwrap();
                 let voice = &song.ins.voices[voice];
-                let VoiceData::Noise(noise) = &voice.slots[0].unit.data else {
+                let VoiceData::Noise(noise) = &voice.base.data else {
                     self.modal_payload = Some(ModalPayload::Msg("Voice not a noise".into()));
                     return;
                 };

@@ -54,8 +54,7 @@ pub fn import(
             volume: 32,
             pan: 64,
             flags: VoiceFlags::WAVE_LOOP,
-            data: ptcow::VoiceData::Wave(wave),
-            ..VoiceUnit::defaults()
+            ..VoiceUnit::default()
         };
         // Seems like envelope values need to be scaled a bit to be more accurate
         let env_scale = 1.5;
@@ -68,7 +67,7 @@ pub fn import(
             })
             .collect();
         unit.envelope.seconds_per_point = 64;
-        let mut voice = Voice::from_unit(unit);
+        let mut voice = Voice::from_unit_and_data(unit, ptcow::VoiceData::Wave(wave));
         voice.name = format!("Melody {m_i}");
         ins.voices.push(voice);
         let mut time_ms = 1;

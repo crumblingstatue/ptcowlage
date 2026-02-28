@@ -3,8 +3,7 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                FreeplayPianoState, SharedUiState, img, unit_color, voice_data_img, voice_img,
-                waveform_edit_widget,
+                FreeplayPianoState, SharedUiState, img, unit_color, voice_img, waveform_edit_widget,
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
@@ -23,10 +22,17 @@ use {
 #[derive(Default)]
 pub struct VoicesUiState {
     pub selected_idx: VoiceIdx,
-    selected_vu: u8,
+    sel_slot: SelectedSlot,
     dragged_idx: Option<VoiceIdx>,
     // Keep track of (preview) sounds playing for each voice
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
+}
+
+#[derive(Default, PartialEq, Hash, Clone, Copy)]
+enum SelectedSlot {
+    #[default]
+    Base,
+    Extra,
 }
 
 trait AtomExtExt<'a> {
@@ -53,7 +59,7 @@ pub fn ui(
     ui.horizontal_wrapped(|ui| {
         ui.menu_button("✴ New...", |ui| {
             if ui.button((img::SAXO.smol(), "Wave")).clicked() {
-                let mut voice = Voice::from_unit(square_wave_vu());
+                let mut voice = square_wave_voice();
                 voice.name = format!("Wave {}", song.ins.voices.len());
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
@@ -61,7 +67,7 @@ pub fn ui(
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
             if ui.button((img::DRUM.smol(), "Noise")).clicked() {
-                let mut voice = Voice::from_unit(bass_drum_vu());
+                let mut voice = bass_drum_voice();
                 voice.name = format!("Noise {}", song.ins.voices.len());
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
@@ -102,13 +108,17 @@ pub fn ui(
             ui.menu_button("✴ Current with new", |ui| {
                 if ui.button((img::SAXO.smol(), "Wave")).clicked() {
                     if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        voice.slots[0].unit = square_wave_vu();
+                        let sqr = square_wave_voice();
+                        voice.base.data = sqr.base.data;
+                        voice.base.unit = sqr.base.unit;
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
                     }
                 }
                 if ui.button((img::DRUM.smol(), "Noise")).clicked() {
                     if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        voice.slots[0].unit = bass_drum_vu();
+                        let bass = bass_drum_voice();
+                        voice.base.data = bass.base.data;
+                        voice.base.unit = bass.base.unit;
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
                     }
                 }
@@ -200,23 +210,25 @@ pub fn ui(
     }
 }
 
-fn bass_drum_vu() -> VoiceUnit {
-    VoiceUnit {
+fn bass_drum_voice() -> Voice {
+    let unit = VoiceUnit {
         pan: 64,
         volume: 127,
-        data: VoiceData::Noise(bass_drum()),
-        ..VoiceUnit::defaults()
-    }
+        ..VoiceUnit::default()
+    };
+    let data = VoiceData::Noise(bass_drum());
+    Voice::from_unit_and_data(unit, data)
 }
 
-fn square_wave_vu() -> VoiceUnit {
-    VoiceUnit {
+fn square_wave_voice() -> Voice {
+    let unit = VoiceUnit {
         pan: 64,
         volume: 127,
         flags: VoiceFlags::WAVE_LOOP,
-        data: VoiceData::Wave(square_wave()),
-        ..VoiceUnit::defaults()
-    }
+        ..VoiceUnit::default()
+    };
+    let data = VoiceData::Wave(square_wave());
+    Voice::from_unit_and_data(unit, data)
 }
 
 enum VoiceUiOp {
@@ -244,7 +256,7 @@ fn voice_ui(
     let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut voice.name);
-        for slot in &voice.slots {
+        for slot in voice.slots() {
             play_sound_ui(ui, aux, ui_state, idx, &slot.inst.sample_buf);
         }
         if ui.button("⬆").clicked() {
@@ -273,7 +285,7 @@ fn voice_ui(
                 });
             }
         }
-        match &voice.slots[0].unit.data {
+        match &voice.base.data {
             VoiceData::Noise(_) => {
                 if ui.button("Export .ptnoise").clicked() {
                     app_cmd.push(Cmd::PromptExportPtnoise { voice: idx });
@@ -300,42 +312,34 @@ pub fn voice_ui_inner(
     ui_state: &mut VoicesUiState,
 ) {
     ui.horizontal(|ui| {
-        for (i, slot) in voice.slots.iter().enumerate() {
-            ui.selectable_value(
-                &mut ui_state.selected_vu,
-                i as u8,
-                (
-                    egui::Image::new(voice_data_img(&slot.unit.data)),
-                    format!("Unit {i}"),
-                ),
-            );
+        ui.selectable_value(&mut ui_state.sel_slot, SelectedSlot::Base, "Base");
+        if voice.extra.is_some() {
+            ui.selectable_value(&mut ui_state.sel_slot, SelectedSlot::Extra, "Extra");
         }
         ui.separator();
         if ui
-            .add_enabled(
-                voice.slots.len() < 2 && voice.slots.len() < 2,
-                egui::Button::new("+"),
-            )
+            .add_enabled(voice.extra.is_none(), egui::Button::new("+"))
             .clicked()
         {
-            voice.slots.push(voice.slots[0].clone());
+            voice.extra = Some(voice.base.clone());
         }
         if ui
-            .add_enabled(
-                voice.slots.len() > 1 && voice.slots.len() > 1,
-                egui::Button::new("-"),
-            )
+            .add_enabled(voice.extra.is_some(), egui::Button::new("-"))
             .clicked()
         {
-            voice.slots.pop();
+            voice.extra = None;
         }
     });
     ui.separator();
-    // Ensure no out of bounds indexing (there is always at least one unit)
-    if ui_state.selected_vu as usize >= voice.slots.len() {
-        ui_state.selected_vu = 0;
+    // Ensure we don't select extra slot if it's none
+    if voice.extra.is_none() {
+        ui_state.sel_slot = SelectedSlot::Base;
     }
-    let slot = &mut voice.slots[ui_state.selected_vu as usize];
+    let slot = match ui_state.sel_slot {
+        SelectedSlot::Base => &mut voice.base,
+        // INVARIANT: We assume extra is only selected if it exists (see above)
+        SelectedSlot::Extra => voice.extra.as_mut().unwrap(),
+    };
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
@@ -346,7 +350,7 @@ pub fn voice_ui_inner(
                 voice_idx,
                 ui_state,
                 aux,
-                ui_state.selected_vu,
+                ui_state.sel_slot,
             );
             let inst = &mut slot.inst;
             let id = ui.make_persistent_id("inst");
@@ -489,11 +493,11 @@ fn voice_unit_ui(
     voice_idx: VoiceIdx,
     ui_state: &mut VoicesUiState,
     aux: &AuxAudioState,
-    unit_idx: u8,
+    sel_slot: SelectedSlot,
 ) {
     let unit = &mut slot.unit;
     let inst = &mut slot.inst;
-    match &mut unit.data {
+    match &mut slot.data {
         VoiceData::Noise(noise) => {
             ui.label("smp num 44k");
             ui.add(egui::DragValue::new(&mut noise.smp_num_44k));
@@ -685,7 +689,7 @@ fn voice_unit_ui(
             ui.add(egui::DragValue::new(&mut oggv.sps2));
         }
     }
-    unit_envelope_ui(ui, unit, inst, out_rate, unit_idx);
+    unit_envelope_ui(ui, unit, inst, out_rate, sel_slot);
     // If the sound is aux playing currently, update its buffer as well
     if let Some(key) = ui_state.playing_sounds.get(&voice_idx) {
         aux.send
@@ -721,7 +725,7 @@ fn unit_envelope_ui(
     unit: &mut VoiceUnit,
     inst: &mut VoiceInstance,
     out_rate: u16,
-    unit_idx: u8,
+    sel_slot: SelectedSlot,
 ) {
     let env_w: u16 = unit.envelope.points.iter().map(|pt| pt.x).sum();
     ui.horizontal(|ui| {
@@ -743,7 +747,7 @@ fn unit_envelope_ui(
     });
     ui.horizontal_top(|ui| {
         if !unit.envelope.points.is_empty() {
-            draw_envelope_src(unit, ui, env_w, unit_idx);
+            draw_envelope_src(unit, ui, env_w, sel_slot);
         }
         ui.horizontal_wrapped(|ui| {
             if let Some((last, init)) = unit.envelope.points.split_last_mut() {
@@ -799,10 +803,10 @@ fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
 }
 
-fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, unit_idx: u8) {
+fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, sel_slot: SelectedSlot) {
     let w = f32::from(width);
     egui::ScrollArea::horizontal()
-        .id_salt(unit_idx)
+        .id_salt(sel_slot)
         .max_width(384.0)
         .show(ui, |ui| {
             let (rect, _re) =

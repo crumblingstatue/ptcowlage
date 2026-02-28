@@ -115,10 +115,9 @@ fn wave_voice(ch: &organyacat::Channel) -> Voice {
         // This is probably a hack, but sounds close enough
         basic_key: 17664 - (4 * 256),
         flags: VoiceFlags::WAVE_LOOP | VoiceFlags::SMOOTH,
-        data: ptcow::VoiceData::Pcm(pcm),
-        ..VoiceUnit::defaults()
+        ..VoiceUnit::default()
     };
-    let mut voice = Voice::from_unit(unit);
+    let mut voice = Voice::from_unit_and_data(unit, ptcow::VoiceData::Pcm(pcm));
     voice.name = format!("org wave {}", ch.instrument);
     voice
 }
@@ -133,11 +132,10 @@ fn drum_voice(ch: &organyacat::Channel) -> Voice {
         smp,
     };
     let unit = VoiceUnit {
-        data: ptcow::VoiceData::Pcm(pcm),
         flags: VoiceFlags::SMOOTH,
-        ..VoiceUnit::defaults()
+        ..VoiceUnit::default()
     };
-    let mut voice = Voice::from_unit(unit);
+    let mut voice = Voice::from_unit_and_data(unit, ptcow::VoiceData::Pcm(pcm));
     voice.name = format!("org drum {}", ch.instrument);
     voice
 }
