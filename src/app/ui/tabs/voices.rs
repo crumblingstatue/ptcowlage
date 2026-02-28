@@ -305,28 +305,32 @@ pub fn voice_ui_inner(
     aux: &mut AuxAudioState,
     ui_state: &mut VoicesUiState,
 ) {
-    ui.horizontal(|ui| {
-        ui.selectable_value(
-            &mut ui_state.sel_slot,
-            SelectedSlot::Base,
-            // We still want the image for coord/overtone distinction
-            (voice_data_img(&voice.base.data), "Base"),
-        );
-        if let Some(extra) = &voice.extra {
+    // Add a slot selection UI for wave voices
+    if let VoiceData::Wave(_) = &voice.base.data {
+        ui.horizontal(|ui| {
             ui.selectable_value(
                 &mut ui_state.sel_slot,
-                SelectedSlot::Extra,
-                (voice_data_img(&extra.data), "Extra"),
+                SelectedSlot::Base,
+                // We still want the image for coord/overtone distinction
+                (voice_data_img(&voice.base.data), "Base"),
             );
-            if ui.button("-").clicked() {
-                voice.extra = None;
+            if let Some(extra) = &voice.extra {
+                ui.selectable_value(
+                    &mut ui_state.sel_slot,
+                    SelectedSlot::Extra,
+                    (voice_data_img(&extra.data), "Extra"),
+                );
+                if ui.button("-").clicked() {
+                    voice.extra = None;
+                }
+            } else {
+                if ui.button("+").clicked() {
+                    voice.extra = Some(voice.base.clone());
+                }
             }
-        } else {
-            if ui.button("+").clicked() {
-                voice.extra = Some(voice.base.clone());
-            }
-        }
-    });
+        });
+    }
+
     ui.separator();
     // Ensure we don't select extra slot if it's none
     if voice.extra.is_none() {
