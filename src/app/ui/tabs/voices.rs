@@ -756,7 +756,11 @@ fn slot_wave_extra_ui(
         ui.label("Pan");
         ui.add(egui::Slider::new(&mut data.pan, 0..=128));
     });
-    let env_w: u16 = data.envelope.points.iter().map(|pt| pt.x).sum();
+    // When calculating width, ignore last point (release)
+    let env_w: u16 = data.envelope.points[..data.envelope.points.len().saturating_sub(1)]
+        .iter()
+        .map(|pt| pt.x)
+        .sum();
     ui.horizontal(|ui| {
         ui.strong(format!("Envelope ({} points)", data.envelope.points.len()));
         ui.label("fps");
@@ -787,9 +791,9 @@ fn slot_wave_extra_ui(
                 ui.end_row();
                 ui.label(format!("envelope width: {env_w}"));
                 ui.end_row();
-                ui.label("Tail");
-                ui.add(egui::DragValue::new(&mut last.x).prefix("x "));
-                ui.add(egui::DragValue::new(&mut last.y).prefix("y "));
+                ui.label("Release");
+                // Only the x value is used for release
+                ui.add(egui::DragValue::new(&mut last.x));
             }
         });
     });
@@ -844,8 +848,9 @@ fn draw_envelope_src(env_src: &EnvelopeSrc, ui: &mut egui::Ui, width: u16, sel_s
             let lb = rect.left_bottom();
             p.rect_filled(rect, 2.0, PAL.env_bg);
             let mut x_cursor = 0;
-            let mut egui_points: Vec<egui::Pos2> = env_src
-                .points
+            let mut egui_points: Vec<egui::Pos2> = env_src.points
+                // We don't want to include the last point (release)
+                [..env_src.points.len().saturating_sub(1)]
                 .iter()
                 .map(|pt| {
                     x_cursor += pt.x;
