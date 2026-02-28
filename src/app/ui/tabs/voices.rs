@@ -12,9 +12,9 @@ use {
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
-        Bps, ChNum, EnvPt, NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags,
-        NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags,
-        VoiceIdx, VoiceUnit, WaveData, noise_to_pcm,
+        Bps, ChNum, EnvPt, EnvelopeSrc, NoiseDesignOscillator, NoiseDesignUnit,
+        NoiseDesignUnitFlags, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice,
+        VoiceData, VoiceFlags, VoiceIdx, VoiceUnit, WaveDataPoints, noise_to_pcm,
     },
     rustc_hash::FxHashMap,
 };
@@ -211,19 +211,12 @@ pub fn ui(
 }
 
 fn bass_drum_voice() -> Voice {
-    let unit = VoiceUnit {
-        pan: 64,
-        volume: 127,
-        ..VoiceUnit::default()
-    };
     let data = VoiceData::Noise(bass_drum());
-    Voice::from_unit_and_data(unit, data)
+    Voice::from_unit_and_data(VoiceUnit::default(), data)
 }
 
 fn square_wave_voice() -> Voice {
     let unit = VoiceUnit {
-        pan: 64,
-        volume: 127,
         flags: VoiceFlags::WAVE_LOOP,
         ..VoiceUnit::default()
     };
@@ -611,7 +604,7 @@ fn voice_unit_ui(
                 ui.label("Kind");
                 if ui
                     .selectable_label(
-                        matches!(*wave_data, WaveData::Coord { .. }),
+                        matches!(wave_data.points, WaveDataPoints::Coord { .. }),
                         (img::SAXO, "Coordinate"),
                     )
                     .clicked()
@@ -620,18 +613,18 @@ fn voice_unit_ui(
                 }
                 if ui
                     .selectable_label(
-                        matches!(wave_data, WaveData::Overtone { .. }),
+                        matches!(wave_data.points, WaveDataPoints::Overtone { .. }),
                         (img::ACCORDION, "Overtone"),
                     )
                     .clicked()
                 {
-                    *wave_data = WaveData::Overtone {
+                    wave_data.points = WaveDataPoints::Overtone {
                         points: vec![OsciPt { x: 1, y: 16 }],
                     };
                 }
             });
-            match wave_data {
-                WaveData::Coord { points, resolution } => {
+            match &mut wave_data.points {
+                WaveDataPoints::Coord { points, resolution } => {
                     ui.horizontal_top(|ui| {
                         draw_coord_wavebox(ui, points, resolution);
                         ui.horizontal_wrapped(|ui| {
@@ -658,9 +651,9 @@ fn voice_unit_ui(
                         });
                     });
                 }
-                WaveData::Overtone { points } => {
+                WaveDataPoints::Overtone { points } => {
                     ui.horizontal_top(|ui| {
-                        draw_overtone_wavebox(ui, slot.unit.volume, points);
+                        draw_overtone_wavebox(ui, wave_data.volume, points);
                         ui.horizontal_wrapped(|ui| {
                             ui.style_mut().spacing.slider_width = 512.0;
                             ui.label(format!("{} points", points.len()));
@@ -687,7 +680,7 @@ fn voice_unit_ui(
             }
 
             slot.inst
-                .recalc_wave_data(wave_data, slot.unit.volume, slot.unit.pan);
+                .recalc_wave_data(&wave_data.points, wave_data.volume, wave_data.pan);
         }
         VoiceData::OggV(oggv) => {
             ui.label("Ogg/Vorbis voice");
@@ -718,11 +711,6 @@ fn voice_unit_ui(
         ui.end_row();
         ui.label("Basic key");
         ui.add(egui::DragValue::new(&mut slot.unit.basic_key));
-        ui.end_row();
-        ui.label("Volume");
-        ui.add(egui::DragValue::new(&mut slot.unit.volume));
-        ui.label("Pan");
-        ui.add(egui::Slider::new(&mut slot.unit.pan, 0..=128));
         ui.label("Tuning");
         ui.add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.001));
     });
@@ -734,35 +722,37 @@ fn unit_envelope_ui(
     out_rate: u16,
     sel_slot: SelectedSlot,
 ) {
-    let env_w: u16 = slot.unit.envelope.points.iter().map(|pt| pt.x).sum();
+    let VoiceData::Wave(data) = &mut slot.data else {
+        return;
+    };
+    ui.label("Volume");
+    ui.add(egui::DragValue::new(&mut data.volume));
+    ui.label("Pan");
+    ui.add(egui::Slider::new(&mut data.pan, 0..=128));
+    let env_w: u16 = data.envelope.points.iter().map(|pt| pt.x).sum();
     ui.horizontal(|ui| {
-        ui.strong(format!(
-            "Envelope ({} points)",
-            slot.unit.envelope.points.len()
-        ));
+        ui.strong(format!("Envelope ({} points)", data.envelope.points.len()));
         ui.label("fps");
-        ui.add(egui::DragValue::new(
-            &mut slot.unit.envelope.seconds_per_point,
-        ));
+        ui.add(egui::DragValue::new(&mut data.envelope.seconds_per_point));
         if ui.button("+").clicked() {
-            slot.unit.envelope.points.push(EnvPt {
-                x: slot.unit.envelope.points.last().map_or(0, |pt| pt.x) + 16,
+            data.envelope.points.push(EnvPt {
+                x: data.envelope.points.last().map_or(0, |pt| pt.x) + 16,
                 y: 0,
             });
         }
         if ui.button("-").clicked() {
-            slot.unit.envelope.points.pop();
+            data.envelope.points.pop();
         }
         if ui.button("Recalculate").clicked() {
-            slot.inst.recalc_envelope(&slot.unit, out_rate);
+            slot.inst.recalc_envelope(out_rate, &data.envelope);
         }
     });
     ui.horizontal_top(|ui| {
-        if !slot.unit.envelope.points.is_empty() {
-            draw_envelope_src(&mut slot.unit, ui, env_w, sel_slot);
+        if !data.envelope.points.is_empty() {
+            draw_envelope_src(&data.envelope, ui, env_w, sel_slot);
         }
         ui.horizontal_wrapped(|ui| {
-            if let Some((last, init)) = slot.unit.envelope.points.split_last_mut() {
+            if let Some((last, init)) = data.envelope.points.split_last_mut() {
                 for pt in init {
                     ui.add(egui::DragValue::new(&mut pt.x).prefix("x "));
                     ui.add(egui::DragValue::new(&mut pt.y).prefix("y "));
@@ -815,7 +805,7 @@ fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
 }
 
-fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, sel_slot: SelectedSlot) {
+fn draw_envelope_src(env_src: &EnvelopeSrc, ui: &mut egui::Ui, width: u16, sel_slot: SelectedSlot) {
     let w = f32::from(width);
     egui::ScrollArea::horizontal()
         .id_salt(sel_slot)
@@ -827,8 +817,7 @@ fn draw_envelope_src(unit: &mut VoiceUnit, ui: &mut egui::Ui, width: u16, sel_sl
             let lb = rect.left_bottom();
             p.rect_filled(rect, 2.0, PAL.env_bg);
             let mut x_cursor = 0;
-            let mut egui_points: Vec<egui::Pos2> = unit
-                .envelope
+            let mut egui_points: Vec<egui::Pos2> = env_src
                 .points
                 .iter()
                 .map(|pt| {

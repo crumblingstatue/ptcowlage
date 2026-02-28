@@ -1,7 +1,7 @@
 use piyopiyo::{DRUM_SAMPLES, piano_keys};
 use ptcow::{
-    EnvPt, Event, EventPayload, Herd, MooInstructions, OsciPt, PcmData, SampleRate, Song, Unit,
-    UnitIdx, Voice, VoiceFlags, VoiceIdx, VoiceUnit, WaveData,
+    EnvPt, EnvelopeSrc, Event, EventPayload, Herd, MooInstructions, OsciPt, PcmData, SampleRate,
+    Song, Unit, UnitIdx, Voice, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints,
 };
 use rustc_hash::FxHashMap;
 
@@ -46,28 +46,36 @@ pub fn import(
                 y: i16::from(*v),
             })
             .collect();
-        let wave = WaveData::Coord {
+        let wave_points = WaveDataPoints::Coord {
             points,
             resolution: 256,
         };
-        let mut unit = VoiceUnit {
-            volume: 32,
-            pan: 64,
+        let unit = VoiceUnit {
             flags: VoiceFlags::WAVE_LOOP,
             ..VoiceUnit::default()
         };
         // Seems like envelope values need to be scaled a bit to be more accurate
         let env_scale = 1.5;
-        unit.envelope.points = tr
-            .envelope
-            .iter()
-            .map(|val| EnvPt {
-                x: 1,
-                y: (f64::from(*val) * env_scale) as u8,
-            })
-            .collect();
-        unit.envelope.seconds_per_point = 64;
-        let mut voice = Voice::from_unit_and_data(unit, ptcow::VoiceData::Wave(wave));
+        let env = EnvelopeSrc {
+            seconds_per_point: 64,
+            points: tr
+                .envelope
+                .iter()
+                .map(|val| EnvPt {
+                    x: 1,
+                    y: (f64::from(*val) * env_scale) as u8,
+                })
+                .collect(),
+        };
+        let mut voice = Voice::from_unit_and_data(
+            unit,
+            ptcow::VoiceData::Wave(WaveData {
+                points: wave_points,
+                envelope: env,
+                volume: 32,
+                pan: 64,
+            }),
+        );
         voice.name = format!("Melody {m_i}");
         ins.voices.push(voice);
         let mut time_ms = 1;

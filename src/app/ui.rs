@@ -24,7 +24,7 @@ use {
     egui_toast::Toasts,
     ptcow::{
         Event, EventPayload, GroupIdx, PcmData, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
-        VoiceUnit,
+        VoiceUnit, WaveDataPoints,
     },
     rustc_hash::FxHashSet,
     rustysynth::SoundFont,
@@ -539,9 +539,9 @@ fn voice_data_img(data: &VoiceData) -> egui::ImageSource<'static> {
     match data {
         ptcow::VoiceData::Noise(_) => img::DRUM,
         ptcow::VoiceData::Pcm(_) => img::MIC,
-        ptcow::VoiceData::Wave(data) => match data {
-            ptcow::WaveData::Coord { .. } => img::SAXO,
-            ptcow::WaveData::Overtone { .. } => img::ACCORDION,
+        ptcow::VoiceData::Wave(data) => match data.points {
+            WaveDataPoints::Coord { .. } => img::SAXO,
+            WaveDataPoints::Overtone { .. } => img::ACCORDION,
         },
         ptcow::VoiceData::OggV(_) => img::FISH,
     }
