@@ -202,7 +202,8 @@ pub fn ui(
             }
             VoiceUiOp::Duplicate(idx) => {
                 let dup = song.ins.voices[idx].clone();
-                song.ins.voices.insert(idx.usize(), dup);
+                // We want to insert the duplicate at the end, not to disrupt the existing indices
+                song.ins.voices.push(dup);
             }
             VoiceUiOp::Delete(idx) => {
                 song.ins.voices.remove(idx.usize());
