@@ -63,8 +63,32 @@ pub struct App {
 
 pub type BundledSongs = &'static [(&'static str, &'static [u8])];
 
+fn load_persistence(cc: &eframe::CreationContext<'_>, app: &mut App) {
+    if let Some(storage) = cc.storage {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(folders) = eframe::get_value(storage, "pinned-folders") {
+                app.file_dia.storage_mut().pinned_folders = folders;
+            }
+            if let Some(list) = eframe::get_value(storage, "recently-opened") {
+                app.recently_opened = list;
+            }
+        }
+        if let Some(text) = storage.get_string("out-buf-size") {
+            if let Ok(num) = text.parse() {
+                app.out.buf_size = num;
+            }
+        }
+    }
+}
+
 impl App {
-    pub fn new(args: CliArgs, out_params: OutParams, bundled_songs: BundledSongs) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        args: CliArgs,
+        out_params: OutParams,
+        bundled_songs: BundledSongs,
+    ) -> Self {
         let sample_rate = 44_100;
         let mut song_state = SongState::new(sample_rate);
         let mut modal = Modal::default();
@@ -141,11 +165,20 @@ impl App {
             #[cfg(target_arch = "wasm32")]
             web_cmd: Default::default(),
         };
+        load_persistence(cc, &mut this);
         // SongState comes with a default unit by... default, so let's toot that
         this.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
                 this.modal.msg(format!("Error loading project:\n{e}"));
+            }
+        } else if args.recent {
+            // Try to open most recent file
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Some(path) = this.recently_opened.most_recent() {
+                if let Err(e) = this.load_song_from_path(path.clone()) {
+                    this.modal.msg(format!("Error loading project:\n{e}"));
+                }
             }
         } else if let Some(song) = bundled_songs.first() {
             // Load a bundled song if no song was requested to open
