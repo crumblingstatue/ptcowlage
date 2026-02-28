@@ -483,7 +483,7 @@ fn roll_ui_inner(
         });
     }
     // Events left click window
-    if let Some(popup) = &state.evs_popup {
+    if let Some(popup) = &mut state.evs_popup {
         let mut open = true;
         egui::Window::new(popup.title)
             .default_pos(popup.pos)
@@ -730,12 +730,13 @@ fn events_window_inner_ui(
     song: &mut SongState,
     cmd: &mut CommandQueue,
     ui: &mut egui::Ui,
-    popup: &EventsPopup,
+    popup: &mut EventsPopup,
 ) {
-    for &ev_idx in &popup.indices {
+    popup.indices.retain(|&ev_idx| {
+        let mut retain = true;
         let Some(ev) = song.song.events.get_mut(ev_idx) else {
             ui.label("<unresolved event (oob)>");
-            continue;
+            return true;
         };
         if let Some(unit) = song.herd.units.get(ev.unit) {
             ui.colored_label(unit_color(ev.unit), &unit.name);
@@ -763,8 +764,12 @@ fn events_window_inner_ui(
         if ui.button("Open in events tab").clicked() {
             cmd.push(Cmd::OpenEventInEventsTab { index: ev_idx });
         }
+        if ui.button("Remove").clicked() {
+            retain = false;
+        }
         ui.end_row();
-    }
+        retain
+    });
 }
 
 fn piano_key_from_y(
