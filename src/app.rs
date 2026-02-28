@@ -270,8 +270,7 @@ impl App {
                     }
                     FileOp::ExportPtnoise { voice } => {
                         let song = self.song.lock().unwrap();
-                        let ptcow::VoiceData::Noise(noise) =
-                            &song.ins.voices[voice].slots[0].unit.data
+                        let ptcow::VoiceData::Noise(noise) = &song.ins.voices[voice].base.data
                         else {
                             return;
                         };
