@@ -14,6 +14,7 @@ use {
                     self, FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileFilt,
                     FileOp,
                 },
+                modal::Modal,
             },
         },
         audio_out::{
@@ -25,7 +26,7 @@ use {
     anyhow::Context,
     eframe::egui,
     egui_toast::{Toast, ToastKind, ToastOptions},
-    ptcow::{Event, EventPayload, NoiseTable, SampleRate, SampleT, UnitIdx, VoiceIdx},
+    ptcow::{Event, EventPayload, NoiseTable, SampleRate, UnitIdx, VoiceIdx},
     rustysynth::SoundFont,
     std::{
         fs::File,
@@ -50,7 +51,7 @@ pub struct App {
     ui_state: ui::UiState,
     /// Currently opened file
     open_file: Option<PathBuf>,
-    modal_payload: Option<ModalPayload>,
+    modal: Modal,
     pub(crate) cmd: CommandQueue,
     /// Auxiliary audio output (for example playing voice samples in voice UI)
     ///
@@ -60,18 +61,13 @@ pub struct App {
     web_cmd: crate::web_glue::WebCmdQueueHandle,
 }
 
-pub enum ModalPayload {
-    Msg(String),
-    SeekToSamplePrompt(SampleT),
-}
-
 pub type BundledSongs = &'static [(&'static str, &'static [u8])];
 
 impl App {
     pub fn new(args: CliArgs, out_params: OutParams, bundled_songs: BundledSongs) -> Self {
         let sample_rate = 44_100;
         let mut song_state = SongState::new(sample_rate);
-        let mut modal_payload = None;
+        let mut modal = Modal::default();
         if let Some(mid_path) = args.midi_import {
             let mid_data = std::fs::read(&mid_path).unwrap();
             match mid2ptcop::write_midi_to_pxtone(
@@ -83,7 +79,7 @@ impl App {
                     song_state.song.recalculate_length();
                 }
                 Err(e) => {
-                    modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    modal.msg(e);
                 }
             }
         }
@@ -139,7 +135,7 @@ impl App {
             out: out_params,
             ui_state: ui::UiState::default(),
             open_file: None,
-            modal_payload,
+            modal,
             cmd: CommandQueue::default(),
             aux_state: None,
             #[cfg(target_arch = "wasm32")]
@@ -149,14 +145,12 @@ impl App {
         this.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
-                this.modal_payload =
-                    Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                this.modal.msg(format!("Error loading project:\n{e}"));
             }
         } else if let Some(song) = bundled_songs.first() {
             // Load a bundled song if no song was requested to open
             if let Err(e) = this.load_song_from_bytes(song.1) {
-                this.modal_payload =
-                    Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                this.modal.msg(format!("Error loading project:\n{e}"));
             } else {
                 this.open_file = Some(song.0.into());
             }
@@ -178,7 +172,7 @@ impl App {
                 song.song.recalculate_length();
             }
             Err(e) => {
-                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                self.modal.msg(e);
             }
         }
         post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
@@ -258,7 +252,7 @@ impl App {
                         let wav = match crate::util::export_wav(&mut song) {
                             Ok(wav) => wav,
                             Err(e) => {
-                                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                                self.modal.msg(e);
                                 return;
                             }
                         };
@@ -281,7 +275,7 @@ impl App {
                         match song.ins.voices[voice].to_ptvoice() {
                             Ok(data) => (data, "out.ptvoice"),
                             Err(e) => {
-                                self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                                self.modal.msg(e);
                                 return;
                             }
                         }
@@ -309,7 +303,7 @@ impl App {
                 reset_voice_for_units_with_voice_idx(&mut song, idx);
                 self.ui_state.voices.selected_idx = idx;
             }
-            Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+            Err(e) => self.modal.msg(e),
         }
     }
 
@@ -322,7 +316,7 @@ impl App {
                 reset_voice_for_units_with_voice_idx(&mut song, idx);
                 self.ui_state.voices.selected_idx = idx;
             }
-            Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+            Err(e) => self.modal.msg(e),
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -330,8 +324,7 @@ impl App {
         match op {
             FileOp::OpenProj => {
                 if let Err(e) = self.load_song_from_path(path) {
-                    self.modal_payload =
-                        Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                    self.modal.msg(format!("Error loading project:\n{e}"));
                 }
             }
             FileOp::ReplaceVoicesPtcop => {
@@ -351,7 +344,7 @@ impl App {
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
             }
@@ -368,7 +361,7 @@ impl App {
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
             }
@@ -380,7 +373,7 @@ impl App {
                             Some(ui::Sf2ImportDialog::new(soundfont, Some(voice_idx)));
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
             }
@@ -391,7 +384,7 @@ impl App {
                         self.ui_state.sf2_import = Some(ui::Sf2ImportDialog::new(soundfont, None));
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
             }
@@ -424,7 +417,7 @@ impl App {
                         self.open_file = Some(path);
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
                 drop(song);
@@ -436,11 +429,11 @@ impl App {
                 match crate::util::export_wav(&mut song) {
                     Ok(data) => {
                         if let Err(e) = std::fs::write(path, data) {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                            self.modal.msg(e);
                         }
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
                 // We can restart audio thread now
@@ -456,10 +449,10 @@ impl App {
                 match song.ins.voices[voice].to_ptvoice() {
                     Ok(data) => {
                         if let Err(e) = std::fs::write(&path, data) {
-                            self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                            self.modal.msg(e);
                         }
                     }
-                    Err(e) => self.modal_payload = Some(ModalPayload::Msg(e.to_string())),
+                    Err(e) => self.modal.msg(e),
                 }
                 self.cmd.toast(
                     ToastKind::Success,
@@ -473,11 +466,11 @@ impl App {
                 let song = self.song.lock().unwrap();
                 let voice = &song.ins.voices[voice];
                 let VoiceData::Noise(noise) = &voice.base.data else {
-                    self.modal_payload = Some(ModalPayload::Msg("Voice not a noise".into()));
+                    self.modal.msg("Voice not a noise");
                     return;
                 };
                 if let Err(e) = std::fs::write(&path, noise.to_ptnoise()) {
-                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    self.modal.msg(e);
                 }
                 self.cmd.toast(
                     ToastKind::Success,
@@ -554,9 +547,7 @@ impl eframe::App for App {
                             "ptcop" | "pttune" => {
                                 // Web version loads dropped files directly as bytes
                                 if let Err(e) = self.load_song_from_bytes(bytes) {
-                                    self.modal_payload = Some(ModalPayload::Msg(format!(
-                                        "Error loading project:\n{e}"
-                                    )));
+                                    self.modal.msg(format!("Error loading project:\n{e}"));
                                 }
                             }
                             "mid" => {
@@ -582,31 +573,7 @@ impl eframe::App for App {
         {
             self.desktop_handle_file_op(path, op);
         }
-        if let Some(payload) = &mut self.modal_payload {
-            let mut close = false;
-            egui::Modal::new("modal_popup".into()).show(ctx, |ui| match payload {
-                ModalPayload::Msg(msg) => {
-                    ui.label(&*msg);
-                    if ui.button("Close").clicked() {
-                        close = true;
-                    }
-                }
-                ModalPayload::SeekToSamplePrompt(samp) => {
-                    ui.heading("Seek to sample");
-                    ui.add(egui::DragValue::new(samp));
-                    if ui.button("Seek").clicked() {
-                        self.song.lock().unwrap().herd.seek_to_sample(*samp);
-                        close = true;
-                    }
-                    if ui.button("Cancel").clicked() {
-                        close = true;
-                    }
-                }
-            });
-            if close {
-                self.modal_payload = None;
-            }
-        }
+        self.modal.update(ctx, &self.song);
         if let Some(sf2) = &mut self.ui_state.sf2_import {
             let mut close = false;
             egui::Modal::new("sf2_import_popup".into()).show(ctx, |ui| {
@@ -818,8 +785,7 @@ impl App {
             #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {
                 if let Err(e) = self.load_song_from_path(path) {
-                    self.modal_payload =
-                        Some(ModalPayload::Msg(format!("Error loading project:\n{e}")));
+                    self.modal.msg(format!("Error loading project:\n{e}"));
                 }
             }
             Cmd::ResetUnitVoice { unit, voice } => {
@@ -837,7 +803,7 @@ impl App {
         match cmd {
             WebCmd::OpenFile { data, name } => {
                 if let Err(e) = self.load_song_from_bytes(&data) {
-                    self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                    self.modal.msg(e);
                 }
                 self.open_file = Some(name.into());
             }
@@ -877,7 +843,7 @@ impl App {
                         }
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
             }
@@ -897,7 +863,7 @@ impl App {
                         }
                     }
                     Err(e) => {
-                        self.modal_payload = Some(ModalPayload::Msg(e.to_string()));
+                        self.modal.msg(e);
                     }
                 }
             }
@@ -991,15 +957,13 @@ fn do_tick0_events(song: &mut SongState) {
 }
 
 fn poly_migrate_single(
-    app_modal_payload: &mut Option<ModalPayload>,
+    app_modal: &mut Modal,
     song: &mut SongState,
     migrate_from: UnitIdx,
 ) -> Option<UnitIdx> {
     let migrate_to = UnitIdx(song.herd.units.len());
     if migrate_to.0 >= 50 {
-        *app_modal_payload = Some(ModalPayload::Msg(
-            "Error: Cannot create more units than 50".to_string(),
-        ));
+        app_modal.msg("Error: Cannot create more units than 50");
         return None;
     }
     if !poly_migrate_units(migrate_from, migrate_to, &mut song.song) {

@@ -3,10 +3,10 @@
 use {
     crate::{
         app::{
-            ModalPayload,
             command_queue::CommandQueue,
             ui::{
                 SharedUiState,
+                modal::Modal,
                 unit::{handle_units_command, unit_ui},
             },
         },
@@ -20,7 +20,7 @@ pub fn ui(
     shared: &mut SharedUiState,
     song: &mut SongState,
     app_cmd: &mut CommandQueue,
-    app_modal_payload: &mut Option<ModalPayload>,
+    app_modal: &mut Modal,
 ) {
     let mut cmd = None;
     egui::ScrollArea::vertical()
@@ -45,5 +45,5 @@ pub fn ui(
                 ui.label("Select a unit from the left panel");
             }
         });
-    handle_units_command(cmd, song, app_modal_payload);
+    handle_units_command(cmd, song, app_modal);
 }

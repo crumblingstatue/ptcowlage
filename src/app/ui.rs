@@ -1,6 +1,7 @@
 pub mod file_ops;
 mod img;
 pub mod left_panel;
+pub mod modal;
 pub mod top_panel;
 mod unit;
 pub mod windows;
@@ -372,7 +373,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut song,
             &mut app.ui_state.freeplay_piano,
             &mut app.cmd,
-            &mut app.modal_payload,
+            &mut app.modal,
         ),
         Tab::Map => {
             tabs::map::ui(ui, &mut song, &mut app.ui_state.map, &mut app.cmd);
@@ -394,7 +395,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.raw_events,
             app.out.rate,
             &mut app.cmd,
-            &mut app.modal_payload,
+            &mut app.modal,
         ),
         Tab::Voices => tabs::voices::ui(
             ui,
@@ -411,7 +412,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.shared,
             &mut song,
             &mut app.cmd,
-            &mut app.modal_payload,
+            &mut app.modal,
         ),
         Tab::Effects => tabs::effects::ui(
             ui,

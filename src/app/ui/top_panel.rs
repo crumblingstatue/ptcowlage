@@ -1,10 +1,10 @@
 use {
     crate::{
         app::{
-            ModalPayload, SongState,
+            SongState,
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{Tab, piano_freeplay_ui, windows::TitleAndCommentWindow},
+            ui::{Tab, modal::Modal, piano_freeplay_ui, windows::TitleAndCommentWindow},
         },
         audio_out::{OutParams, prepare_song},
     },
@@ -139,9 +139,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     if song.herd.units[migrate_from].mute {
                         continue;
                     }
-                    while let Some(out) =
-                        poly_migrate_single(&mut app.modal_payload, song, migrate_from)
-                    {
+                    while let Some(out) = poly_migrate_single(&mut app.modal, song, migrate_from) {
                         migrate_from = out;
                     }
                 }
@@ -165,14 +163,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             egui::Grid::new("timing_grid")
                 .num_columns(2)
                 .show(ui, |ui| {
-                    timing_popup_ui(
-                        &mut app.out,
-                        &mut app.cmd,
-                        &mut app.modal_payload,
-                        song,
-                        ui,
-                        full_w,
-                    );
+                    timing_popup_ui(&mut app.out, &mut app.cmd, &mut app.modal, song, ui, full_w);
                 });
         });
         ui.menu_button("Help", |ui| {
@@ -377,7 +368,7 @@ fn file_menu_ui(
 fn timing_popup_ui(
     app_out: &mut OutParams,
     app_cmd: &mut CommandQueue,
-    app_modal_payload: &mut Option<ModalPayload>,
+    app_modal: &mut Modal,
     song: &mut SongState,
     ui: &mut egui::Ui,
     full_w: f32,
@@ -495,7 +486,7 @@ fn timing_popup_ui(
     ui.add(egui::DragValue::new(&mut song.herd.smp_end));
     ui.end_row();
     if ui.button("Seek to sample...").clicked() {
-        *app_modal_payload = Some(ModalPayload::SeekToSamplePrompt(song.herd.smp_count));
+        app_modal.seek_to_sample(song.herd.smp_count);
     }
 }
 

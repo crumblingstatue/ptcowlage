@@ -1,10 +1,10 @@
 use {
     crate::{
         app::{
-            ModalPayload,
             command_queue::{Cmd, CommandQueue},
             ui::{
                 group_idx_slider,
+                modal::Modal,
                 unit::{handle_units_command, unit_ui},
                 unit_color, voice_img, voice_img_opt,
             },
@@ -69,7 +69,7 @@ pub fn ui(
     ui_state: &mut RawEventsUiState,
     out_rate: SampleRate,
     app_cmd: &mut CommandQueue,
-    app_modal_payload: &mut Option<ModalPayload>,
+    app_modal: &mut Modal,
 ) {
     top_ui(ui, song, ui_state, app_cmd);
 
@@ -439,7 +439,7 @@ pub fn ui(
             }
         }
     }
-    handle_units_command(unit_cmd, song, app_modal_payload);
+    handle_units_command(unit_cmd, song, app_modal);
     if let Some(cmd) = ev_list_cmd {
         match cmd {
             EventListCmd::Remove { idx } => {

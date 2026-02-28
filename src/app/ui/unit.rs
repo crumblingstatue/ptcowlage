@@ -3,10 +3,9 @@
 use {
     crate::{
         app::{
-            ModalPayload,
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{Tab, group_idx_slider, img, tabs::events::Filter, voice_img},
+            ui::{Tab, group_idx_slider, img, modal::Modal, tabs::events::Filter, voice_img},
         },
         audio_out::SongState,
         egui_ext::ImageExt as _,
@@ -265,11 +264,7 @@ pub fn unit_ui(
     });
 }
 
-pub fn handle_units_command(
-    cmd: Option<UnitsCmd>,
-    song: &mut SongState,
-    app_modal_payload: &mut Option<ModalPayload>,
-) {
+pub fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState, app_modal: &mut Modal) {
     if let Some(cmd) = cmd {
         match cmd {
             UnitsCmd::ToggleSolo { idx } => {
@@ -342,7 +337,7 @@ pub fn handle_units_command(
                 song.herd.units.remove(idx.usize());
             }
             UnitsCmd::MigrateUnitEvents { idx } => {
-                poly_migrate_single(app_modal_payload, song, idx);
+                poly_migrate_single(app_modal, song, idx);
                 song.song.events.sort();
             }
             UnitsCmd::SplitByKey { idx } => {

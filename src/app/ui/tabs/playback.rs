@@ -1,10 +1,11 @@
 use {
     crate::{
         app::{
-            ModalPayload, SongState,
+            SongState,
             command_queue::CommandQueue,
             ui::{
                 FreeplayPianoState, img,
+                modal::Modal,
                 unit::{UnitsCmd, handle_units_command, unit_mute_unmute_all_ui},
                 unit_color, voice_data_img,
             },
@@ -19,7 +20,7 @@ pub fn ui(
     song: &mut SongState,
     piano_state: &mut FreeplayPianoState,
     app_cmd: &mut CommandQueue,
-    app_modal_payload: &mut Option<ModalPayload>,
+    app_modal: &mut Modal,
 ) {
     if !song.song.text.name.is_empty() {
         ui.strong(&song.song.text.name);
@@ -51,7 +52,7 @@ pub fn ui(
         .max_height(ui.available_height() - 32.0)
         .auto_shrink([false, true])
         .show(ui, |ui| {
-            playback_cows_ui(ui, song, piano_state, app_cmd, app_modal_payload);
+            playback_cows_ui(ui, song, piano_state, app_cmd, app_modal);
         });
     ui.label("Cows are interactive. m: mute, s: solo");
 
@@ -66,7 +67,7 @@ fn playback_cows_ui(
     song: &mut SongState,
     piano_state: &mut FreeplayPianoState,
     app_cmd: &mut CommandQueue,
-    app_modal_payload: &mut Option<ModalPayload>,
+    app_modal: &mut Modal,
 ) {
     let mut cmd = None;
     for (i, unit) in song.herd.units.enumerated_mut() {
@@ -144,5 +145,5 @@ fn playback_cows_ui(
             );
         });
     }
-    handle_units_command(cmd, song, app_modal_payload);
+    handle_units_command(cmd, song, app_modal);
 }
