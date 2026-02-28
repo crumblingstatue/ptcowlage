@@ -3,7 +3,8 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                FreeplayPianoState, SharedUiState, img, unit_color, voice_img, waveform_edit_widget,
+                FreeplayPianoState, SharedUiState, img, unit_color, voice_data_img, voice_img,
+                waveform_edit_widget,
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
@@ -305,9 +306,18 @@ pub fn voice_ui_inner(
     ui_state: &mut VoicesUiState,
 ) {
     ui.horizontal(|ui| {
-        ui.selectable_value(&mut ui_state.sel_slot, SelectedSlot::Base, "Base");
-        if voice.extra.is_some() {
-            ui.selectable_value(&mut ui_state.sel_slot, SelectedSlot::Extra, "Extra");
+        ui.selectable_value(
+            &mut ui_state.sel_slot,
+            SelectedSlot::Base,
+            // We still want the image for coord/overtone distinction
+            (voice_data_img(&voice.base.data), "Base"),
+        );
+        if let Some(extra) = &voice.extra {
+            ui.selectable_value(
+                &mut ui_state.sel_slot,
+                SelectedSlot::Extra,
+                (voice_data_img(&extra.data), "Extra"),
+            );
         }
         ui.separator();
         if ui
