@@ -31,13 +31,47 @@ use {
     std::{
         fs::File,
         path::{Path, PathBuf},
-        sync::{Arc, Mutex},
+        sync::{
+            Arc, Mutex, RwLock,
+            atomic::{AtomicBool, AtomicU32, Ordering},
+        },
     },
     tinyaudio::OutputDevice,
 };
 
 pub mod command_queue;
 pub mod ui;
+
+#[derive(Default)]
+pub struct SongLockMy {
+    locked: bool,
+    reason: &'static str,
+}
+
+#[derive(Default)]
+pub struct SongLockShared {
+    cancel_requested: AtomicBool,
+    can_unlock: AtomicBool,
+    /// Stores float data for progress, range 0..1
+    progress: AtomicU32,
+    error: RwLock<String>,
+}
+
+#[derive(Default)]
+pub struct SongLock {
+    my: SongLockMy,
+    shared: Arc<SongLockShared>,
+}
+impl SongLock {
+    fn lock(&mut self, reason: &'static str) {
+        self.my.reason = reason;
+        self.my.locked = true;
+        self.shared.cancel_requested.store(false, Ordering::Relaxed);
+        self.shared.can_unlock.store(false, Ordering::Relaxed);
+        self.shared.progress.store(0, Ordering::Relaxed);
+        self.shared.error.write().unwrap().clear();
+    }
+}
 
 pub struct App {
     song: SongStateHandle,
@@ -57,6 +91,8 @@ pub struct App {
     ///
     /// Spawned on-demand, mainly due to web needing interaction before spawning audio context.
     aux_state: Option<AuxAudioState>,
+    /// If active, we don't try to lock the song Mutex, because it's being used
+    song_lock: SongLock,
     #[cfg(target_arch = "wasm32")]
     web_cmd: crate::web_glue::WebCmdQueueHandle,
 }
@@ -162,6 +198,7 @@ impl App {
             modal,
             cmd: CommandQueue::default(),
             aux_state: None,
+            song_lock: SongLock::default(),
             #[cfg(target_arch = "wasm32")]
             web_cmd: Default::default(),
         };
@@ -458,24 +495,28 @@ impl App {
             FileOp::ExportWav => {
                 // Disable audio device for export duration
                 self.pt_audio_dev = None;
-                let mut song = self.song.lock().unwrap();
-                match crate::util::export_wav(&mut song) {
-                    Ok(data) => {
-                        if let Err(e) = std::fs::write(path, data) {
-                            self.modal.msg(e);
+                let song = self.song.clone();
+                self.song_lock.lock("Exporting .wav ...");
+                let song_lock = self.song_lock.shared.clone();
+
+                std::thread::spawn(move || {
+                    let mut song = song.lock().unwrap();
+                    match crate::util::export_wav(
+                        &mut song,
+                        &song_lock.progress,
+                        &song_lock.cancel_requested,
+                    ) {
+                        Ok(data) => {
+                            if let Err(e) = std::fs::write(path, data) {
+                                *song_lock.error.write().unwrap() = e.to_string();
+                            }
+                        }
+                        Err(e) => {
+                            *song_lock.error.write().unwrap() = e.to_string();
                         }
                     }
-                    Err(e) => {
-                        self.modal.msg(e);
-                    }
-                }
-                // We can restart audio thread now
-                self.cmd.push(Cmd::ReplaceAudioThread);
-                post_load_prep(
-                    &mut song,
-                    self.out.rate,
-                    &mut self.ui_state.freeplay_piano.toot,
-                );
+                    song_lock.can_unlock.store(true, Ordering::Relaxed);
+                });
             }
             FileOp::ExportPtvoice { voice } => {
                 let song = self.song.lock().unwrap();
@@ -547,6 +588,45 @@ fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint();
+        if self.song_lock.my.locked {
+            egui::Modal::new("song_lock".into()).show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(self.song_lock.my.reason);
+                    ui.spinner();
+                });
+                let progress =
+                    f32::from_bits(self.song_lock.shared.progress.load(Ordering::Relaxed));
+                ui.add(egui::ProgressBar::new(progress).show_percentage());
+                if ui.button("Cancel").clicked() {
+                    self.song_lock
+                        .shared
+                        .cancel_requested
+                        .store(true, Ordering::Relaxed);
+                }
+            });
+            if self.song_lock.shared.can_unlock.load(Ordering::Relaxed) {
+                // We can restart audio thread now
+                self.cmd.push(Cmd::ReplaceAudioThread);
+                post_load_prep(
+                    &mut self.song.lock().unwrap(),
+                    self.out.rate,
+                    &mut self.ui_state.freeplay_piano.toot,
+                );
+                self.song_lock.my.locked = false;
+                let err = self.song_lock.shared.error.read().unwrap();
+                if err.is_empty() {
+                    self.cmd.toast(
+                        ToastKind::Success,
+                        ".wav successfully exported!".into(),
+                        5.0,
+                    );
+                } else {
+                    self.cmd
+                        .toast(ToastKind::Error, format!("Error exporting wav: {err}"), 5.0);
+                }
+            }
+            return;
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| ui::top_panel::top_panel(self, ui));
         if self.ui_state.show_left_panel() {
             egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));

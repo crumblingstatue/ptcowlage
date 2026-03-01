@@ -1,7 +1,10 @@
 use {
     crate::audio_out::{SongState, prepare_song},
     ptcow::ChNum,
-    std::io::Write,
+    std::{
+        io::Write,
+        sync::atomic::{AtomicBool, AtomicU32, Ordering},
+    },
 };
 
 /// 領域展開
@@ -88,7 +91,11 @@ pub fn write_wav<W: Write>(mut w: W, n_ch: ChNum, samples: &[i16]) -> std::io::R
     Ok(())
 }
 
-pub fn export_wav(song: &mut SongState) -> std::io::Result<Vec<u8>> {
+pub fn export_wav(
+    song: &mut SongState,
+    progress: &AtomicU32,
+    cancel: &AtomicBool,
+) -> std::io::Result<Vec<u8>> {
     let mut samp_data = Vec::new();
     let mut buf = [0; 16_384];
     let mut wav_out = Vec::new();
@@ -97,7 +104,12 @@ pub fn export_wav(song: &mut SongState) -> std::io::Result<Vec<u8>> {
     // Make sure we can moo
     song.herd.moo_end = false;
     while song.herd.moo(&song.ins, &song.song, &mut buf, true) {
+        if cancel.load(Ordering::Relaxed) {
+            return Err(std::io::Error::other("Cancelled"));
+        }
         samp_data.extend_from_slice(&buf);
+        let progress_ratio = song.herd.smp_count as f32 / song.herd.smp_end as f32;
+        progress.store(progress_ratio.to_bits(), Ordering::Relaxed);
     }
     write_wav(&mut wav_out, ChNum::Stereo, &samp_data)?;
     Ok(wav_out)
