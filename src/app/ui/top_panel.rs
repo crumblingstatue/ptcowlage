@@ -354,9 +354,15 @@ fn file_menu_ui(
         app_cmd.push(Cmd::PromptImportOrg);
     }
     ui.separator();
+    #[cfg(not(target_arch = "wasm32"))]
     if ui.button("Export wav").clicked() {
         app_cmd.push(Cmd::PromptExportWav);
     }
+    #[cfg(target_arch = "wasm32")]
+    ui.hyperlink_to(
+        " Get the desktop version for .wav export and more",
+        "https://github.com/crumblingstatue/ptcowlage?tab=readme-ov-file#building",
+    );
     ui.separator();
     if cfg!(not(target_arch = "wasm32")) {
         if ui.button("Quit").clicked() {

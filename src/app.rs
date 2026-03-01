@@ -313,25 +313,6 @@ impl App {
                             ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
                         (data, "out.ptcop")
                     }
-                    FileOp::ExportWav => {
-                        use crate::audio_out::prepare_song;
-
-                        let mut song = self.song.lock().unwrap();
-                        // Kill audio thread
-                        self.pt_audio_dev = None;
-                        let wav = match crate::util::export_wav(&mut song) {
-                            Ok(wav) => wav,
-                            Err(e) => {
-                                self.modal.msg(e);
-                                return;
-                            }
-                        };
-                        // Now we can resume playback
-                        prepare_song(&mut song, true);
-                        song.herd.moo_end = false;
-                        self.cmd.push(Cmd::ReplaceAudioThread);
-                        (wav, "out.wav")
-                    }
                     FileOp::ExportPtnoise { voice } => {
                         let song = self.song.lock().unwrap();
                         let ptcow::VoiceData::Noise(noise) = &song.ins.voices[voice].base.data
