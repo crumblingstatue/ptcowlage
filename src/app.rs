@@ -511,7 +511,7 @@ impl App {
                 }
                 self.cmd.toast(
                     ToastKind::Success,
-                    format!("Exported to {}", path.display()),
+                    format_args!("Exported to {}", path.display()),
                     5.0,
                 );
             }
@@ -529,7 +529,7 @@ impl App {
                 }
                 self.cmd.toast(
                     ToastKind::Success,
-                    format!("Exported to {}", path.display()),
+                    format_args!("Exported to {}", path.display()),
                     5.0,
                 );
             }
@@ -984,8 +984,11 @@ impl App {
             let song = self.song.lock().unwrap();
             let serialized = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
             std::fs::write(path, serialized).unwrap();
-            self.cmd
-                .toast(ToastKind::Info, format!("Saved {}", path.display()), 3.0);
+            self.cmd.toast(
+                ToastKind::Info,
+                format_args!("Saved {}", path.display()),
+                3.0,
+            );
         }
     }
     /// Replace already running ptcow audio thread with a new one

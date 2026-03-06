@@ -568,7 +568,11 @@ fn top_ui(
             let orig_len = song.song.events.len();
             crate::pxtone_misc::clean_losing_events(&mut song.song.events);
             let n_removed = orig_len - song.song.events.len();
-            app_cmd.toast(ToastKind::Info, format!("Removed {n_removed} events"), 8.0);
+            app_cmd.toast(
+                ToastKind::Info,
+                format_args!("Removed {n_removed} events"),
+                8.0,
+            );
             ui_state.filter_needs_recalc = true;
         }
         // Recalculate filtered events if filter changed
