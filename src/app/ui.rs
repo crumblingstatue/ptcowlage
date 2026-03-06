@@ -446,6 +446,7 @@ pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, 
 
     let hor_ratio = rect.width() / samples.len() as f32;
     let lt = rect.left_top();
+    let lb = rect.left_bottom();
 
     // Load previous pointer pos from temp storage
     let prev_pointer_pos: Option<egui::Pos2> = ui.data(|d| d.get_temp(id));
@@ -474,7 +475,7 @@ pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, 
         for p in line_points_between(a, b) {
             let xi = p.x.round() as isize;
             if xi >= 0 && xi < samples.len() as isize {
-                samples[xi as usize] = p.y.clamp(0.0, 255.0) as u8;
+                samples[xi as usize] = 255 - p.y.clamp(0.0, 255.0) as u8;
             }
         }
     }
@@ -497,7 +498,7 @@ pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, 
     let points: Vec<egui::Pos2> = samples
         .iter()
         .enumerate()
-        .map(|(i, val)| egui::Pos2::new(lt.x + i as f32 * hor_ratio, lt.y + f32::from(*val)))
+        .map(|(i, val)| egui::Pos2::new(lt.x + i as f32 * hor_ratio, lb.y - f32::from(*val)))
         .collect();
 
     painter.line(points, egui::Stroke::new(1.0, egui::Color32::YELLOW));
