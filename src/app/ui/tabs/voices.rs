@@ -823,7 +823,7 @@ fn draw_overtone_wavebox(ui: &mut egui::Ui, volume: i16, points: &[OsciPt]) {
 
 fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16) {
     let reso = f32::from(*resolution);
-    let (rect, _re) = ui.allocate_exact_size(egui::vec2(reso, reso), egui::Sense::click_and_drag());
+    let (rect, _re) = ui.allocate_exact_size(egui::vec2(reso, 256.), egui::Sense::click_and_drag());
     let p = ui.painter_at(rect);
     p.rect_filled(rect, 2.0, PAL.wave_bg);
     let lc = rect.left_center();
