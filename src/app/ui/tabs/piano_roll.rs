@@ -229,7 +229,13 @@ fn roll_ui_inner(
 ) {
     // We make up a value for number of ticks if there are no events in the song (empty song)
     // TODO: Maybe we can do something more clever here
-    let last_tick = song.song.events.last().map_or(5000, |ev| ev.tick);
+    let last_note_tick = song.song.events.last().map_or(5000, |ev| ev.tick);
+    let last_meas_tick =
+        ptcow::timing::meas_to_tick(song.song.master.end_meas(), song.song.master.timing);
+    // We want the UI to encompass the last meas line.
+    // This is especially useful if the user wants to allocate a bunch of empty space at the end
+    // to place notes into. They can just increase the value of the last meas.
+    let last_tick = std::cmp::max(last_note_tick, last_meas_tick);
     let mut approx_end = last_tick as f32 / state.tick_div;
     // Safety for ui alloc
     if !approx_end.is_finite() {
