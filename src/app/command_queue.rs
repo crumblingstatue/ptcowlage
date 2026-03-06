@@ -75,10 +75,10 @@ impl CommandQueue {
     pub fn pop(&mut self) -> Option<Cmd> {
         self.queue.pop_front()
     }
-    pub fn toast(&mut self, kind: ToastKind, text: String, duration: f64) {
+    pub fn toast(&mut self, kind: ToastKind, msg: impl std::fmt::Display, duration: f64) {
         self.push(Cmd::Toast {
             kind,
-            text,
+            text: msg.to_string(),
             duration,
         });
     }

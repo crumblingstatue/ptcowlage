@@ -492,7 +492,7 @@ fn top_ui(
                     }
                 }
                 Err(e) => {
-                    app_cmd.toast(ToastKind::Error, e.to_string(), 5.0);
+                    app_cmd.toast(ToastKind::Error, e, 5.0);
                 }
             }
             ui_state.cmd_string_buf.clear();

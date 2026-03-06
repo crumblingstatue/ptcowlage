@@ -596,11 +596,8 @@ impl eframe::App for App {
                 self.song_lock.my.locked = false;
                 let err = self.song_lock.shared.error.read().unwrap();
                 if err.is_empty() {
-                    self.cmd.toast(
-                        ToastKind::Success,
-                        ".wav successfully exported!".into(),
-                        5.0,
-                    );
+                    self.cmd
+                        .toast(ToastKind::Success, ".wav successfully exported!", 5.0);
                 } else {
                     self.cmd
                         .toast(ToastKind::Error, format!("Error exporting wav: {err}"), 5.0);
@@ -974,12 +971,11 @@ impl App {
                         .toast(ToastKind::Info, format!("Reloaded {}", path.display()), 3.0);
                 }
                 Err(e) => {
-                    self.cmd.toast(ToastKind::Error, e.to_string(), 6.0);
+                    self.cmd.toast(ToastKind::Error, e, 6.0);
                 }
             },
             None => {
-                self.cmd
-                    .toast(ToastKind::Error, "No file to reload".into(), 5.0);
+                self.cmd.toast(ToastKind::Error, "No file to reload", 5.0);
             }
         }
     }
