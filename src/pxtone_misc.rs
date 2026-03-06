@@ -25,6 +25,7 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
         for j in i + 1..n_events {
             let eve2 = &mut song.events[j];
             let eve2_tick = eve2.tick;
+            let eve2_unit = eve2.unit;
             if eve2.unit != src_unit {
                 continue;
             }
@@ -42,6 +43,7 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
                     for k in j - 3..j {
                         if let Some(eve3) = song.events.get_mut(k)
                             && eve3.tick == eve2_tick
+                            && eve3.unit == eve2_unit
                             && let EventPayload::Key(_)
                             | EventPayload::Velocity(_)
                             | EventPayload::Volume(_) = eve3.payload
