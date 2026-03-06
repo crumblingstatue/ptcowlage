@@ -4,7 +4,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 FreeplayPianoState, SharedUiState, img, unit_color, voice_data_img, voice_img,
-                waveform_edit_widget,
+                waveform_edit_widget_16_bit_interleaved_stereo, waveform_edit_widget_u8,
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
@@ -375,9 +375,9 @@ pub fn voice_ui_inner(
                         ui.label("Number of samples");
                         ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
                     });
-                    waveform_edit_widget(
+                    waveform_edit_widget_16_bit_interleaved_stereo(
                         ui,
-                        &mut slot.inst.sample_buf,
+                        bytemuck::cast_slice_mut(&mut slot.inst.sample_buf),
                         256.,
                         egui::Id::new("smp_buf"),
                     );
@@ -392,7 +392,7 @@ pub fn voice_ui_inner(
                         }
                     });
                     if !slot.inst.env.is_empty() {
-                        waveform_edit_widget(
+                        waveform_edit_widget_u8(
                             ui,
                             &mut slot.inst.env,
                             256.0,

@@ -428,7 +428,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
 /// Draws and edits a waveform.
 /// `samples` are u8 values (0..255) representing the waveform.
 /// `height` is the display height of the waveform rectangle.
-pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, id: egui::Id) {
+pub fn waveform_edit_widget_u8(ui: &mut egui::Ui, samples: &mut [u8], height: f32, id: egui::Id) {
     // We avoid rendering huge waveforms, which can tank performance, and cause audio glitching
     // due to lock contention
     if samples.len() > 32_768 {
@@ -502,6 +502,114 @@ pub fn waveform_edit_widget(ui: &mut egui::Ui, samples: &mut [u8], height: f32, 
         .collect();
 
     painter.line(points, egui::Stroke::new(1.0, egui::Color32::YELLOW));
+}
+
+/// Draws and edits an interleaved stereo signed 16 bit waveform.
+/// `height` is the display height of the waveform rectangle.
+pub fn waveform_edit_widget_16_bit_interleaved_stereo(
+    ui: &mut egui::Ui,
+    samples: &mut [i16],
+    height: f32,
+    id: egui::Id,
+) {
+    // We avoid rendering huge waveforms, which can tank performance, and cause audio glitching
+    // due to lock contention
+    if samples.len() > 32_768 {
+        ui.label("Sample data too large to display");
+        return;
+    }
+    // Unique ID to store previous pointer pos across frames
+    let id = ui.id().with(id);
+
+    // Allocate widget space
+    let (rect, resp) = ui.allocate_exact_size(
+        egui::Vec2::new(ui.available_width(), height),
+        egui::Sense::click_and_drag(),
+    );
+
+    let hor_ratio = rect.width() / (samples.len() / 2) as f32;
+    let lc = rect.left_center();
+
+    // Load previous pointer pos from temp storage
+    let prev_pointer_pos: Option<egui::Pos2> = ui.data(|d| d.get_temp(id));
+
+    // Get latest pointer pos (egui 0.33)
+    let (pointer_pos, lmb, rmb) = ui.input(|i| {
+        (
+            i.pointer.latest_pos(),
+            i.pointer.primary_down(),
+            i.pointer.secondary_down(),
+        )
+    });
+
+    // ---- Editing ----
+    if resp.dragged()
+        && let (Some(pos), Some(prev)) = (pointer_pos, prev_pointer_pos)
+    {
+        // Only draw inside the rect
+        let pos = egui::Pos2::new(
+            pos.x.clamp(rect.left(), rect.right()),
+            pos.y.clamp(rect.top(), rect.bottom()),
+        );
+        let prev = egui::Pos2::new(
+            prev.x.clamp(rect.left(), rect.right()),
+            prev.y.clamp(rect.top(), rect.bottom()),
+        );
+
+        // Convert to sample-space coordinates
+        let a = egui::Pos2::new((prev.x - lc.x) / (hor_ratio / 2.0), lc.y - prev.y);
+        let b = egui::Pos2::new((pos.x - lc.x) / (hor_ratio / 2.0), lc.y - pos.y);
+
+        for p in line_points_between(a, b) {
+            let xi = p.x.round() as isize;
+            if xi >= 0 {
+                let val = (p.y * 256.0) as i16;
+                if lmb {
+                    let idx = if xi % 2 == 0 { xi } else { xi + 1 };
+                    if let Some(samp) = samples.get_mut(idx as usize) {
+                        *samp = val;
+                    }
+                }
+                if rmb {
+                    let idx = if xi % 2 != 0 { xi } else { xi + 1 };
+                    if let Some(samp) = samples.get_mut(idx as usize) {
+                        *samp = val;
+                    }
+                }
+            }
+        }
+    }
+
+    // Save current pointer pos for next frame
+    if let Some(pos) = pointer_pos {
+        ui.data_mut(|d| d.insert_temp(id, pos));
+    } else {
+        // Clear if pointer not present
+        ui.data_mut(|d| d.remove::<egui::Pos2>(id));
+    }
+
+    // ---- Rendering ----
+    let painter = ui.painter_at(rect);
+
+    // Background
+    painter.rect_filled(rect, 2.0, egui::Color32::BLACK);
+
+    // Waveform line
+    let (points_l, points_r): (Vec<egui::Pos2>, Vec<egui::Pos2>) = samples
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .enumerate()
+        .map(|(i, [l, r])| {
+            (
+                egui::Pos2::new(lc.x + i as f32 * hor_ratio, lc.y - f32::from(*l) / 256.),
+                egui::Pos2::new(lc.x + i as f32 * hor_ratio, lc.y - f32::from(*r) / 256.),
+            )
+        })
+        .collect();
+
+    painter.line(points_l, egui::Stroke::new(1.0, egui::Color32::RED));
+    painter.line(points_r, egui::Stroke::new(1.0, egui::Color32::BLUE));
 }
 
 /// Bresenham line iterator (integer steps in sample space)
