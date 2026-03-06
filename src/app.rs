@@ -1026,9 +1026,21 @@ fn post_load_prep(
     // Set a default toot unit if units aren't empty
     let has_units = !song_ref.herd.units.is_empty();
     if has_units {
-        *freeplay_toot = Some(UnitIdx(0));
+        match freeplay_toot {
+            Some(val) => {
+                // Reset the toot value if it's out of bounds, otherwise leave it alone.
+                if val.0 >= song_ref.herd.units.len() {
+                    *val = UnitIdx(0);
+                }
+            }
+            // If it's not set, set it to unit 0
+            None => *freeplay_toot = Some(UnitIdx(0)),
+        }
         // Set initial voices, etc.
         do_tick0_events(song_ref);
+    } else {
+        // If there are no units, set it to `None`.
+        *freeplay_toot = None;
     }
     // Make sure `moo_end` is not set, so mooing does something
     song_ref.herd.moo_end = false;
