@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use arrayvec::ArrayVec;
 use ptcow::{
     DEFAULT_KEY, EnvPt, EnvelopeSrc, EveList, Event, EventPayload, NoiseData,
-    NoiseDesignOscillator, NoiseDesignUnit, NoiseDesignUnitFlags, NoiseType, OsciPt, Song, Unit,
-    UnitIdx, VoiceIdx, WaveData, WaveDataPoints,
+    NoiseDesignOscillator, NoiseDesignUnit, NoiseType, OsciPt, Song, Unit, UnitIdx, VoiceIdx,
+    WaveData, WaveDataPoints,
 };
 
 use crate::audio_out::SongState;
@@ -258,7 +258,6 @@ pub fn bass_drum() -> NoiseData {
                     invert: false,
                 },
                 volu: NoiseDesignOscillator::default(),
-                ser_flags: NoiseDesignUnitFlags::OSC_MAIN,
             }][..],
         )
         .unwrap(),

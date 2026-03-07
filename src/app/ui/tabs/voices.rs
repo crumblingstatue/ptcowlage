@@ -14,9 +14,9 @@ use {
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
-        Bps, ChNum, EnvPt, EnvelopeSrc, NoiseDesignOscillator, NoiseDesignUnit,
-        NoiseDesignUnitFlags, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice,
-        VoiceData, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints, noise_to_pcm,
+        Bps, ChNum, EnvPt, EnvelopeSrc, NoiseDesignOscillator, NoiseDesignUnit, NoiseTable,
+        NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags, VoiceIdx, VoiceUnit,
+        WaveData, WaveDataPoints, noise_to_pcm,
     },
     rustc_hash::FxHashMap,
 };
@@ -509,18 +509,8 @@ fn play_sound_ui(
     }
 }
 
-/// Returns whether the serialize checkbox was clicked
-fn osci_ui(
-    ui: &mut egui::Ui,
-    osci: &mut NoiseDesignOscillator,
-    name: &str,
-    mut serialize: bool,
-) -> bool {
-    let mut ser_clicked = false;
-    ui.horizontal(|ui| {
-        ui.heading(name);
-        ser_clicked = ui.checkbox(&mut serialize, "serialize").clicked();
-    });
+fn osci_ui(ui: &mut egui::Ui, osci: &mut NoiseDesignOscillator, name: &str) {
+    ui.strong(name);
     ui.indent("osci", |ui| {
         ui.horizontal_wrapped(|ui| {
             ui.style_mut().spacing.slider_width = ui.available_width() - 160.0;
@@ -558,7 +548,6 @@ fn osci_ui(
             ui.checkbox(&mut osci.invert, "invert");
         });
     });
-    ser_clicked
 }
 
 struct Pal {
@@ -626,33 +615,9 @@ fn voice_unit_ui(
                 ui.label("pan");
                 ui.add(egui::Slider::new(&mut unit.pan, -100..=100));
             });
-            let clicked = osci_ui(
-                ui,
-                &mut unit.main,
-                "main",
-                unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN),
-            );
-            if clicked {
-                unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_MAIN);
-            }
-            let clicked = osci_ui(
-                ui,
-                &mut unit.freq,
-                "freq",
-                unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ),
-            );
-            if clicked {
-                unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_FREQ);
-            }
-            let clicked = osci_ui(
-                ui,
-                &mut unit.volu,
-                "volu",
-                unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU),
-            );
-            if clicked {
-                unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_VOLU);
-            }
+            osci_ui(ui, &mut unit.main, "main");
+            osci_ui(ui, &mut unit.freq, "freq");
+            osci_ui(ui, &mut unit.volu, "volu");
             ui.horizontal(|ui| {
                 ui.label("Envelope points");
                 if ui
