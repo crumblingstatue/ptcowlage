@@ -1118,6 +1118,15 @@ fn loop_points_popup_button(ui: &mut egui::Ui, song: &mut SongState) {
                 }
             });
 
+            ui.separator();
+            ui.horizontal(|ui| {
+                ui.label("Repeat sample");
+                ui.add(egui::DragValue::new(&mut song.herd.smp_repeat));
+            });
+            ui.horizontal(|ui| {
+                ui.label("End sample");
+                ui.add(egui::DragValue::new(&mut song.herd.smp_end));
+            });
             if ui.button("Reset").clicked() {
                 loop_points_changed = true;
                 ui.close();
