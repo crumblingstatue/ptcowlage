@@ -104,7 +104,9 @@ fn unit_ui(
 
         let re = ui.label(egui::RichText::new(&unit.name).color(c));
         if n != 0 {
-            let w = (n.abs() as f32 / 5000.0).clamp(4.0, ui.available_width());
+            // We need to ensure min <= max when clamping, otherwise panic
+            let max = f32::max(4.0, ui.available_width());
+            let w = (n.abs() as f32 / 5000.0).clamp(4.0, max);
             let left_center = ui.cursor().left_center();
             ui.painter().line_segment(
                 [left_center, left_center + egui::vec2(w, 0.0)],
