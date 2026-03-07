@@ -1575,7 +1575,7 @@ dependencies = [
 [[package]]
 name = "mid2ptcop"
 version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/mid2ptcop.git#3f4a358663ec0ba3adf2f61fc86962471cb2b185"
+source = "git+https://github.com/crumblingstatue/mid2ptcop.git#7d958d0c997e8294db6b41e75647fb14fdac3c38"
 dependencies = [
  "midly",
  "ptcow",
@@ -2270,8 +2270,9 @@ checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
 
 [[package]]
 name = "ptcow"
-version = "0.4.0"
-source = "git+https://github.com/crumblingstatue/ptcow.git#bd01f8c23e9bbd8e3e96b41bb477c92b7bd1b777"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f8145ab90ddc88f712ab2e6f157b726d8cd065df4059bcc03431f49cc853c66"
 dependencies = [
  "arrayvec",
  "bitflags 2.11.0",
