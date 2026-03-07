@@ -33,6 +33,7 @@ pub struct VoicesUiState {
     selected_noise_unit: usize,
     /// A "reset slot", and 3 manually saved slots for quicksaving/loading the currently edited voice
     save_slots: [Option<Voice>; 4],
+    last_hovered_wave_idx: Option<usize>,
 }
 
 impl VoicesUiState {
@@ -730,7 +731,7 @@ fn voice_unit_ui(
             match &mut wave_data.points {
                 WaveDataPoints::Coord { points, resolution } => {
                     ui.horizontal_top(|ui| {
-                        draw_coord_wavebox(ui, points, resolution);
+                        draw_coord_wavebox(ui, points, resolution, ui_state.last_hovered_wave_idx);
                         ui.horizontal_wrapped(|ui| {
                             ui.label("Resolution");
                             ui.add(egui::DragValue::new(resolution)).changed();
@@ -756,15 +757,28 @@ fn voice_unit_ui(
                                 }
                             }
                             ui.end_row();
-                            for pt in &mut *points {
-                                ui.add(egui::DragValue::new(&mut pt.x).prefix("x ").range(0..=255))
-                                    .changed();
-                                ui.add(
-                                    egui::DragValue::new(&mut pt.y)
-                                        .prefix("y ")
-                                        .range(-128..=127),
-                                )
-                                .changed();
+                            // Highlight the hovered control in the wave visualization
+                            ui_state.last_hovered_wave_idx = None;
+                            for (i, pt) in points.iter_mut().enumerate() {
+                                if ui
+                                    .add(
+                                        egui::DragValue::new(&mut pt.x).prefix("x ").range(0..=255),
+                                    )
+                                    .hovered()
+                                {
+                                    ui_state.last_hovered_wave_idx = Some(i);
+                                }
+                                if ui
+                                    .add(
+                                        egui::DragValue::new(&mut pt.y)
+                                            .prefix("y ")
+                                            .range(-128..=127),
+                                    )
+                                    .hovered()
+                                {
+                                    ui_state.last_hovered_wave_idx = Some(i);
+                                }
+                                ui.add_space(5.0);
                             }
                         });
                     });
@@ -928,7 +942,12 @@ fn draw_overtone_wavebox(ui: &mut egui::Ui, volume: i16, points: &[OsciPt]) {
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
 }
 
-fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16) {
+fn draw_coord_wavebox(
+    ui: &mut egui::Ui,
+    points: &[OsciPt],
+    resolution: &mut u16,
+    highlight: Option<usize>,
+) {
     let reso = f32::from(*resolution);
     let (rect, _re) = ui.allocate_exact_size(egui::vec2(reso, 256.), egui::Sense::click_and_drag());
     let p = ui.painter_at(rect);
@@ -940,7 +959,11 @@ fn draw_coord_wavebox(ui: &mut egui::Ui, points: &[OsciPt], resolution: &mut u16
         .collect();
     // pxtone Voice seems to add this point when drawing it
     egui_points.push(rect.right_center());
+    let hi_point = highlight.map(|idx| egui_points[idx]);
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
+    if let Some(pt) = hi_point {
+        p.circle_filled(pt, 4.0, egui::Color32::YELLOW);
+    }
 }
 
 fn draw_envelope_src(env_src: &EnvelopeSrc, ui: &mut egui::Ui, width: u16, sel_slot: SelectedSlot) {
