@@ -336,8 +336,9 @@ impl SubSliceUi {
         ui.horizontal(|ui| {
             ui.label("↔");
             const MAX: usize = 262_144;
+            let min = std::cmp::min(32, slice.len());
             let max = std::cmp::min(MAX, slice.len());
-            ui.add(egui::Slider::new(&mut self.max_size, 32..=max).step_by(f64::from(step_by)));
+            ui.add(egui::Slider::new(&mut self.max_size, min..=max).step_by(f64::from(step_by)));
         });
         let end = slice.len().saturating_sub(self.max_size);
         ui.add_enabled_ui(end != 0, |ui| {
@@ -444,14 +445,19 @@ pub fn voice_ui_inner(
                     ui.label("Number of samples");
                     ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
                 });
-                let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
-                let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
-                waveform_edit_widget_16_bit_interleaved_stereo(
-                    ui,
-                    view,
-                    256.,
-                    egui::Id::new("smp_buf"),
-                );
+                if !slot.inst.sample_buf.is_empty() {
+                    let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
+                    let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
+                    waveform_edit_widget_16_bit_interleaved_stereo(
+                        ui,
+                        view,
+                        256.,
+                        egui::Id::new("smp_buf"),
+                    );
+                } else {
+                    // Avoid (bytemuck) panic on empty sample buffer
+                    ui.colored_label(egui::Color32::GRAY, "No sample data");
+                }
                 ui.horizontal(|ui| {
                     ui.label("Envelope");
                     let mut len = slot.inst.env.len();
