@@ -29,6 +29,7 @@ pub struct VoicesUiState {
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
     inst_sub: SubSliceUi,
     inst_env_sub: SubSliceUi,
+    selected_noise_unit: usize,
 }
 
 impl VoicesUiState {
@@ -37,6 +38,7 @@ impl VoicesUiState {
         self.sel_slot = SelectedSlot::Base;
         self.inst_sub = SubSliceUi::default();
         self.inst_env_sub = SubSliceUi::default();
+        self.selected_noise_unit = 0;
     }
 }
 
@@ -584,84 +586,94 @@ fn voice_unit_ui(
 ) {
     match &mut slot.data {
         VoiceData::Noise(noise) => {
-            ui.label("smp num 44k");
-            ui.add(egui::DragValue::new(&mut noise.smp_num_44k));
-            let mut i = 0;
             let total = noise.units.len();
-            noise.units.retain(|unit| {
-                let mut retain = true;
-                ui.horizontal(|ui| {
-                    ui.strong(format!("design unit {}/{total}", i + 1));
-                    if ui.button("-").clicked() {
-                        retain = false;
+            ui.horizontal(|ui| {
+                ui.label("Number of samples");
+                ui.add(egui::DragValue::new(&mut noise.smp_num_44k));
+            });
+            ui.horizontal(|ui| {
+                for i in 0..total {
+                    if ui
+                        .selectable_label(
+                            ui_state.selected_noise_unit == i,
+                            (img::DRUM, format!("unit {i}")),
+                        )
+                        .clicked()
+                    {
+                        ui_state.selected_noise_unit = i;
                     }
-                });
-
-                ui.indent(egui::Id::new("du").with(i), |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("pan");
-                        ui.add(egui::Slider::new(&mut unit.pan, -100..=100));
+                }
+                if ui.button("+").clicked() {
+                    noise.units.push(NoiseDesignUnit::default());
+                }
+                if ui
+                    .add_enabled(!noise.units.is_empty(), egui::Button::new("-"))
+                    .clicked()
+                {
+                    noise.units.remove(ui_state.selected_noise_unit);
+                    ui_state.selected_noise_unit = 0;
+                }
+            });
+            let Some(unit) = noise.units.get_mut(ui_state.selected_noise_unit) else {
+                ui.label("No noise unit selected");
+                return;
+            };
+            ui.horizontal(|ui| {
+                ui.label("pan");
+                ui.add(egui::Slider::new(&mut unit.pan, -100..=100));
+            });
+            let clicked = osci_ui(
+                ui,
+                &mut unit.main,
+                "main",
+                unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN),
+            );
+            if clicked {
+                unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_MAIN);
+            }
+            let clicked = osci_ui(
+                ui,
+                &mut unit.freq,
+                "freq",
+                unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ),
+            );
+            if clicked {
+                unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_FREQ);
+            }
+            let clicked = osci_ui(
+                ui,
+                &mut unit.volu,
+                "volu",
+                unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU),
+            );
+            if clicked {
+                unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_VOLU);
+            }
+            ui.horizontal(|ui| {
+                ui.label("Envelope points");
+                if ui
+                    .add_enabled(!unit.enves.is_full(), egui::Button::new("+"))
+                    .clicked()
+                {
+                    unit.enves.push(EnvPt { x: 1, y: 1 });
+                }
+                if ui
+                    .add_enabled(!unit.enves.is_empty(), egui::Button::new("-"))
+                    .clicked()
+                {
+                    unit.enves.pop();
+                }
+            });
+            ui.horizontal(|ui| {
+                for env_pt in &mut unit.enves {
+                    ui.group(|ui| {
+                        ui.add(egui::DragValue::new(&mut env_pt.x).prefix("x "));
+                        ui.add(egui::DragValue::new(&mut env_pt.y).prefix("y "));
                     });
-                    let clicked = osci_ui(
-                        ui,
-                        &mut unit.main,
-                        "main",
-                        unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN),
-                    );
-                    if clicked {
-                        unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_MAIN);
-                    }
-                    let clicked = osci_ui(
-                        ui,
-                        &mut unit.freq,
-                        "freq",
-                        unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ),
-                    );
-                    if clicked {
-                        unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_FREQ);
-                    }
-                    let clicked = osci_ui(
-                        ui,
-                        &mut unit.volu,
-                        "volu",
-                        unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU),
-                    );
-                    if clicked {
-                        unit.ser_flags.toggle(NoiseDesignUnitFlags::OSC_VOLU);
-                    }
-                    ui.horizontal(|ui| {
-                        ui.label("Envelope points");
-                        if ui
-                            .add_enabled(!unit.enves.is_full(), egui::Button::new("+"))
-                            .clicked()
-                        {
-                            unit.enves.push(EnvPt { x: 1, y: 1 });
-                        }
-                        if ui
-                            .add_enabled(!unit.enves.is_empty(), egui::Button::new("-"))
-                            .clicked()
-                        {
-                            unit.enves.pop();
-                        }
-                    });
-                    ui.horizontal(|ui| {
-                        for env_pt in &mut unit.enves {
-                            ui.group(|ui| {
-                                ui.add(egui::DragValue::new(&mut env_pt.x).prefix("x "));
-                                ui.add(egui::DragValue::new(&mut env_pt.y).prefix("y "));
-                            });
-                        }
-                    });
-                });
-                i += 1;
-
-                retain
+                }
             });
             ui.separator();
 
-            if ui.button("+Add unit").clicked() {
-                noise.units.push(NoiseDesignUnit::default());
-            }
             let tbl = NoiseTable::generate();
             slot.inst.sample_buf = noise_to_pcm(noise, &tbl).smp;
             slot.inst.num_samples = noise.smp_num_44k;
