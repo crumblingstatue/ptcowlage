@@ -802,6 +802,9 @@ impl App {
             Cmd::OpenVoice(idx) => {
                 self.ui_state.tab = Tab::Voices;
                 self.ui_state.voices.selected_idx = idx;
+                self.ui_state
+                    .voices
+                    .soft_reset(&self.song.lock().unwrap().ins.voices);
             }
             Cmd::OverwriteEvent { idx, payload } => {
                 let mut song = self.song.lock().unwrap();
