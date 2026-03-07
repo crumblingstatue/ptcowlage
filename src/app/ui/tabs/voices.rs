@@ -747,10 +747,14 @@ fn voice_unit_ui(
                             }
                             ui.end_row();
                             for pt in &mut *points {
-                                ui.add(egui::DragValue::new(&mut pt.x).prefix("x "))
+                                ui.add(egui::DragValue::new(&mut pt.x).prefix("x ").range(0..=255))
                                     .changed();
-                                ui.add(egui::DragValue::new(&mut pt.y).prefix("y "))
-                                    .changed();
+                                ui.add(
+                                    egui::DragValue::new(&mut pt.y)
+                                        .prefix("y ")
+                                        .range(-128..=127),
+                                )
+                                .changed();
                             }
                         });
                     });
