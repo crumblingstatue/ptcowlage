@@ -27,6 +27,17 @@ pub struct VoicesUiState {
     dragged_idx: Option<VoiceIdx>,
     // Keep track of (preview) sounds playing for each voice
     playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
+    inst_sub: SubSliceUi,
+    inst_env_sub: SubSliceUi,
+}
+
+impl VoicesUiState {
+    /// "Soft reset" the state when clicking a new voice
+    fn soft_reset(&mut self) {
+        self.sel_slot = SelectedSlot::Base;
+        self.inst_sub = SubSliceUi::default();
+        self.inst_env_sub = SubSliceUi::default();
+    }
 }
 
 #[derive(Default, PartialEq, Hash, Clone, Copy)]
@@ -137,6 +148,7 @@ pub fn ui(
             });
             if re.clicked() {
                 ui_state.selected_idx = i;
+                ui_state.soft_reset();
             }
             if re.drag_started() {
                 ui_state.dragged_idx = Some(i);
@@ -298,6 +310,43 @@ fn voice_ui(
     voice_ui_inner(ui, voice, idx, out_rate, aux, ui_state, app_cmd);
 }
 
+pub struct SubSliceUi {
+    max_size: usize,
+    offset: usize,
+}
+
+impl Default for SubSliceUi {
+    fn default() -> Self {
+        Self {
+            max_size: Self::DEFAULT_MAX_SIZE,
+            offset: 0,
+        }
+    }
+}
+
+impl SubSliceUi {
+    pub const DEFAULT_MAX_SIZE: usize = 16_384;
+    pub fn subslice_ui<'a, T>(&mut self, ui: &mut egui::Ui, slice: &'a mut [T]) -> &'a mut [T] {
+        ui.style_mut().spacing.slider_width = ui.available_width() - 100.0;
+        ui.horizontal(|ui| {
+            ui.label("↔");
+            const MAX: usize = 262_144;
+            let max = std::cmp::min(MAX, slice.len());
+            ui.add(egui::Slider::new(&mut self.max_size, 32..=max));
+        });
+        let end = slice.len().saturating_sub(self.max_size);
+        ui.add_enabled_ui(end != 0, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("⤵");
+                ui.add_enabled(end != 0, egui::Slider::new(&mut self.offset, 0..=end));
+            });
+        });
+
+        let end = self.offset + self.max_size;
+        &mut slice[self.offset..end]
+    }
+}
+
 pub fn voice_ui_inner(
     ui: &mut egui::Ui,
     voice: &mut Voice,
@@ -375,9 +424,11 @@ pub fn voice_ui_inner(
                         ui.label("Number of samples");
                         ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
                     });
+                    let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
+                    let view = ui_state.inst_sub.subslice_ui(ui, samples);
                     waveform_edit_widget_16_bit_interleaved_stereo(
                         ui,
-                        bytemuck::cast_slice_mut(&mut slot.inst.sample_buf),
+                        view,
                         256.,
                         egui::Id::new("smp_buf"),
                     );
@@ -392,12 +443,8 @@ pub fn voice_ui_inner(
                         }
                     });
                     if !slot.inst.env.is_empty() {
-                        waveform_edit_widget_u8(
-                            ui,
-                            &mut slot.inst.env,
-                            256.0,
-                            egui::Id::new("env_buf"),
-                        );
+                        let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env);
+                        waveform_edit_widget_u8(ui, view, 256.0, egui::Id::new("env_buf"));
                     }
                     ui.label("Envelope release");
                     ui.add(egui::DragValue::new(&mut slot.inst.env_release));
