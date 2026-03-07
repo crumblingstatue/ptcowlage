@@ -11,6 +11,7 @@ use {
         app::{
             SongState,
             ui::{
+                left_panel::LeftPanelState,
                 tabs::{
                     effects::EffectsUiState, events::RawEventsUiState, map::MapState,
                     piano_roll::PianoRollState, voices::VoicesUiState,
@@ -278,6 +279,7 @@ pub struct UiState {
     pub shared: SharedUiState,
     pub sf2_import: Option<Sf2ImportDialog>,
     pub windows: Windows,
+    pub left: LeftPanelState,
 }
 
 pub struct Sf2ImportDialog {

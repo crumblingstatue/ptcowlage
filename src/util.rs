@@ -114,3 +114,19 @@ pub fn export_wav(
     write_wav(&mut wav_out, ChNum::Stereo, &samp_data)?;
     Ok(wav_out)
 }
+
+pub trait HashSetExt<T> {
+    fn toggle(&mut self, item: &T);
+}
+
+impl<T: Eq + core::hash::Hash + Clone, S: std::hash::BuildHasher> HashSetExt<T>
+    for std::collections::HashSet<T, S>
+{
+    fn toggle(&mut self, item: &T) {
+        if self.contains(item) {
+            self.remove(item);
+        } else {
+            self.insert(item.clone());
+        }
+    }
+}

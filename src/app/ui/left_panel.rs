@@ -12,9 +12,14 @@ use {
             },
         },
         egui_ext::ImageExt,
+        util::HashSetExt as _,
     },
-    eframe::egui,
+    eframe::egui::{
+        self,
+        containers::menu::{MenuButton, MenuConfig},
+    },
     ptcow::{EveList, MooInstructions, Unit, UnitIdx},
+    rustc_hash::FxHashSet,
 };
 
 pub fn ui(app: &mut App, ui: &mut egui::Ui) {
@@ -64,6 +69,29 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
             }
         });
     handle_units_command(cmd, song, &mut app.modal);
+    ui.checkbox(&mut app.ui_state.left.select_mode, "Select mode");
+    if !app.ui_state.left.selected_units.is_empty() {
+        let button = MenuButton::new("Actions").config(
+            MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
+        );
+        button.ui(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut app.ui_state.left.batch_rename_buf)
+                        .hint_text("Name"),
+                );
+                if ui.button("Batch rename").clicked() {
+                    let mut indices: Vec<UnitIdx> =
+                        app.ui_state.left.selected_units.iter().copied().collect();
+                    indices.sort_by_key(|idx| idx.0);
+                    for (num, idx) in indices.into_iter().enumerate() {
+                        song.herd.units[idx].name =
+                            format!("{}{num:02}", app.ui_state.left.batch_rename_buf);
+                    }
+                }
+            });
+        });
+    }
     unit_mute_unmute_all_ui(ui, &mut song.herd.units);
     ui.label("m: mute, s: solo");
     ui.label("h: hide, v: visual solo");
@@ -71,6 +99,13 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
         app.ui_state.piano_roll.hidden_units.clear();
     }
     app.ui_state.shared.highlight_set.clear();
+}
+
+#[derive(Default)]
+pub struct LeftPanelState {
+    select_mode: bool,
+    selected_units: FxHashSet<UnitIdx>,
+    batch_rename_buf: String,
 }
 
 fn unit_ui(
@@ -88,6 +123,12 @@ fn unit_ui(
     let n: i32 = unit.pan_time_bufs.iter().flatten().copied().sum();
     ui.horizontal(|ui| {
         let mut any_hovered = false;
+        if ui_state.left.select_mode {
+            let mut selected = ui_state.left.selected_units.contains(&i);
+            if ui.checkbox(&mut selected, "").clicked() {
+                ui_state.left.selected_units.toggle(&i);
+            }
+        }
         if unit.mute {
             any_hovered |= ui.label("m").contains_pointer();
         }
