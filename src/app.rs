@@ -982,13 +982,19 @@ impl App {
     fn save_current_file(&mut self) {
         if let Some(path) = &self.open_file {
             let song = self.song.lock().unwrap();
-            let serialized = ptcow::serialize_project(&song.song, &song.herd, &song.ins).unwrap();
-            std::fs::write(path, serialized).unwrap();
-            self.cmd.toast(
-                ToastKind::Info,
-                format_args!("Saved {}", path.display()),
-                3.0,
-            );
+            match ptcow::serialize_project(&song.song, &song.herd, &song.ins) {
+                Ok(out) => {
+                    std::fs::write(path, out).unwrap();
+                    self.cmd.toast(
+                        ToastKind::Info,
+                        format_args!("Saved {}", path.display()),
+                        3.0,
+                    );
+                }
+                Err(e) => {
+                    self.modal.msg(format_args!("Error saving: {e}"));
+                }
+            }
         }
     }
     /// Replace already running ptcow audio thread with a new one
