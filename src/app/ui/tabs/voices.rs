@@ -738,12 +738,22 @@ fn voice_unit_ui(
                             ui.label(format!("{} points", points.len()));
                             if ui.button("+").clicked() {
                                 points.push(OsciPt {
-                                    x: points.last().map_or(0, |pt| pt.x) + 16,
+                                    x: points.last().map_or(0, |pt| pt.x) + 1,
                                     y: 0,
                                 });
                             }
                             if ui.button("-").clicked() {
                                 points.pop();
+                            }
+                            if ui.button("Fix x coordinates").clicked() {
+                                for i in 0..points.len() {
+                                    let Ok([a, b]) = points.get_disjoint_mut([i, i + 1]) else {
+                                        break;
+                                    };
+                                    if b.x <= a.x {
+                                        b.x = a.x + 1;
+                                    }
+                                }
                             }
                             ui.end_row();
                             for pt in &mut *points {
