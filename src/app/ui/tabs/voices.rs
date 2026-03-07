@@ -438,15 +438,11 @@ pub fn voice_ui_inner(
                 ui.horizontal(|ui| {
                     ui.label("Sample buf");
                     play_sound_ui(ui, aux, ui_state, voice_idx, &slot.inst.sample_buf);
-                    let mut len = slot.inst.sample_buf.len();
-                    if ui
-                        .add(egui::DragValue::new(&mut len).update_while_editing(false))
-                        .changed()
-                    {
-                        slot.inst.sample_buf.resize(len, 0);
-                    }
-                    ui.label("Number of samples");
-                    ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
+                    ui.label(format!(
+                        "{} samples, {} bytes",
+                        slot.inst.num_samples,
+                        slot.inst.sample_buf.len()
+                    ));
                 });
                 if !slot.inst.sample_buf.is_empty() {
                     let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
