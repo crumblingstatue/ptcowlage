@@ -31,15 +31,21 @@ pub struct VoicesUiState {
     inst_sub: SubSliceUi,
     inst_env_sub: SubSliceUi,
     selected_noise_unit: usize,
+    /// A "reset slot", and 3 manually saved slots for quicksaving/loading the currently edited voice
+    save_slots: [Option<Voice>; 4],
 }
 
 impl VoicesUiState {
     /// "Soft reset" the state when clicking a new voice
-    fn soft_reset(&mut self) {
+    pub fn soft_reset(&mut self, voices: &ptcow::Voices) {
         self.sel_slot = SelectedSlot::Base;
         self.inst_sub = SubSliceUi::default();
         self.inst_env_sub = SubSliceUi::default();
         self.selected_noise_unit = 0;
+        self.save_slots = [const { None }; 4];
+        if let Some(voice) = voices.get(self.selected_idx) {
+            self.save_slots[0] = Some(voice.clone());
+        }
     }
 }
 
@@ -151,7 +157,7 @@ pub fn ui(
             });
             if re.clicked() {
                 ui_state.selected_idx = i;
-                ui_state.soft_reset();
+                ui_state.soft_reset(&song.ins.voices);
             }
             if re.drag_started() {
                 ui_state.dragged_idx = Some(i);
@@ -307,6 +313,29 @@ fn voice_ui(
                 }
             }
             _ => {}
+        }
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("Experimentation slots")
+            .on_hover_text("These saves only last while this voice tab is open");
+        for (i, save_slot) in ui_state.save_slots.iter_mut().enumerate() {
+            ui.group(|ui| {
+                ui.label(i.to_string());
+                if ui.button("💾").clicked() {
+                    *save_slot = Some(voice.clone());
+                }
+                match save_slot {
+                    Some(saved_voice) => {
+                        if ui.button("⮋").clicked() {
+                            *voice = saved_voice.clone();
+                        }
+                    }
+                    None => {
+                        ui.add_enabled(false, egui::Button::new("⮋"));
+                    }
+                }
+            });
         }
     });
 

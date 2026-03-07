@@ -180,6 +180,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             });
         });
         ui.separator();
+        let prev_tab = app.ui_state.tab;
         let mut tab = |tab, label, fkey: &str, on| {
             ui.selectable_value(
                 &mut app.ui_state.tab,
@@ -203,6 +204,17 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         tab(Tab::Voices, "📢 Voices", "F8", k_f8);
         tab(Tab::Unit, "🐄 Unit", "F9", k_f9);
         tab(Tab::Effects, "🔊 Effects", "F10", k_f10);
+        // Do some init logic for some tabs.
+        // TODO: Can probably done in a cleaner way
+        if prev_tab != app.ui_state.tab {
+            #[expect(clippy::single_match)]
+            match app.ui_state.tab {
+                Tab::Voices => {
+                    app.ui_state.voices.soft_reset(&song.ins.voices);
+                }
+                _ => {}
+            }
+        }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if let Some(open_path) = &app.open_file {
                 ui.label(format!("{}", open_path.file_name().unwrap().display()));
