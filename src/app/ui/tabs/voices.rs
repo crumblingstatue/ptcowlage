@@ -10,6 +10,7 @@ use {
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
         pxtone_misc::{bass_drum, reset_voice_for_units_with_voice_idx, square_wave},
     },
+    arrayvec::ArrayVec,
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
@@ -603,8 +604,11 @@ fn voice_unit_ui(
                         ui_state.selected_noise_unit = i;
                     }
                 }
-                if ui.button("+").clicked() {
-                    noise.units.push(NoiseDesignUnit::default());
+                if ui
+                    .add_enabled(!noise.units.is_full(), egui::Button::new("+"))
+                    .clicked()
+                {
+                    noise.units.push(default_noise_unit());
                 }
                 if ui
                     .add_enabled(!noise.units.is_empty(), egui::Button::new("-"))
@@ -824,6 +828,20 @@ fn voice_unit_ui(
         ui.label("Tuning");
         ui.add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.001));
     });
+}
+
+fn default_noise_unit() -> NoiseDesignUnit {
+    let mut new = NoiseDesignUnit {
+        enves: ArrayVec::from([
+            EnvPt { x: 0, y: 100 },
+            EnvPt { x: 50, y: 50 },
+            EnvPt { x: 100, y: 0 },
+        ]),
+        ..Default::default()
+    };
+    new.main.freq = 60.0;
+    new.main.volume = 80.0;
+    new
 }
 
 fn slot_wave_extra_ui(
