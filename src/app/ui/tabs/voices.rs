@@ -400,8 +400,16 @@ pub fn voice_ui_inner(
         // INVARIANT: We assume extra is only selected if it exists (see above)
         SelectedSlot::Extra => voice.extra.as_mut().unwrap(),
     };
+    let id = ui.make_persistent_id("inst");
+    let cs = CollapsingState::load_with_default_open(ui.ctx(), id, false);
+    let top_max_height = if cs.is_open() {
+        ui.available_height() / 2.0
+    } else {
+        ui.available_height() - 32.0
+    };
     egui::ScrollArea::vertical()
-        .auto_shrink(false)
+        .auto_shrink([false, true])
+        .max_height(top_max_height)
         .show(ui, |ui| {
             voice_unit_ui(
                 ui,
@@ -413,51 +421,55 @@ pub fn voice_ui_inner(
                 ui_state.sel_slot,
                 app_cmd,
             );
-            let id = ui.make_persistent_id("inst");
-            CollapsingState::load_with_default_open(ui.ctx(), id, false)
-                .show_header(ui, |ui| {
-                    ui.strong("Instance");
-                })
-                .body(|ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Sample buf");
-                        play_sound_ui(ui, aux, ui_state, voice_idx, &slot.inst.sample_buf);
-                        let mut len = slot.inst.sample_buf.len();
-                        if ui
-                            .add(egui::DragValue::new(&mut len).update_while_editing(false))
-                            .changed()
-                        {
-                            slot.inst.sample_buf.resize(len, 0);
-                        }
-                        ui.label("Number of samples");
-                        ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
-                    });
-                    let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
-                    let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
-                    waveform_edit_widget_16_bit_interleaved_stereo(
-                        ui,
-                        view,
-                        256.,
-                        egui::Id::new("smp_buf"),
-                    );
-                    ui.horizontal(|ui| {
-                        ui.label("Envelope");
-                        let mut len = slot.inst.env.len();
-                        if ui
-                            .add(egui::DragValue::new(&mut len).update_while_editing(false))
-                            .changed()
-                        {
-                            slot.inst.env.resize(len, 0);
-                        }
-                    });
-                    if !slot.inst.env.is_empty() {
-                        let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env, 1);
-                        waveform_edit_widget_u8(ui, view, 256.0, egui::Id::new("env_buf"));
-                    }
-                    ui.label("Envelope release");
-                    ui.add(egui::DragValue::new(&mut slot.inst.env_release));
-                });
         });
+    ui.separator();
+    cs.show_header(ui, |ui| {
+        ui.strong("📈 Instance");
+    })
+    .body(|ui| {
+        egui::ScrollArea::vertical()
+            .id_salt("inst")
+            .auto_shrink(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Sample buf");
+                    play_sound_ui(ui, aux, ui_state, voice_idx, &slot.inst.sample_buf);
+                    let mut len = slot.inst.sample_buf.len();
+                    if ui
+                        .add(egui::DragValue::new(&mut len).update_while_editing(false))
+                        .changed()
+                    {
+                        slot.inst.sample_buf.resize(len, 0);
+                    }
+                    ui.label("Number of samples");
+                    ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
+                });
+                let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
+                let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
+                waveform_edit_widget_16_bit_interleaved_stereo(
+                    ui,
+                    view,
+                    256.,
+                    egui::Id::new("smp_buf"),
+                );
+                ui.horizontal(|ui| {
+                    ui.label("Envelope");
+                    let mut len = slot.inst.env.len();
+                    if ui
+                        .add(egui::DragValue::new(&mut len).update_while_editing(false))
+                        .changed()
+                    {
+                        slot.inst.env.resize(len, 0);
+                    }
+                });
+                if !slot.inst.env.is_empty() {
+                    let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env, 1);
+                    waveform_edit_widget_u8(ui, view, 256.0, egui::Id::new("env_buf"));
+                }
+                ui.label("Envelope release");
+                ui.add(egui::DragValue::new(&mut slot.inst.env_release));
+            })
+    });
 }
 
 fn play_sound_ui(
