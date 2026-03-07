@@ -326,19 +326,27 @@ impl Default for SubSliceUi {
 
 impl SubSliceUi {
     pub const DEFAULT_MAX_SIZE: usize = 16_384;
-    pub fn subslice_ui<'a, T>(&mut self, ui: &mut egui::Ui, slice: &'a mut [T]) -> &'a mut [T] {
+    pub fn subslice_ui<'a, T>(
+        &mut self,
+        ui: &mut egui::Ui,
+        slice: &'a mut [T],
+        step_by: u8,
+    ) -> &'a mut [T] {
         ui.style_mut().spacing.slider_width = ui.available_width() - 100.0;
         ui.horizontal(|ui| {
             ui.label("↔");
             const MAX: usize = 262_144;
             let max = std::cmp::min(MAX, slice.len());
-            ui.add(egui::Slider::new(&mut self.max_size, 32..=max));
+            ui.add(egui::Slider::new(&mut self.max_size, 32..=max).step_by(f64::from(step_by)));
         });
         let end = slice.len().saturating_sub(self.max_size);
         ui.add_enabled_ui(end != 0, |ui| {
             ui.horizontal(|ui| {
                 ui.label("⤵");
-                ui.add_enabled(end != 0, egui::Slider::new(&mut self.offset, 0..=end));
+                ui.add_enabled(
+                    end != 0,
+                    egui::Slider::new(&mut self.offset, 0..=end).step_by(f64::from(step_by)),
+                );
             });
         });
 
@@ -425,7 +433,7 @@ pub fn voice_ui_inner(
                         ui.add(egui::DragValue::new(&mut slot.inst.num_samples));
                     });
                     let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
-                    let view = ui_state.inst_sub.subslice_ui(ui, samples);
+                    let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
                     waveform_edit_widget_16_bit_interleaved_stereo(
                         ui,
                         view,
@@ -443,7 +451,7 @@ pub fn voice_ui_inner(
                         }
                     });
                     if !slot.inst.env.is_empty() {
-                        let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env);
+                        let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env, 1);
                         waveform_edit_widget_u8(ui, view, 256.0, egui::Id::new("env_buf"));
                     }
                     ui.label("Envelope release");
