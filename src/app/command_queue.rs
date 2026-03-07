@@ -61,6 +61,7 @@ pub enum Cmd {
         voice: VoiceIdx,
     },
     Modal(Box<dyn FnOnce(&mut Modal)>),
+    PromptImportOggVorbis,
 }
 
 #[derive(Default)]

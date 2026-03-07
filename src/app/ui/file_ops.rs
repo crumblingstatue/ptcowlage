@@ -17,6 +17,7 @@ pub enum FileOp {
     ImportPtVoice,
     ExportPtvoice { voice: VoiceIdx },
     ExportPtnoise { voice: VoiceIdx },
+    ImportOggVorbis,
 }
 
 #[derive(Clone, Copy)]
@@ -48,6 +49,7 @@ file_filts! {
     FILT_PIYOPIYO, "PiyoPiyo file", "pmd";
     FILT_ORGANYA, "Organya file", "org";
     FILT_WAV, "WAVE file", "wav";
+    FILT_OGG, "Ogg/Vorbis file", "ogg";
     FILT_SF2, "SoundFont2 file", "sf2";
     FILT_PTVOICE, "PxTone voice file", "ptvoice";
     FILT_PTNOISE, "PxTone noise file", "ptnoise";

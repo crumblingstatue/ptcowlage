@@ -89,6 +89,10 @@ pub enum WebCmd {
         data: Vec<u8>,
         name: String,
     },
+    ImportOggVorbis {
+        data: Vec<u8>,
+        name: String,
+    },
     ReplaceVoicesPtCop {
         data: Vec<u8>,
     },
@@ -118,6 +122,7 @@ impl WebCmd {
             FileOp::ImportSf2Single => todo!(),
             FileOp::ImportPtNoise => Self::ImportPtNoise { data, name },
             FileOp::ImportPtVoice => Self::ImportPtVoice { data, name },
+            FileOp::ImportOggVorbis => Self::ImportOggVorbis { data, name },
             FileOp::ReplacePtVoiceSingle(voice_idx) => Self::ReplacePtVoiceSingle {
                 data,
                 name,

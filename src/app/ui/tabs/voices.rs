@@ -104,6 +104,9 @@ pub fn ui(
             if ui.button((img::DRUM.smol(), ".ptnoise")).clicked() {
                 app_cmd.push(Cmd::PromptImportPtNoise);
             }
+            if ui.button((img::FISH.smol(), ".ogg (vorbis)")).clicked() {
+                app_cmd.push(Cmd::PromptImportOggVorbis);
+            }
             if ui.button("🎵 Single from .sf2").clicked() {
                 app_cmd.push(Cmd::PromptImportSf2Sound);
             }

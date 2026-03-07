@@ -370,6 +370,18 @@ impl App {
             Err(e) => self.modal.msg(e),
         }
     }
+    fn import_ogg_vorbis(&mut self, data: &[u8], path: &Path) {
+        match load_and_recalc_voice(data, path, just_load_ogg, self.out.rate) {
+            Ok(voice) => {
+                let mut song = self.song.lock().unwrap();
+                song.ins.voices.push(voice);
+                let idx = VoiceIdx(song.ins.voices.len() - 1);
+                reset_voice_for_units_with_voice_idx(&mut song, idx);
+                self.ui_state.voices.selected_idx = idx;
+            }
+            Err(_) => todo!(),
+        }
+    }
     #[cfg(not(target_arch = "wasm32"))]
     fn desktop_handle_file_op(&mut self, path: PathBuf, op: FileOp) {
         match op {
@@ -446,6 +458,10 @@ impl App {
             FileOp::ImportPtNoise => {
                 let data = std::fs::read(&path).unwrap();
                 self.import_ptnoise(&data, &path);
+            }
+            FileOp::ImportOggVorbis => {
+                let data = std::fs::read(&path).unwrap();
+                self.import_ogg_vorbis(&data, &path);
             }
             FileOp::ImportMidi => {
                 let mid_data = std::fs::read(&path).unwrap();
@@ -560,6 +576,20 @@ fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
 fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let noise = ptcow::NoiseData::from_ptnoise(data)?;
     let mut voice = ptcow::Voice::from_data(ptcow::VoiceData::Noise(noise));
+    if let Some(os_str) = path.file_stem() {
+        voice.name = os_str.to_string_lossy().into_owned();
+    }
+    Ok(voice)
+}
+
+fn just_load_ogg(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+    let oggv = ptcow::OggVData {
+        raw_bytes: data.to_vec(),
+        ch: 1,
+        sps2: 0,
+        smp_num: 0,
+    };
+    let mut voice = ptcow::Voice::from_data(ptcow::VoiceData::OggV(oggv));
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
     }
@@ -808,6 +838,9 @@ impl App {
             Cmd::PromptImportPtNoise => {
                 self.open_file_prompt(file_ops::FILT_PTNOISE, FileOp::ImportPtNoise, false);
             }
+            Cmd::PromptImportOggVorbis => {
+                self.open_file_prompt(file_ops::FILT_OGG, FileOp::ImportOggVorbis, false);
+            }
             Cmd::PromptImportSf2Sound => {
                 self.open_file_prompt(file_ops::FILT_SF2, FileOp::ImportSf2Single, false);
             }
@@ -915,6 +948,9 @@ impl App {
             }
             WebCmd::ImportPtNoise { data, name } => {
                 self.import_ptnoise(&data, name.as_ref());
+            }
+            WebCmd::ImportOggVorbis { data, name } => {
+                self.import_ogg_vorbis(&data, name.as_ref());
             }
             WebCmd::ReplaceVoicesPtCop { data } => {
                 let (_, _, ins) = ptcow::read_song(&data, 44_100).unwrap();
