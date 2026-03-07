@@ -254,14 +254,17 @@ fn roll_ui_inner(
     pnt.rect_filled(rect, 2.0, egui::Color32::from_rgb(30, 30, 24));
     let cr = ui.clip_rect();
     // Draw guide lines
-    let (mouse_screen_pos, lmb_clicked, lmb_pressed, lmb_released) = ui.input(|inp| {
-        (
-            inp.pointer.latest_pos(),
-            inp.pointer.primary_clicked(),
-            inp.pointer.primary_pressed(),
-            inp.pointer.primary_released(),
-        )
-    });
+    let (mouse_screen_pos, lmb_clicked, lmb_pressed, lmb_released, excl_mark, kb_num2) =
+        ui.input(|inp| {
+            (
+                inp.pointer.latest_pos(),
+                inp.pointer.primary_clicked(),
+                inp.pointer.primary_pressed(),
+                inp.pointer.primary_released(),
+                inp.key_pressed(egui::Key::Exclamationmark),
+                inp.key_pressed(egui::Key::Num2),
+            )
+        });
     if lmb_pressed && re.hovered() && state.interact_mode != InteractMode::View {
         state.lmb_drag_origin = mouse_screen_pos;
         // Shift to expand selection rather than replace
@@ -628,6 +631,14 @@ fn roll_ui_inner(
                     state.just_placed_note = Some(PlacedNote { tick, unit, key });
                     piano_freeplay_play_note(song, dst_sps, piano_state, piano_key, unit);
                 }
+            }
+        }
+        if re.contains_pointer() {
+            if excl_mark {
+                song.herd.smp_repeat = sample;
+            }
+            if kb_num2 && mod_shift {
+                song.herd.smp_end = sample;
             }
         }
         if let Some(placed) = &state.just_placed_note {
@@ -1107,27 +1118,36 @@ fn loop_points_popup_button(ui: &mut egui::Ui, song: &mut SongState) {
                 }
             });
 
+            if ui.button("Reset").clicked() {
+                loop_points_changed = true;
+                ui.close();
+            }
+
             if loop_points_changed {
-                song.herd.smp_repeat = ptcow::timing::meas_to_sample(
-                    song.song.master.loop_points.repeat,
-                    song.ins.samples_per_tick,
-                    song.song.master.timing,
-                );
-                if let Some(last) = song.song.master.loop_points.last {
-                    song.herd.smp_end = ptcow::timing::meas_to_sample(
-                        last.get(),
-                        song.ins.samples_per_tick,
-                        song.song.master.timing,
-                    );
-                } else {
-                    song.herd.smp_end = ptcow::timing::meas_to_sample(
-                        song.song.master.end_meas(),
-                        song.ins.samples_per_tick,
-                        song.song.master.timing,
-                    );
-                }
+                reset_loop_points(song);
             }
         });
+}
+
+fn reset_loop_points(song: &mut SongState) {
+    song.herd.smp_repeat = ptcow::timing::meas_to_sample(
+        song.song.master.loop_points.repeat,
+        song.ins.samples_per_tick,
+        song.song.master.timing,
+    );
+    if let Some(last) = song.song.master.loop_points.last {
+        song.herd.smp_end = ptcow::timing::meas_to_sample(
+            last.get(),
+            song.ins.samples_per_tick,
+            song.song.master.timing,
+        );
+    } else {
+        song.herd.smp_end = ptcow::timing::meas_to_sample(
+            song.song.master.end_meas(),
+            song.ins.samples_per_tick,
+            song.song.master.timing,
+        );
+    }
 }
 
 fn experimental_popup_button(ui: &mut egui::Ui, song: &mut SongState, state: &mut PianoRollState) {
@@ -1188,6 +1208,11 @@ fn help_popup_button(ui: &mut egui::Ui, interact_mode: InteractMode) {
             ui.end_row();
             ui.label("Delete selected items");
             ui.input_label("Del");
+            ui.end_row();
+            ui.label("Set sample loop points");
+            ui.input_label("Shift+1");
+            ui.input_label("Shift+2");
+            ui.end_row();
         });
     });
 }
