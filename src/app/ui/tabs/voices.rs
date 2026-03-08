@@ -902,11 +902,24 @@ fn slot_wave_extra_ui(
         ui.strong(format!("Envelope ({} points)", data.envelope.points.len()));
         ui.label("fps");
         ui.add(egui::DragValue::new(&mut data.envelope.seconds_per_point).range(1..=999_999));
-        if ui.button("+").clicked() {
-            data.envelope.points.push(EnvPt { x: 1, y: 64 });
-        }
-        if ui.button("-").clicked() {
-            data.envelope.points.pop();
+        if data.envelope.points.is_empty() {
+            if ui.button("+ Add release point").clicked() {
+                data.envelope.points.push(EnvPt { x: 0, y: 0 });
+            }
+        } else {
+            if ui.button("+").clicked() {
+                data.envelope
+                    .points
+                    .insert(data.envelope.points.len() - 1, EnvPt { x: 1, y: 64 });
+            }
+            let remove_label = if data.envelope.points.len() == 1 {
+                "- Remove release point"
+            } else {
+                "-"
+            };
+            if ui.button(remove_label).clicked() {
+                data.envelope.points.pop();
+            }
         }
         let prepared_size = data.envelope.prepared_size(out_rate);
         if prepared_size <= 88_200 {
