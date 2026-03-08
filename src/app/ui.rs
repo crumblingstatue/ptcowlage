@@ -246,6 +246,7 @@ fn piano_freeplay_play_note(
         tick,
         dst_sps,
         &ev,
+        true,
     );
     // Set velocity
     let ev = Event {
@@ -261,6 +262,7 @@ fn piano_freeplay_play_note(
         tick,
         dst_sps,
         &ev,
+        true,
     );
     if state.record {
         song.song.events.push(ev);
@@ -284,6 +286,7 @@ fn piano_freeplay_play_note(
         tick,
         dst_sps,
         &ev,
+        true,
     );
     if state.record {
         song.song.events.sort();
