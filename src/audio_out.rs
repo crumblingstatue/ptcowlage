@@ -63,6 +63,8 @@ impl SongState {
             pause: true,
             master_vol: 1.0,
         };
+        // Set the end meas for new songs to make sure there is nice big area to play around with
+        this.song.master.loop_points.last = Some(std::num::NonZero::new(100).unwrap());
         this.herd.units.push(Unit {
             name: "Cow".into(),
             ..Default::default()
