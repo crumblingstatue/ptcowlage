@@ -49,6 +49,7 @@ pub struct FreeplayPianoState {
     play_octave: i32,
     // Live record performance (store toots in events)
     record: bool,
+    velocity: i16,
 }
 
 impl Default for FreeplayPianoState {
@@ -59,6 +60,7 @@ impl Default for FreeplayPianoState {
             duration: 1024,
             play_octave: 7,
             record: false,
+            velocity: 100,
         }
     }
 }
@@ -115,6 +117,8 @@ fn piano_freeplay_ui(
             .speed(0.05)
             .range(2..=9),
     );
+    ui.label("Velocity");
+    ui.add(egui::DragValue::new(&mut state.velocity));
     ui.label("Duration");
     ui.add(egui::DragValue::new(&mut state.duration));
     let c = if state.record {
@@ -222,6 +226,7 @@ fn piano_freeplay_play_note(
     unit_no: UnitIdx,
 ) {
     let tick = ptcow::current_tick(&song.herd, &song.ins);
+    // Set key
     let ev = Event {
         payload: EventPayload::Key(piano_key_to_pxtone_key(piano_key)),
         unit: unit_no,
@@ -242,6 +247,25 @@ fn piano_freeplay_play_note(
         dst_sps,
         &ev,
     );
+    // Set velocity
+    let ev = Event {
+        payload: EventPayload::Velocity(state.velocity),
+        unit: unit_no,
+        tick,
+    };
+    let _ = ptcow::do_event(
+        &mut song.herd,
+        &song.ins,
+        &song.song.events,
+        &song.song.master,
+        tick,
+        dst_sps,
+        &ev,
+    );
+    if state.record {
+        song.song.events.push(ev);
+    }
+    // Play the note
     let ev = Event {
         payload: EventPayload::On {
             duration: state.duration,
