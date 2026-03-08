@@ -1,12 +1,24 @@
 //! GUI PxTone player/editor
 
+#![warn(clippy::pedantic)]
+// Eventually I'll fix these... maybe.
+#![expect(
+    clippy::too_many_lines,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::float_cmp
+)]
 #![allow(
     // I keep having to undo the collapses suggested by clippy when I implement more features
     // and make the logic more complex
     clippy::collapsible_if,
     clippy::collapsible_else_if,
     // Especially hard to avoid when prototyping
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    // This lint is just stupid
+    clippy::struct_excessive_bools,
 )]
 
 use std::path::PathBuf;

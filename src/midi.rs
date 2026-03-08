@@ -21,6 +21,10 @@ fn guess_tempo(tracks: &[midly::Track]) -> Option<u32> {
 }
 
 /// Write midi song to pxtone
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "Needs this signature due to fn pointer"
+)]
 pub fn write_midi_to_pxtone(
     mid_data: &[u8],
     herd: &mut Herd,
@@ -49,7 +53,7 @@ pub fn write_midi_to_pxtone(
         for (ev_idx, event) in track.iter().enumerate() {
             // The delta is how much after the previous event this current event is,
             // so we start by incrementing the clock
-            clock += (event.delta.as_int() as f64) as u32;
+            clock += f64::from(event.delta.as_int()) as u32;
             match event.kind {
                 TrackEventKind::Midi { message, .. } => match message {
                     MidiMessage::NoteOff { .. } => {
@@ -124,7 +128,7 @@ pub fn write_midi_to_pxtone(
                             // 11: "Expression" or secondary volume controller
                             7 | 11 => {
                                 song.events.eves.push(Event {
-                                    payload: EventPayload::Volume(value.as_int() as i16),
+                                    payload: EventPayload::Volume(i16::from(value.as_int())),
                                     unit: unit_counter,
                                     tick: clock,
                                 });
@@ -169,7 +173,7 @@ pub fn write_midi_to_pxtone(
 
 fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, pitch_bend: f64, key: u7) {
     let base_key = 27;
-    let raw_key = (key.as_int() + base_key) as i32 * 256;
+    let raw_key = i32::from(key.as_int() + base_key) * 256;
     // TODO: 2560 magic number, based on ear (and it being 10 times 256, something to do with cents?)
     let bend_mod = pitch_bend * 2560.0;
     if bend_mod != 0.0 {
@@ -180,7 +184,7 @@ fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, pitch_bend: f6
         });
     }
     song.events.eves.push(Event {
-        payload: EventPayload::Key((raw_key as f64 + bend_mod) as i32),
+        payload: EventPayload::Key((f64::from(raw_key) + bend_mod) as i32),
         unit: unit_idx,
         tick: clock,
     });

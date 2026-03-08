@@ -133,7 +133,7 @@ impl App {
                 &mut song_state.herd,
                 &mut song_state.song,
             ) {
-                Ok(_) => {
+                Ok(()) => {
                     song_state.song.recalculate_length();
                 }
                 Err(e) => {
@@ -236,7 +236,7 @@ impl App {
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
         match crate::midi::write_midi_to_pxtone(mid_data, &mut song.herd, &mut song.song) {
-            Ok(_) => {
+            Ok(()) => {
                 song.song.recalculate_length();
             }
             Err(e) => {
@@ -557,6 +557,10 @@ fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
     Ok(voice)
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "Needs this signature due to fn pointer"
+)]
 fn just_load_ogg(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
     let oggv = ptcow::OggVData {
         raw_bytes: data.to_vec(),

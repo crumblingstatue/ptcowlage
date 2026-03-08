@@ -173,7 +173,7 @@ pub fn ui(
                                 ev_list_cmd = Some(EventListCmd::Remove { idx });
                             }
                             if ui.button("Cut").clicked() {
-                                ev_list_cmd = Some(EventListCmd::Cut { idx })
+                                ev_list_cmd = Some(EventListCmd::Cut { idx });
                             }
                             ui.menu_button("Insert", |ui| {
                                 let mut payload = None;

@@ -97,7 +97,7 @@ pub fn export_wav(
     cancel: &AtomicBool,
 ) -> std::io::Result<Vec<u8>> {
     let mut samp_data = Vec::new();
-    let mut buf = [0; 16_384];
+    let mut buf = [0; 8192];
     let mut wav_out = Vec::new();
     // Prepare non-looping moo
     prepare_song(song, false);

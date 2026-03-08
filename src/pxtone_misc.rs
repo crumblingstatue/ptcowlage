@@ -1,11 +1,11 @@
-use std::collections::BTreeMap;
-
 use arrayvec::ArrayVec;
 use ptcow::{
     DEFAULT_KEY, EnvPt, EnvelopeSrc, EveList, Event, EventPayload, NoiseData,
     NoiseDesignOscillator, NoiseDesignUnit, NoiseType, OsciPt, Song, Unit, UnitIdx, VoiceIdx,
     WaveData, WaveDataPoints,
 };
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use crate::audio_out::SongState;
 
@@ -111,9 +111,7 @@ pub(crate) fn split_unit_events_by_key(song: &mut SongState, idx: UnitIdx) {
         eves[off.key].payload = EventPayload::Key(DEFAULT_KEY);
     }
     let name = song.herd.units[idx].name.clone();
-    song.herd.units[idx]
-        .name
-        .push_str(&format!("-{}", fst_key / 256));
+    let _ = write!(song.herd.units[idx].name, "-{}", fst_key / 256);
     let fst_voice_idx = eves
         .iter()
         .find_map(|eve| {

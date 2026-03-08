@@ -364,8 +364,8 @@ impl SubSliceUi {
     ) -> &'a mut [T] {
         ui.style_mut().spacing.slider_width = ui.available_width() - 100.0;
         ui.horizontal(|ui| {
-            ui.label("↔");
             const MAX: usize = 262_144;
+            ui.label("↔");
             let min = std::cmp::min(32, slice.len());
             let max = std::cmp::min(MAX, slice.len());
             ui.add(egui::Slider::new(&mut self.max_size, min..=max).step_by(f64::from(step_by)));
@@ -471,7 +471,10 @@ pub fn voice_ui_inner(
                         slot.inst.sample_buf.len()
                     ));
                 });
-                if !slot.inst.sample_buf.is_empty() {
+                if slot.inst.sample_buf.is_empty() {
+                    // Avoid (bytemuck) panic on empty sample buffer
+                    ui.colored_label(egui::Color32::GRAY, "No sample data");
+                } else {
                     let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
                     let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
                     waveform_edit_widget_16_bit_interleaved_stereo(
@@ -480,9 +483,6 @@ pub fn voice_ui_inner(
                         256.,
                         egui::Id::new("smp_buf"),
                     );
-                } else {
-                    // Avoid (bytemuck) panic on empty sample buffer
-                    ui.colored_label(egui::Color32::GRAY, "No sample data");
                 }
                 ui.horizontal(|ui| {
                     ui.label("Envelope");
@@ -699,7 +699,7 @@ fn voice_unit_ui(
                     .clicked()
                 {
                     app_cmd.modal(move |m| {
-                        m.replace_wave_data_slot(voice_idx, sel_slot, square_wave())
+                        m.replace_wave_data_slot(voice_idx, sel_slot, square_wave());
                     });
                 }
                 if ui
@@ -721,7 +721,7 @@ fn voice_unit_ui(
                                 volume: 127,
                                 pan: 64,
                             },
-                        )
+                        );
                     });
                 }
             });

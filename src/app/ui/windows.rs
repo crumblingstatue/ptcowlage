@@ -41,7 +41,7 @@ pub trait Window {
 pub struct TitleAndCommentWindow;
 
 impl Window for TitleAndCommentWindow {
-    fn title(&self) -> &str {
+    fn title(&self) -> &'static str {
         "Title and comment"
     }
     fn update(&mut self, ui: &mut egui::Ui, song: &mut SongState) {
@@ -56,7 +56,7 @@ impl Window for TitleAndCommentWindow {
 pub struct LogWindow;
 
 impl Window for LogWindow {
-    fn title(&self) -> &str {
+    fn title(&self) -> &'static str {
         "Log viewer"
     }
 
