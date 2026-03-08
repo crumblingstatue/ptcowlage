@@ -84,4 +84,7 @@ impl CommandQueue {
     pub fn modal(&mut self, f: impl FnOnce(&mut Modal) + 'static) {
         self.push(Cmd::Modal(Box::new(f)));
     }
+    pub fn tab(&mut self, tab: crate::app::ui::Tab) {
+        self.push(Cmd::SetActiveTab(tab));
+    }
 }

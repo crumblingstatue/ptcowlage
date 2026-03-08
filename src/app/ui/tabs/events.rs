@@ -3,7 +3,7 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                group_idx_slider,
+                Tab, group_idx_slider,
                 modal::Modal,
                 unit::{UnitsCmd, handle_units_command, unit_ui},
                 unit_color, voice_img, voice_img_opt,
@@ -300,6 +300,7 @@ fn table_body_ui(
                     ev.tick,
                     song.ins.samples_per_tick,
                 ));
+                app_cmd.tab(Tab::PianoRoll);
             }
         });
         row.col(|ui| match song.herd.units.get_mut(ev.unit) {
