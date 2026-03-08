@@ -3,8 +3,8 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                FreeplayPianoState, SharedUiState, img, unit_color, voice_data_img, voice_img,
-                waveform_edit_widget_16_bit_interleaved_stereo, waveform_edit_widget_u8,
+                FreeplayPianoState, SharedUiState, envelope_edit_widget, img, unit_color,
+                voice_data_img, voice_img, waveform_edit_widget_16_bit_interleaved_stereo,
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
@@ -51,10 +51,11 @@ impl VoicesUiState {
 }
 
 #[derive(Default, PartialEq, Hash, Clone, Copy)]
+#[repr(u8)]
 pub enum SelectedSlot {
     #[default]
-    Base,
-    Extra,
+    Base = 0,
+    Extra = 1,
 }
 
 trait AtomExtExt<'a> {
@@ -337,7 +338,16 @@ fn voice_ui(
         }
     });
 
-    voice_ui_inner(ui, voice, idx, out_rate, aux, ui_state, app_cmd);
+    voice_ui_inner(
+        ui,
+        voice,
+        idx,
+        out_rate,
+        aux,
+        ui_state,
+        app_cmd,
+        &herd.units,
+    );
 }
 
 pub struct SubSliceUi {
@@ -394,6 +404,7 @@ pub fn voice_ui_inner(
     aux: &mut AuxAudioState,
     ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
+    units: &ptcow::Units,
 ) {
     // Add a slot selection UI for wave voices
     if let VoiceData::Wave(_) = &voice.base.data {
@@ -496,7 +507,15 @@ pub fn voice_ui_inner(
                 });
                 if !slot.inst.env.is_empty() {
                     let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env, 1);
-                    waveform_edit_widget_u8(ui, view, 256.0, egui::Id::new("env_buf"));
+                    envelope_edit_widget(
+                        ui,
+                        view,
+                        256.0,
+                        egui::Id::new("env_buf"),
+                        voice_idx,
+                        ui_state.sel_slot,
+                        units,
+                    );
                 }
                 ui.label("Envelope release");
                 ui.add(egui::DragValue::new(&mut slot.inst.env_release));

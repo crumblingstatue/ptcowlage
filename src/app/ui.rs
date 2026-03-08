@@ -12,8 +12,11 @@ use {
         ui::{
             left_panel::LeftPanelState,
             tabs::{
-                effects::EffectsUiState, events::RawEventsUiState, map::MapState,
-                piano_roll::PianoRollState, voices::VoicesUiState,
+                effects::EffectsUiState,
+                events::RawEventsUiState,
+                map::MapState,
+                piano_roll::PianoRollState,
+                voices::{SelectedSlot, VoicesUiState},
             },
             unit::{unit_color, unit_voice_img},
             windows::Windows,
@@ -21,7 +24,10 @@ use {
     },
     eframe::egui::{self, AtomExt},
     egui_toast::Toasts,
-    ptcow::{Event, EventPayload, GroupIdx, SampleRate, UnitIdx, Voice, VoiceData, WaveDataPoints},
+    ptcow::{
+        Event, EventPayload, GroupIdx, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
+        WaveDataPoints,
+    },
     rustc_hash::FxHashSet,
 };
 
@@ -402,7 +408,15 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
 /// Draws and edits a waveform.
 /// `samples` are u8 values (0..255) representing the waveform.
 /// `height` is the display height of the waveform rectangle.
-pub fn waveform_edit_widget_u8(ui: &mut egui::Ui, samples: &mut [u8], height: f32, id: egui::Id) {
+pub fn envelope_edit_widget(
+    ui: &mut egui::Ui,
+    samples: &mut [u8],
+    height: f32,
+    id: egui::Id,
+    voice_idx: VoiceIdx,
+    sel_slot: SelectedSlot,
+    units: &ptcow::Units,
+) {
     // Unique ID to store previous pointer pos across frames
     let id = ui.id().with(id);
 
@@ -470,6 +484,19 @@ pub fn waveform_edit_widget_u8(ui: &mut egui::Ui, samples: &mut [u8], height: f3
         .collect();
 
     painter.line(points, egui::Stroke::new(1.0, egui::Color32::YELLOW));
+
+    // For units that are playing this voice, draw a line for what position they are in the envelope
+    for (idx, unit) in units.enumerated() {
+        if unit.voice_idx == voice_idx {
+            let tone = &unit.tones[sel_slot as usize];
+            let pos = tone.env_pos;
+            let x = lt.x + pos as f32 * hor_ratio;
+            painter.line_segment(
+                [egui::pos2(x, lt.y), egui::pos2(x, lb.y)],
+                egui::Stroke::new(1.0, unit_color(idx)),
+            );
+        }
+    }
 }
 
 /// Draws and edits an interleaved stereo signed 16 bit waveform.
