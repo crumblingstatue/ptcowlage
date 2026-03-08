@@ -321,21 +321,6 @@ fn roll_ui_inner(
         draw_meas_lines(song, state, last_tick, rect, &pnt, cr, mouse_screen_pos);
     }
 
-    // Draw play head line
-
-    // Approximate clock to lower resolution
-    let clock_approx = clock as f32 / state.tick_div;
-    let playhead_x = clock_approx + rect.min.x;
-    if state.follow_playhead && !song.pause {
-        scroll_to_playhead(ui, cr, playhead_x);
-    }
-    pnt.line_segment(
-        [
-            egui::pos2(playhead_x, rect.min.y),
-            egui::pos2(playhead_x, rect.max.y),
-        ],
-        egui::Stroke::new(2.0, egui::Color32::WHITE),
-    );
     // Draw play repeat line
     let x = (song.herd.smp_repeat as f32 / song.ins.samples_per_tick / state.tick_div) + rect.min.x;
     pnt.line_segment(
@@ -348,6 +333,8 @@ fn roll_ui_inner(
         [egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)],
         egui::Stroke::new(2.0, egui::Color32::RED),
     );
+    // Draw playhead line last so it appears on top of repeat/end
+    let playhead_x = draw_playhead_line(song, state, ui, clock, rect, &pnt, cr);
     if let Some(pos) = mouse_screen_pos {
         let mx = pos.x - rect.min.x;
         let scaled = mx * state.tick_div;
@@ -480,6 +467,31 @@ fn roll_ui_inner(
             UiCmd::ScrollToPlayhead => scroll_to_playhead(ui, cr, playhead_x),
         }
     }
+}
+
+fn draw_playhead_line(
+    song: &mut SongState,
+    state: &mut PianoRollState,
+    ui: &mut egui::Ui,
+    clock: u32,
+    rect: egui::Rect,
+    pnt: &egui::Painter,
+    cr: egui::Rect,
+) -> f32 {
+    // Approximate clock to lower resolution
+    let clock_approx = clock as f32 / state.tick_div;
+    let playhead_x = clock_approx + rect.min.x;
+    if state.follow_playhead && !song.pause {
+        scroll_to_playhead(ui, cr, playhead_x);
+    }
+    pnt.line_segment(
+        [
+            egui::pos2(playhead_x, rect.min.y),
+            egui::pos2(playhead_x, rect.max.y),
+        ],
+        egui::Stroke::new(2.0, egui::Color32::WHITE),
+    );
+    playhead_x
 }
 
 fn draw_piano_roll_items(
