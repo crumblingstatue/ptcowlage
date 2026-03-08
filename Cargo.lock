@@ -2059,8 +2059,9 @@ dependencies = [
 
 [[package]]
 name = "organyacat"
-version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/organyacat.git#853b6352a25a09fe9a8a6803d8738b323bd39640"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4b74b7016c9dd1896efb6b2380045b0612adbdb7a76976005b395dab93fe9ce"
 dependencies = [
  "bytemuck",
 ]
