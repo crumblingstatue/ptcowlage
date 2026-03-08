@@ -29,7 +29,6 @@ pub struct PianoRollState {
     shift_all_offset: i32,
     prev_frame_piano_roll_y_offset: f32,
     interact_mode: InteractMode,
-    draw_debug_info: bool,
     // TODO: Implement Hash for `UnitIdx`
     pub hidden_units: FxHashSet<UnitIdx>,
     draw_meas_lines: bool,
@@ -80,7 +79,6 @@ impl Default for PianoRollState {
             shift_all_offset: 0,
             prev_frame_piano_roll_y_offset: 0.,
             interact_mode: InteractMode::View,
-            draw_debug_info: false,
             hidden_units: FxHashSet::default(),
             draw_meas_lines: true,
             ui_cmd: None,
@@ -290,7 +288,7 @@ fn roll_ui_inner(
     if let Some(sel_rect) = sel_rect {
         pnt.debug_rect(sel_rect, egui::Color32::YELLOW, "Select");
     }
-    let (rects_drawn, circles_drawn, mut lines_drawn, hovered_events) = draw_piano_roll_items(
+    let hovered_events = draw_piano_roll_items(
         song,
         state,
         ui,
@@ -323,29 +321,7 @@ fn roll_ui_inner(
     events_popup_window_ui(song, state, ui, cmd);
 
     if state.draw_meas_lines {
-        draw_meas_lines(
-            song,
-            state,
-            last_tick,
-            rect,
-            &pnt,
-            cr,
-            &mut lines_drawn,
-            mouse_screen_pos,
-        );
-    }
-
-    if state.draw_debug_info {
-        debug_info_ui(
-            song,
-            state,
-            ui,
-            rect,
-            mouse_screen_pos,
-            rects_drawn,
-            circles_drawn,
-            lines_drawn,
-        );
+        draw_meas_lines(song, state, last_tick, rect, &pnt, cr, mouse_screen_pos);
     }
 
     // Draw play head line
@@ -519,7 +495,7 @@ fn draw_piano_roll_items(
     cr: egui::Rect,
     mouse_screen_pos: Option<egui::Pos2>,
     sel_rect: Option<egui::Rect>,
-) -> (i32, i32, i32, Vec<usize>) {
+) -> Vec<usize> {
     // Draw the piano roll items based on events
     let default_y = key_y(
         state.lowest_semitone,
@@ -530,7 +506,6 @@ fn draw_piano_roll_items(
     // INVARIANT/TODO: This assumes there are enough units in the herd so no event refers to an
     // out of bounds index. Might not always hold true. Especially if deleting units is allowed.
     let mut unit_key_ys = vec![default_y; usize::from(song.herd.units.len())];
-    let [mut rects_drawn, mut circles_drawn, lines_drawn] = [0; _];
     let mut hovered_events = Vec::new();
     for (ev_idx, ev) in song.song.events.iter().enumerate() {
         if state.hidden_units.contains(&ev.unit) {
@@ -586,7 +561,6 @@ fn draw_piano_roll_items(
                         egui::StrokeKind::Outside,
                     );
                 }
-                rects_drawn += 1;
             }
             EventPayload::Key(k) => {
                 let y = key_y(state.lowest_semitone, state.row_size, rect, k);
@@ -606,7 +580,6 @@ fn draw_piano_roll_items(
                     clr,
                     egui::Stroke::new(1.0, invert_color(clr)),
                 );
-                circles_drawn += 1;
             }
             _ => {}
         }
@@ -637,7 +610,7 @@ fn draw_piano_roll_items(
             }
         }
     }
-    (rects_drawn, circles_drawn, lines_drawn, hovered_events)
+    hovered_events
 }
 
 fn draw_piano_roll_rows(
@@ -676,42 +649,6 @@ fn draw_piano_roll_rows(
                 egui::StrokeKind::Inside,
             );
         }
-    }
-}
-
-fn debug_info_ui(
-    song: &mut SongState,
-    state: &mut PianoRollState,
-    ui: &mut egui::Ui,
-    rect: egui::Rect,
-    mouse_screen_pos: Option<egui::Pos2>,
-    rects_drawn: i32,
-    circles_drawn: i32,
-    lines_drawn: i32,
-) {
-    if let Some(mp) = mouse_screen_pos
-        && ui.clip_rect().contains(mp)
-    {
-        let (tick, meas) = mouse_tick_meas(mp, rect, state.tick_div, song.song.master.timing);
-        let pnt = ui.ctx().debug_painter();
-        pnt.debug_text(
-            mp + egui::vec2(0.0, -42.0),
-            egui::Align2::LEFT_TOP,
-            egui::Color32::WHITE,
-            format!("tick: {tick}"),
-        );
-        pnt.debug_text(
-            mp + egui::vec2(0.0, -24.0),
-            egui::Align2::LEFT_TOP,
-            egui::Color32::WHITE,
-            format!("meas: {meas}"),
-        );
-        pnt.debug_text(
-            mp + egui::vec2(0.0, -8.0),
-            egui::Align2::LEFT_TOP,
-            egui::Color32::WHITE,
-            format!("drawn {circles_drawn} circles, {rects_drawn} rects, {lines_drawn} lines"),
-        );
     }
 }
 
@@ -897,7 +834,6 @@ fn draw_meas_lines(
     rect: egui::Rect,
     pnt: &egui::Painter,
     cr: egui::Rect,
-    lines_drawn: &mut i32,
     mouse_pos: Option<egui::Pos2>,
 ) {
     let last_meas = ptcow::timing::tick_to_meas(last_tick, song.song.master.timing);
@@ -915,7 +851,6 @@ fn draw_meas_lines(
             [egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)],
             egui::Stroke::new(1.0, egui::Color32::LIGHT_GRAY),
         );
-        *lines_drawn += 1;
         pnt.text(
             egui::pos2(x + 2.0, cr.min.y),
             egui::Align2::LEFT_TOP,
@@ -1239,8 +1174,6 @@ fn experimental_popup_button(ui: &mut egui::Ui, song: &mut SongState, state: &mu
     let re = ui.button("🐛 Debug/Experimental");
     egui::Popup::menu(&re).show(|ui| {
         egui::Grid::new("debug_exp_popup").show(ui, |ui| {
-            ui.checkbox(&mut state.draw_debug_info, "Draw debug info");
-            ui.end_row();
             ui.label("Shift all notes");
             let re = ui.add(egui::DragValue::new(&mut state.shift_all_offset).range(-48..=48));
             if re.dragged() {
