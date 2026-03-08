@@ -1141,30 +1141,9 @@ fn loop_points_popup_button(ui: &mut egui::Ui, song: &mut SongState) {
             }
 
             if loop_points_changed {
-                reset_loop_points(song);
+                crate::pxtone_misc::reset_loop_points(song);
             }
         });
-}
-
-fn reset_loop_points(song: &mut SongState) {
-    song.herd.smp_repeat = ptcow::timing::meas_to_sample(
-        song.song.master.loop_points.repeat,
-        song.ins.samples_per_tick,
-        song.song.master.timing,
-    );
-    if let Some(last) = song.song.master.loop_points.last {
-        song.herd.smp_end = ptcow::timing::meas_to_sample(
-            last.get(),
-            song.ins.samples_per_tick,
-            song.song.master.timing,
-        );
-    } else {
-        song.herd.smp_end = ptcow::timing::meas_to_sample(
-            song.song.master.end_meas(),
-            song.ins.samples_per_tick,
-            song.song.master.timing,
-        );
-    }
 }
 
 fn help_popup_button(ui: &mut egui::Ui, interact_mode: InteractMode) {

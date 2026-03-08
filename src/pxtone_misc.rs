@@ -261,3 +261,24 @@ pub fn bass_drum() -> NoiseData {
         .unwrap(),
     }
 }
+
+pub fn reset_loop_points(song: &mut SongState) {
+    song.herd.smp_repeat = ptcow::timing::meas_to_sample(
+        song.song.master.loop_points.repeat,
+        song.ins.samples_per_tick,
+        song.song.master.timing,
+    );
+    if let Some(last) = song.song.master.loop_points.last {
+        song.herd.smp_end = ptcow::timing::meas_to_sample(
+            last.get(),
+            song.ins.samples_per_tick,
+            song.song.master.timing,
+        );
+    } else {
+        song.herd.smp_end = ptcow::timing::meas_to_sample(
+            song.song.master.end_meas(),
+            song.ins.samples_per_tick,
+            song.song.master.timing,
+        );
+    }
+}
