@@ -26,7 +26,6 @@ pub struct PianoRollState {
     row_size: f32,
     lowest_semitone: u8,
     follow_playhead: bool,
-    shift_all_offset: i32,
     prev_frame_piano_roll_y_offset: f32,
     interact_mode: InteractMode,
     // TODO: Implement Hash for `UnitIdx`
@@ -76,7 +75,6 @@ impl Default for PianoRollState {
             row_size: 12.0,
             lowest_semitone: 42,
             follow_playhead: true,
-            shift_all_offset: 0,
             prev_frame_piano_roll_y_offset: 0.,
             interact_mode: InteractMode::View,
             hidden_units: FxHashSet::default(),
@@ -132,7 +130,6 @@ fn top_ui(
         ui.checkbox(&mut state.follow_playhead, "");
         piano_roll_config_popup_button(ui, state);
         loop_points_popup_button(ui, song);
-        experimental_popup_button(ui, song, state);
         if !state.selected_event_indices.is_empty() {
             ui.separator();
             if ui
@@ -1168,24 +1165,6 @@ fn reset_loop_points(song: &mut SongState) {
             song.song.master.timing,
         );
     }
-}
-
-fn experimental_popup_button(ui: &mut egui::Ui, song: &mut SongState, state: &mut PianoRollState) {
-    let re = ui.button("🐛 Debug/Experimental");
-    egui::Popup::menu(&re).show(|ui| {
-        egui::Grid::new("debug_exp_popup").show(ui, |ui| {
-            ui.label("Shift all notes");
-            let re = ui.add(egui::DragValue::new(&mut state.shift_all_offset).range(-48..=48));
-            if re.dragged() {
-                for ev in &mut *song.song.events {
-                    ev.tick = ev.tick.saturating_add_signed(state.shift_all_offset);
-                }
-            }
-            if ui.input(|inp| inp.pointer.primary_released()) {
-                state.shift_all_offset = 0;
-            }
-        });
-    });
 }
 
 fn help_popup_button(ui: &mut egui::Ui, interact_mode: InteractMode) {
