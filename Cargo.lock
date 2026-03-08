@@ -2402,7 +2402,8 @@ dependencies = [
 [[package]]
 name = "recently_used_list"
 version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/recently_used_list.git#90af7254942e9ac657e0f2df6fbeee4a95a27385"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22eb101c16423b2fa6b1d5a1c511f379f155d42f3cda23d91eb6df327ac7c92e"
 dependencies = [
  "serde",
 ]
