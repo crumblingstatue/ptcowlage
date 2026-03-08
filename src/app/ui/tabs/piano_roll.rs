@@ -222,9 +222,7 @@ fn roll_ui_inner(
     dst_sps: SampleRate,
     piano_state: &mut FreeplayPianoState,
 ) {
-    // We make up a value for number of ticks if there are no events in the song (empty song)
-    // TODO: Maybe we can do something more clever here
-    let last_note_tick = song.song.events.last().map_or(5000, |ev| ev.tick);
+    let last_note_tick = song.song.events.last().map_or(0, |ev| ev.tick);
     let last_meas_tick =
         ptcow::timing::meas_to_tick(song.song.master.end_meas(), song.song.master.timing);
     // We want the UI to encompass the last meas line.
