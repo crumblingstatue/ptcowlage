@@ -130,7 +130,7 @@ impl App {
         let mut modal = Modal::default();
         if let Some(mid_path) = args.midi_import {
             let mid_data = std::fs::read(&mid_path).unwrap();
-            match mid2ptcop::write_midi_to_pxtone(
+            match crate::midi::write_midi_to_pxtone(
                 &mid_data,
                 &mut song_state.herd,
                 &mut song_state.song,
@@ -237,7 +237,7 @@ impl App {
     fn import_midi_from_bytes(&mut self, mid_data: &[u8]) {
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
-        match mid2ptcop::write_midi_to_pxtone(mid_data, &mut song.herd, &mut song.song) {
+        match crate::midi::write_midi_to_pxtone(mid_data, &mut song.herd, &mut song.song) {
             Ok(_) => {
                 song.song.recalculate_length();
             }

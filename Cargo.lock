@@ -1573,16 +1573,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mid2ptcop"
-version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/mid2ptcop.git#7d958d0c997e8294db6b41e75647fb14fdac3c38"
-dependencies = [
- "midly",
- "ptcow",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "midly"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2301,7 +2291,8 @@ dependencies = [
  "egui_extras",
  "fontique",
  "js-sys",
- "mid2ptcop",
+ "log",
+ "midly",
  "organyacat",
  "piyopiyo",
  "ptcow",

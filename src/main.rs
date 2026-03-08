@@ -18,6 +18,7 @@ mod evilscript;
 #[cfg(not(target_arch = "wasm32"))]
 mod font_fallback;
 mod herd_ext;
+mod midi;
 mod organya;
 mod piyopiyo;
 mod pxtone_misc;
