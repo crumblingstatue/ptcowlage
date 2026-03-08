@@ -2175,8 +2175,9 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "piyopiyo"
-version = "0.3.0"
-source = "git+https://github.com/crumblingstatue/piyopiyo-rs.git#9767fb993354a64664d80138b3ca493281422ce3"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0c1f6648eb70a15a7891bb748a2cd784e51f9d89315472414bcf5dc69247875"
 dependencies = [
  "bytemuck",
 ]

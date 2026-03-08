@@ -18,7 +18,7 @@ bitflags.version = "2.11"
 # For midi conversion
 mid2ptcop.git = "https://github.com/crumblingstatue/mid2ptcop.git"
 # For PiyoPiyo conversion
-piyopiyo.git = "https://github.com/crumblingstatue/piyopiyo-rs.git"
+piyopiyo = "0.4.0"
 # For Organya conversion
 organyacat.git = "https://github.com/crumblingstatue/organyacat.git"
 # For soundfont (sf2) voice import
