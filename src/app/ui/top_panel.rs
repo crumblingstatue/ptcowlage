@@ -4,7 +4,12 @@ use {
             SongState,
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{Tab, modal::Modal, piano_freeplay_ui, windows::TitleAndCommentWindow},
+            ui::{
+                Tab,
+                modal::Modal,
+                piano_freeplay_ui,
+                windows::{LogWindow, TitleAndCommentWindow},
+            },
         },
         audio_out::{OutParams, prepare_song},
     },
@@ -178,6 +183,10 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 ui.hyperlink_to("▶ pxtone web", "https://ptweb.me/");
                 ui.hyperlink_to("🐷 Discord", "https://discord.gg/2uQjHu8");
             });
+            ui.separator();
+            if ui.button("Log viewer").clicked() {
+                app.ui_state.windows.toggle::<LogWindow>();
+            }
         });
         ui.separator();
         let prev_tab = app.ui_state.tab;

@@ -51,3 +51,16 @@ impl Window for TitleAndCommentWindow {
         ui.text_edit_multiline(&mut song.song.text.comment);
     }
 }
+
+#[derive(Default)]
+pub struct LogWindow;
+
+impl Window for LogWindow {
+    fn title(&self) -> &str {
+        "Log viewer"
+    }
+
+    fn update(&mut self, ui: &mut egui::Ui, _song: &mut SongState) {
+        egui_logger::logger_ui().show(ui);
+    }
+}

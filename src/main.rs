@@ -65,6 +65,7 @@ struct CliArgs {
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
     use {clap::Parser as _, eframe::egui};
+    egui_logger::builder().init().unwrap();
     let opts = eframe::NativeOptions::default();
     let args = CliArgs::parse();
     eframe::run_native(
@@ -89,6 +90,7 @@ fn main() {
 #[cfg(target_arch = "wasm32")]
 fn main() {
     use eframe::wasm_bindgen::JsCast as _;
+    egui_logger::builder().init().unwrap();
 
     let web_options = eframe::WebOptions::default();
 

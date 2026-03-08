@@ -27,6 +27,7 @@ arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
 log = "0.4.29"
+egui_logger = "0.9.3"
 
 # Web-only dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
