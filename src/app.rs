@@ -27,9 +27,7 @@ use {
     eframe::egui,
     egui_toast::{Toast, ToastKind, ToastOptions},
     ptcow::{Event, EventPayload, NoiseTable, SampleRate, UnitIdx, VoiceIdx},
-    rustysynth::SoundFont,
     std::{
-        fs::File,
         path::{Path, PathBuf},
         sync::{
             Arc, Mutex, RwLock,
@@ -428,29 +426,6 @@ impl App {
                     }
                 }
             }
-            FileOp::ReplaceSf2Single(voice_idx) => {
-                let mut sf2_file = File::open(path).unwrap();
-                match SoundFont::new(&mut sf2_file) {
-                    Ok(soundfont) => {
-                        self.ui_state.sf2_import =
-                            Some(ui::Sf2ImportDialog::new(soundfont, Some(voice_idx)));
-                    }
-                    Err(e) => {
-                        self.modal.msg(e);
-                    }
-                }
-            }
-            FileOp::ImportSf2Single => {
-                let mut sf2_file = File::open(path).unwrap();
-                match SoundFont::new(&mut sf2_file) {
-                    Ok(soundfont) => {
-                        self.ui_state.sf2_import = Some(ui::Sf2ImportDialog::new(soundfont, None));
-                    }
-                    Err(e) => {
-                        self.modal.msg(e);
-                    }
-                }
-            }
             FileOp::ImportPtVoice => {
                 let data = std::fs::read(&path).unwrap();
                 self.import_ptvoice(&data, &path);
@@ -695,15 +670,6 @@ impl eframe::App for App {
             self.desktop_handle_file_op(path, op);
         }
         self.modal.update(ctx, &self.song);
-        if let Some(sf2) = &mut self.ui_state.sf2_import {
-            let mut close = false;
-            egui::Modal::new("sf2_import_popup".into()).show(ctx, |ui| {
-                close = ui::sf2_import_ui(ui, sf2, &mut self.aux_state, &self.song, self.out.rate);
-            });
-            if close {
-                self.ui_state.sf2_import = None;
-            }
-        }
         self.ui_state.shared.toasts.show(ctx);
         // Do queue commands
         while let Some(cmd) = self.cmd.pop() {
@@ -844,9 +810,6 @@ impl App {
             Cmd::PromptImportOggVorbis => {
                 self.open_file_prompt(file_ops::FILT_OGG, FileOp::ImportOggVorbis, false);
             }
-            Cmd::PromptImportSf2Sound => {
-                self.open_file_prompt(file_ops::FILT_SF2, FileOp::ImportSf2Single, false);
-            }
             Cmd::PromptReplaceAllPtcop => {
                 self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ReplaceVoicesPtcop, false);
             }
@@ -864,11 +827,6 @@ impl App {
                     false,
                 );
             }
-            Cmd::PromptReplaceSf2Single(voice_idx) => self.open_file_prompt(
-                file_ops::FILT_SF2,
-                FileOp::ReplaceSf2Single(voice_idx),
-                false,
-            ),
             Cmd::PromptSaveAs => {
                 self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::SaveProjAs, true);
             }

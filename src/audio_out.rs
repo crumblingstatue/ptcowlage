@@ -221,6 +221,7 @@ pub enum AuxMsg {
     StopAudio {
         key: AuxAudioKey,
     },
+    #[expect(dead_code, reason = "useful in the future")]
     StopAll,
 }
 

@@ -107,9 +107,6 @@ pub fn ui(
             if ui.button((img::FISH.smol(), ".ogg (vorbis)")).clicked() {
                 app_cmd.push(Cmd::PromptImportOggVorbis);
             }
-            if ui.button("🎵 Single from .sf2").clicked() {
-                app_cmd.push(Cmd::PromptImportSf2Sound);
-            }
         });
         ui.menu_button("🔁 Replace...", |ui| {
             if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
@@ -126,9 +123,6 @@ pub fn ui(
                 .clicked()
             {
                 app_cmd.push(Cmd::PromptReplacePtNoiseSingle(ui_state.selected_idx));
-            }
-            if ui.button("🎵 Current from .sf2").clicked() {
-                app_cmd.push(Cmd::PromptReplaceSf2Single(ui_state.selected_idx));
             }
             ui.menu_button("✴ Current with new", |ui| {
                 if ui.button((img::SAXO.smol(), "Wave")).clicked() {

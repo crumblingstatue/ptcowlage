@@ -7,29 +7,22 @@ mod unit;
 pub mod windows;
 
 use {
-    crate::{
-        app::{
-            SongState,
-            ui::{
-                left_panel::LeftPanelState,
-                tabs::{
-                    effects::EffectsUiState, events::RawEventsUiState, map::MapState,
-                    piano_roll::PianoRollState, voices::VoicesUiState,
-                },
-                unit::{unit_color, unit_voice_img},
-                windows::Windows,
+    crate::app::{
+        SongState,
+        ui::{
+            left_panel::LeftPanelState,
+            tabs::{
+                effects::EffectsUiState, events::RawEventsUiState, map::MapState,
+                piano_roll::PianoRollState, voices::VoicesUiState,
             },
+            unit::{unit_color, unit_voice_img},
+            windows::Windows,
         },
-        audio_out::{AuxAudioState, AuxMsg, SongStateHandle},
     },
     eframe::egui::{self, AtomExt},
     egui_toast::Toasts,
-    ptcow::{
-        Event, EventPayload, GroupIdx, PcmData, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
-        VoiceUnit, WaveDataPoints,
-    },
+    ptcow::{Event, EventPayload, GroupIdx, SampleRate, UnitIdx, Voice, VoiceData, WaveDataPoints},
     rustc_hash::FxHashSet,
-    rustysynth::SoundFont,
 };
 
 pub mod tabs {
@@ -277,29 +270,8 @@ pub struct UiState {
     pub voices: VoicesUiState,
     pub effects: EffectsUiState,
     pub shared: SharedUiState,
-    pub sf2_import: Option<Sf2ImportDialog>,
     pub windows: Windows,
     pub left: LeftPanelState,
-}
-
-pub struct Sf2ImportDialog {
-    soundfont: SoundFont,
-    selected: Option<usize>,
-    /// If `Some`, replace the voice at index with the import
-    target_voice_idx: Option<VoiceIdx>,
-    filter_string: String,
-}
-
-impl Sf2ImportDialog {
-    /// If `target_voice_idx` is `None`, it's import rather than replace
-    pub fn new(soundfont: SoundFont, target_voice_idx: Option<VoiceIdx>) -> Self {
-        Self {
-            soundfont,
-            selected: None,
-            target_voice_idx,
-            filter_string: String::new(),
-        }
-    }
 }
 
 /// Ui state shared among different uis
@@ -652,103 +624,6 @@ fn voice_img_opt(opt_voice: Option<&Voice>) -> egui::ImageSource<'static> {
         Some(voice) => voice_img(voice),
         None => img::X,
     }
-}
-
-/// Returns true if import ui should close
-pub(crate) fn sf2_import_ui(
-    ui: &mut egui::Ui,
-    sf2: &mut Sf2ImportDialog,
-    aux: &mut Option<AuxAudioState>,
-    song: &SongStateHandle,
-    out_rate: SampleRate,
-) -> bool {
-    let mut close = false;
-    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-    if let Some(sel) = sf2.selected {
-        let ins = &sf2.soundfont.get_instruments()[sel];
-        ui.heading(ins.get_name());
-        let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(44_100, 1024));
-        for region in ins.get_regions() {
-            ui.horizontal(|ui| {
-                ui.label(format!(
-                    "coarse: {}, fine: {}",
-                    region.get_coarse_tune(),
-                    region.get_fine_tune()
-                ));
-                if ui.button("Play").clicked() {
-                    let key = aux.next_key();
-                    let start = region.get_sample_start() as usize;
-                    let end = region.get_sample_end() as usize;
-                    let sample_data: Vec<i16> = sf2.soundfont.get_wave_data()[start..end].to_vec();
-                    aux.send
-                        .send(crate::audio_out::AuxMsg::PlaySamples16 { key, sample_data })
-                        .unwrap();
-                }
-                if ui.button("Import").clicked() {
-                    let start = region.get_sample_start() as usize;
-                    let end = region.get_sample_end() as usize;
-                    let sample_data: Vec<i16> = sf2.soundfont.get_wave_data()[start..end].to_vec();
-                    let pcm = PcmData {
-                        ch: ptcow::ChNum::Mono,
-                        sps: 44_100,
-                        bps: ptcow::Bps::B16,
-                        num_samples: sample_data.len() as u32,
-                        smp: bytemuck::pod_collect_to_vec(&sample_data),
-                    };
-                    let data = VoiceData::Pcm(pcm);
-                    let mut vu = VoiceUnit::default();
-                    // The way basic key works, the lower the basic key, the higher the pitch
-                    // So if we want to increase the pitch by 1 semitone, we need to subtract 256.
-                    // So we subtract the fine tune values, rather than adding
-                    // Coarse tune (semitone)
-                    vu.basic_key -= region.get_coarse_tune() * 256;
-                    // Fine tune (cent)
-                    vu.basic_key -= (f64::from(region.get_fine_tune()) * 2.56) as i32;
-                    let mut song = song.lock().unwrap();
-                    let song = &mut *song;
-                    let mut voice = Voice::from_unit_and_data(vu, data);
-                    voice.name = ins.get_name().to_string();
-                    if let Some(target_idx) = sf2.target_voice_idx {
-                        song.ins.voices[target_idx] = voice;
-                    } else {
-                        song.ins.voices.push(voice);
-                    }
-                    ptcow::rebuild_tones(
-                        &mut song.ins,
-                        out_rate,
-                        &mut song.herd.delays,
-                        &mut song.herd.overdrives,
-                        &song.song.master,
-                    );
-                    close = true;
-                }
-            });
-        }
-        if ui.button("Stop").clicked() {
-            aux.send.send(AuxMsg::StopAll).unwrap();
-        }
-        ui.separator();
-    }
-    ui.add(egui::TextEdit::singleline(&mut sf2.filter_string).hint_text("🔎 Filter"));
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        for (i, instrument) in sf2.soundfont.get_instruments().iter().enumerate() {
-            if !sf2.filter_string.is_empty()
-                && !instrument
-                    .get_name()
-                    .to_ascii_lowercase()
-                    .contains(&sf2.filter_string.to_ascii_lowercase())
-            {
-                continue;
-            }
-            if ui
-                .selectable_label(sf2.selected == Some(i), instrument.get_name())
-                .clicked()
-            {
-                sf2.selected = Some(i);
-            }
-        }
-    });
-    close
 }
 
 fn group_idx_slider(ui: &mut egui::Ui, group_idx: &mut GroupIdx) -> egui::Response {
