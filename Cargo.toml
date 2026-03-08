@@ -56,3 +56,7 @@ lto = "thin"
 # On wasm32, panic is just abort regardless of what we set here, so let's just abort everywhere
 # for consistent behavior.
 panic = "abort"
+
+[patch.crates-io]
+# TODO: New ptcow release
+ptcow.git = "https://github.com/crumblingstatue/ptcow.git"

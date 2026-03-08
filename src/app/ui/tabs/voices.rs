@@ -892,8 +892,14 @@ fn slot_wave_extra_ui(
         if ui.button("-").clicked() {
             data.envelope.points.pop();
         }
-        if ui.button("Recalculate").clicked() {
+        let prepared_size = data.envelope.prepared_size(out_rate);
+        if prepared_size <= 88_200 {
             slot.inst.recalc_envelope(out_rate, &data.envelope);
+        } else {
+            ui.label(format!("Prepared size: {prepared_size}"));
+            if ui.button("Recalculate").clicked() {
+                slot.inst.recalc_envelope(out_rate, &data.envelope);
+            }
         }
     });
     ui.horizontal_top(|ui| {
