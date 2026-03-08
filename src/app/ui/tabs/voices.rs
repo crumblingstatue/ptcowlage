@@ -912,13 +912,14 @@ fn slot_wave_extra_ui(
                     .points
                     .insert(data.envelope.points.len() - 1, EnvPt { x: 1, y: 64 });
             }
-            let remove_label = if data.envelope.points.len() == 1 {
-                "- Remove release point"
+            if data.envelope.points.len() == 1 {
+                if ui.button("- Remove release point").clicked() {
+                    data.envelope.points.pop();
+                }
             } else {
-                "-"
-            };
-            if ui.button(remove_label).clicked() {
-                data.envelope.points.pop();
+                if ui.button("-").clicked() {
+                    data.envelope.points.remove(data.envelope.points.len() - 2);
+                }
             }
         }
         let prepared_size = data.envelope.prepared_size(out_rate);
