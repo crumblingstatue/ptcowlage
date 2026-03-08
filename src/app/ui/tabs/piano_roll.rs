@@ -275,36 +275,7 @@ fn roll_ui_inner(
     if lmb_released {
         state.lmb_drag_origin = None;
     }
-    for key in 0..state.n_rows {
-        let info = key_info(state.lowest_semitone, key);
-        let y = f32::from(key) * state.row_size;
-        let y = rect.max.y - y;
-        let sharp = [
-            false, true, false, true, false, false, true, false, true, false, true, false,
-        ];
-        let row_rect = egui::Rect::from_min_max(
-            egui::pos2(cr.min.x, y),
-            egui::pos2(cr.max.x, y + state.row_size),
-        );
-        if sharp[info.c_scale_idx as usize] {
-            pnt.rect_filled(row_rect, 0.0, egui::Color32::BLACK);
-        }
-        pnt.line_segment(
-            [egui::pos2(cr.min.x, y), egui::pos2(cr.max.x, y)],
-            egui::Stroke::new(1.0, egui::Color32::DARK_GRAY),
-        );
-        // Draw a highlight for the row mouse is on
-        if let Some(mp) = mouse_screen_pos
-            && row_rect.y_range().contains(mp.y)
-        {
-            pnt.rect_stroke(
-                row_rect,
-                0.0,
-                egui::Stroke::new(1.0, egui::Color32::YELLOW),
-                egui::StrokeKind::Inside,
-            );
-        }
-    }
+    draw_piano_roll_rows(state, rect, &pnt, cr, mouse_screen_pos);
     // Lmb Drag selection box
     let mut sel_rect = None;
     if state.interact_mode == InteractMode::Edit
@@ -319,123 +290,17 @@ fn roll_ui_inner(
     if let Some(sel_rect) = sel_rect {
         pnt.debug_rect(sel_rect, egui::Color32::YELLOW, "Select");
     }
-    // Draw the piano roll items based on events
-    let default_y = key_y(
-        state.lowest_semitone,
-        state.row_size,
+    let (rects_drawn, circles_drawn, mut lines_drawn, hovered_events) = draw_piano_roll_items(
+        song,
+        state,
+        ui,
+        cmd,
         rect,
-        ptcow::DEFAULT_KEY,
+        &pnt,
+        cr,
+        mouse_screen_pos,
+        sel_rect,
     );
-    // INVARIANT/TODO: This assumes there are enough units in the herd so no event refers to an
-    // out of bounds index. Might not always hold true. Especially if deleting units is allowed.
-    let mut unit_key_ys = vec![default_y; usize::from(song.herd.units.len())];
-    let [mut rects_drawn, mut circles_drawn, mut lines_drawn] = [0; _];
-    let mut hovered_events = Vec::new();
-    for (ev_idx, ev) in song.song.events.iter().enumerate() {
-        if state.hidden_units.contains(&ev.unit) {
-            continue;
-        }
-        let clock_approx = ev.tick as f32 / state.tick_div;
-        let x = clock_approx + rect.min.x;
-        // We take advantage of the fact that events are sorted by ticks, and
-        // if the x is larger than the UI clip rect, we break, to save on rendering
-        // a bunch of stuff
-        if x > cr.max.x {
-            break;
-        }
-        let clr = unit_color(ev.unit);
-        let mut interact_rect = None;
-        match ev.payload {
-            EventPayload::On { duration } => {
-                // Sometimes, key events are after on in the event buffer,
-                // but at the same tick. Look ahead to find such events, and correct
-                // the y position
-                for eve_ahead in &song.song.events[ev_idx..] {
-                    if eve_ahead.tick != ev.tick {
-                        break;
-                    }
-                    if eve_ahead.unit != ev.unit {
-                        continue;
-                    }
-                    let EventPayload::Key(key) = eve_ahead.payload else {
-                        continue;
-                    };
-                    unit_key_ys[ev.unit.usize()] =
-                        key_y(state.lowest_semitone, state.row_size, rect, key);
-                }
-                let y = unit_key_ys[ev.unit.usize()];
-                let rect = egui::Rect::from_min_max(
-                    egui::pos2(x, y),
-                    egui::pos2(x + duration as f32 / state.tick_div, y + state.row_size),
-                );
-                // We skip drawing the rect if it's outside to the left of the clip rect
-                if rect.max.x < cr.min.x {
-                    continue;
-                }
-                interact_rect = Some(rect);
-                // We slightly shrink the drawn rect so it doesn't overlap guide lines or row
-                // highlight
-                let shrink_rect = rect.shrink2(egui::vec2(0.0, 2.0));
-                pnt.rect_filled(shrink_rect, 2.0, clr);
-                if state.selected_event_indices.contains(&ev_idx) {
-                    pnt.rect_stroke(
-                        shrink_rect,
-                        2.0,
-                        egui::Stroke::new(1.0, invert_color(clr)),
-                        egui::StrokeKind::Outside,
-                    );
-                }
-                rects_drawn += 1;
-            }
-            EventPayload::Key(k) => {
-                let y = key_y(state.lowest_semitone, state.row_size, rect, k);
-                unit_key_ys[ev.unit.usize()] = y;
-                let radius = state.row_size / 4.0;
-                // We skip drawing the circle if it's outside to the left of the clip rect
-                if x + radius < cr.min.x {
-                    continue;
-                }
-                interact_rect = Some(egui::Rect::from_center_size(
-                    egui::pos2(x, y),
-                    egui::vec2(radius * 2.0, radius * 2.0),
-                ));
-                pnt.circle(
-                    egui::pos2(x + radius, y + radius),
-                    radius,
-                    clr,
-                    egui::Stroke::new(1.0, invert_color(clr)),
-                );
-                circles_drawn += 1;
-            }
-            _ => {}
-        }
-        // The interact rectangles are at the pos where they are drawn on the screen,
-        // so no mouse coordinate conversion is required.
-        if let Some(irect) = interact_rect
-            && let Some(mp) = mouse_screen_pos
-        {
-            // We want to make sure mouse pos is also in clip rect so clicks outside the scroll area
-            // aren't registered
-            if cr.contains(mp) && irect.contains(mp) {
-                if ui.input(|inp| inp.pointer.secondary_clicked()) {
-                    if state.interact_mode == InteractMode::Place
-                        || state.interact_mode == InteractMode::Edit
-                    {
-                        cmd.push(Cmd::RemoveNoteAtIdx { idx: ev_idx });
-                    }
-                }
-                hovered_events.push(ev_idx);
-            }
-        }
-        // Add to selection if selection box is active
-        if let Some(irect) = interact_rect
-            && let Some(sel_rect) = sel_rect
-        {
-            if sel_rect.contains_rect(irect) {
-                state.selected_event_indices.insert(ev_idx);
-            }
-        }
-    }
 
     // Left click popup
     if let Some(mp) = mouse_screen_pos
@@ -453,82 +318,9 @@ fn roll_ui_inner(
     }
 
     // Alt hover tooltip
-    if mod_alt && !hovered_events.is_empty() {
-        egui::Tooltip::always_open(
-            ui.ctx().clone(),
-            ui.layer_id(),
-            egui::Id::NULL,
-            PopupAnchor::Pointer,
-        )
-        .gap(16.0)
-        .show(|ui| {
-            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-            for ev_idx in hovered_events {
-                let ev = &song.song.events[ev_idx];
-                let payload_text = match ev.payload {
-                    EventPayload::On { duration } => {
-                        format!("On event for {duration} ticks")
-                    }
-                    EventPayload::Key(key) => {
-                        format!(
-                            "Key: {key}\n{:#?}",
-                            key_info(state.lowest_semitone, (key / 256) as u8)
-                        )
-                    }
-                    _ => {
-                        continue;
-                    }
-                };
-                let unit_name = match song.herd.units.get(ev.unit) {
-                    Some(unit) => unit.name.clone(),
-                    None => format!("No such unit: {}", ev.unit.0),
-                };
-                ui.horizontal(|ui| {
-                    ui.label(ev.tick.to_string());
-                    ui.colored_label(unit_color(ev.unit), unit_name);
-                    ui.label(payload_text);
-                });
-            }
-        });
-    }
+    alt_hover_tooltip_ui(song, state, ui, mod_alt, hovered_events);
     // Events left click window
-    if let Some(popup) = &mut state.evs_popup {
-        let mut open = true;
-        egui::Window::new(popup.title)
-            .default_pos(popup.pos)
-            .open(&mut open)
-            .show(ui.ctx(), |ui| {
-                ui.horizontal(|ui| {
-                    if ui.button("Up 1 key").clicked() {
-                        for &idx in &popup.indices {
-                            let ev = &mut song.song.events[idx];
-                            if let EventPayload::Key(key) = &mut ev.payload {
-                                *key += 256;
-                            }
-                        }
-                    }
-                    if ui.button("Down 1 key").clicked() {
-                        for &idx in &popup.indices {
-                            let ev = &mut song.song.events[idx];
-                            if let EventPayload::Key(key) = &mut ev.payload {
-                                *key -= 256;
-                            }
-                        }
-                    }
-                });
-                ui.separator();
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    egui::Grid::new("events_win_events")
-                        .striped(true)
-                        .show(ui, |ui| {
-                            events_window_inner_ui(song, cmd, ui, popup);
-                        });
-                });
-            });
-        if !open {
-            state.evs_popup = None;
-        }
-    }
+    events_popup_window_ui(song, state, ui, cmd);
 
     if state.draw_meas_lines {
         draw_meas_lines(
@@ -544,30 +336,16 @@ fn roll_ui_inner(
     }
 
     if state.draw_debug_info {
-        if let Some(mp) = mouse_screen_pos
-            && ui.clip_rect().contains(mp)
-        {
-            let (tick, meas) = mouse_tick_meas(mp, rect, state.tick_div, song.song.master.timing);
-            let pnt = ui.ctx().debug_painter();
-            pnt.debug_text(
-                mp + egui::vec2(0.0, -42.0),
-                egui::Align2::LEFT_TOP,
-                egui::Color32::WHITE,
-                format!("tick: {tick}"),
-            );
-            pnt.debug_text(
-                mp + egui::vec2(0.0, -24.0),
-                egui::Align2::LEFT_TOP,
-                egui::Color32::WHITE,
-                format!("meas: {meas}"),
-            );
-            pnt.debug_text(
-                mp + egui::vec2(0.0, -8.0),
-                egui::Align2::LEFT_TOP,
-                egui::Color32::WHITE,
-                format!("drawn {circles_drawn} circles, {rects_drawn} rects, {lines_drawn} lines"),
-            );
-        }
+        debug_info_ui(
+            song,
+            state,
+            ui,
+            rect,
+            mouse_screen_pos,
+            rects_drawn,
+            circles_drawn,
+            lines_drawn,
+        );
     }
 
     // Draw play head line
@@ -727,6 +505,304 @@ fn roll_ui_inner(
     if let Some(cmd) = state.ui_cmd.take() {
         match cmd {
             UiCmd::ScrollToPlayhead => scroll_to_playhead(ui, cr, playhead_x),
+        }
+    }
+}
+
+fn draw_piano_roll_items(
+    song: &mut SongState,
+    state: &mut PianoRollState,
+    ui: &mut egui::Ui,
+    cmd: &mut CommandQueue,
+    rect: egui::Rect,
+    pnt: &egui::Painter,
+    cr: egui::Rect,
+    mouse_screen_pos: Option<egui::Pos2>,
+    sel_rect: Option<egui::Rect>,
+) -> (i32, i32, i32, Vec<usize>) {
+    // Draw the piano roll items based on events
+    let default_y = key_y(
+        state.lowest_semitone,
+        state.row_size,
+        rect,
+        ptcow::DEFAULT_KEY,
+    );
+    // INVARIANT/TODO: This assumes there are enough units in the herd so no event refers to an
+    // out of bounds index. Might not always hold true. Especially if deleting units is allowed.
+    let mut unit_key_ys = vec![default_y; usize::from(song.herd.units.len())];
+    let [mut rects_drawn, mut circles_drawn, lines_drawn] = [0; _];
+    let mut hovered_events = Vec::new();
+    for (ev_idx, ev) in song.song.events.iter().enumerate() {
+        if state.hidden_units.contains(&ev.unit) {
+            continue;
+        }
+        let clock_approx = ev.tick as f32 / state.tick_div;
+        let x = clock_approx + rect.min.x;
+        // We take advantage of the fact that events are sorted by ticks, and
+        // if the x is larger than the UI clip rect, we break, to save on rendering
+        // a bunch of stuff
+        if x > cr.max.x {
+            break;
+        }
+        let clr = unit_color(ev.unit);
+        let mut interact_rect = None;
+        match ev.payload {
+            EventPayload::On { duration } => {
+                // Sometimes, key events are after on in the event buffer,
+                // but at the same tick. Look ahead to find such events, and correct
+                // the y position
+                for eve_ahead in &song.song.events[ev_idx..] {
+                    if eve_ahead.tick != ev.tick {
+                        break;
+                    }
+                    if eve_ahead.unit != ev.unit {
+                        continue;
+                    }
+                    let EventPayload::Key(key) = eve_ahead.payload else {
+                        continue;
+                    };
+                    unit_key_ys[ev.unit.usize()] =
+                        key_y(state.lowest_semitone, state.row_size, rect, key);
+                }
+                let y = unit_key_ys[ev.unit.usize()];
+                let rect = egui::Rect::from_min_max(
+                    egui::pos2(x, y),
+                    egui::pos2(x + duration as f32 / state.tick_div, y + state.row_size),
+                );
+                // We skip drawing the rect if it's outside to the left of the clip rect
+                if rect.max.x < cr.min.x {
+                    continue;
+                }
+                interact_rect = Some(rect);
+                // We slightly shrink the drawn rect so it doesn't overlap guide lines or row
+                // highlight
+                let shrink_rect = rect.shrink2(egui::vec2(0.0, 2.0));
+                pnt.rect_filled(shrink_rect, 2.0, clr);
+                if state.selected_event_indices.contains(&ev_idx) {
+                    pnt.rect_stroke(
+                        shrink_rect,
+                        2.0,
+                        egui::Stroke::new(1.0, invert_color(clr)),
+                        egui::StrokeKind::Outside,
+                    );
+                }
+                rects_drawn += 1;
+            }
+            EventPayload::Key(k) => {
+                let y = key_y(state.lowest_semitone, state.row_size, rect, k);
+                unit_key_ys[ev.unit.usize()] = y;
+                let radius = state.row_size / 4.0;
+                // We skip drawing the circle if it's outside to the left of the clip rect
+                if x + radius < cr.min.x {
+                    continue;
+                }
+                interact_rect = Some(egui::Rect::from_center_size(
+                    egui::pos2(x, y),
+                    egui::vec2(radius * 2.0, radius * 2.0),
+                ));
+                pnt.circle(
+                    egui::pos2(x + radius, y + radius),
+                    radius,
+                    clr,
+                    egui::Stroke::new(1.0, invert_color(clr)),
+                );
+                circles_drawn += 1;
+            }
+            _ => {}
+        }
+        // The interact rectangles are at the pos where they are drawn on the screen,
+        // so no mouse coordinate conversion is required.
+        if let Some(irect) = interact_rect
+            && let Some(mp) = mouse_screen_pos
+        {
+            // We want to make sure mouse pos is also in clip rect so clicks outside the scroll area
+            // aren't registered
+            if cr.contains(mp) && irect.contains(mp) {
+                if ui.input(|inp| inp.pointer.secondary_clicked()) {
+                    if state.interact_mode == InteractMode::Place
+                        || state.interact_mode == InteractMode::Edit
+                    {
+                        cmd.push(Cmd::RemoveNoteAtIdx { idx: ev_idx });
+                    }
+                }
+                hovered_events.push(ev_idx);
+            }
+        }
+        // Add to selection if selection box is active
+        if let Some(irect) = interact_rect
+            && let Some(sel_rect) = sel_rect
+        {
+            if sel_rect.contains_rect(irect) {
+                state.selected_event_indices.insert(ev_idx);
+            }
+        }
+    }
+    (rects_drawn, circles_drawn, lines_drawn, hovered_events)
+}
+
+fn draw_piano_roll_rows(
+    state: &PianoRollState,
+    rect: egui::Rect,
+    pnt: &egui::Painter,
+    cr: egui::Rect,
+    mouse_screen_pos: Option<egui::Pos2>,
+) {
+    for key in 0..state.n_rows {
+        let info = key_info(state.lowest_semitone, key);
+        let y = f32::from(key) * state.row_size;
+        let y = rect.max.y - y;
+        let sharp = [
+            false, true, false, true, false, false, true, false, true, false, true, false,
+        ];
+        let row_rect = egui::Rect::from_min_max(
+            egui::pos2(cr.min.x, y),
+            egui::pos2(cr.max.x, y + state.row_size),
+        );
+        if sharp[info.c_scale_idx as usize] {
+            pnt.rect_filled(row_rect, 0.0, egui::Color32::BLACK);
+        }
+        pnt.line_segment(
+            [egui::pos2(cr.min.x, y), egui::pos2(cr.max.x, y)],
+            egui::Stroke::new(1.0, egui::Color32::DARK_GRAY),
+        );
+        // Draw a highlight for the row mouse is on
+        if let Some(mp) = mouse_screen_pos
+            && row_rect.y_range().contains(mp.y)
+        {
+            pnt.rect_stroke(
+                row_rect,
+                0.0,
+                egui::Stroke::new(1.0, egui::Color32::YELLOW),
+                egui::StrokeKind::Inside,
+            );
+        }
+    }
+}
+
+fn debug_info_ui(
+    song: &mut SongState,
+    state: &mut PianoRollState,
+    ui: &mut egui::Ui,
+    rect: egui::Rect,
+    mouse_screen_pos: Option<egui::Pos2>,
+    rects_drawn: i32,
+    circles_drawn: i32,
+    lines_drawn: i32,
+) {
+    if let Some(mp) = mouse_screen_pos
+        && ui.clip_rect().contains(mp)
+    {
+        let (tick, meas) = mouse_tick_meas(mp, rect, state.tick_div, song.song.master.timing);
+        let pnt = ui.ctx().debug_painter();
+        pnt.debug_text(
+            mp + egui::vec2(0.0, -42.0),
+            egui::Align2::LEFT_TOP,
+            egui::Color32::WHITE,
+            format!("tick: {tick}"),
+        );
+        pnt.debug_text(
+            mp + egui::vec2(0.0, -24.0),
+            egui::Align2::LEFT_TOP,
+            egui::Color32::WHITE,
+            format!("meas: {meas}"),
+        );
+        pnt.debug_text(
+            mp + egui::vec2(0.0, -8.0),
+            egui::Align2::LEFT_TOP,
+            egui::Color32::WHITE,
+            format!("drawn {circles_drawn} circles, {rects_drawn} rects, {lines_drawn} lines"),
+        );
+    }
+}
+
+fn alt_hover_tooltip_ui(
+    song: &mut SongState,
+    state: &mut PianoRollState,
+    ui: &mut egui::Ui,
+    mod_alt: bool,
+    hovered_events: Vec<usize>,
+) {
+    if mod_alt && !hovered_events.is_empty() {
+        egui::Tooltip::always_open(
+            ui.ctx().clone(),
+            ui.layer_id(),
+            egui::Id::NULL,
+            PopupAnchor::Pointer,
+        )
+        .gap(16.0)
+        .show(|ui| {
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+            for ev_idx in hovered_events {
+                let ev = &song.song.events[ev_idx];
+                let payload_text = match ev.payload {
+                    EventPayload::On { duration } => {
+                        format!("On event for {duration} ticks")
+                    }
+                    EventPayload::Key(key) => {
+                        format!(
+                            "Key: {key}\n{:#?}",
+                            key_info(state.lowest_semitone, (key / 256) as u8)
+                        )
+                    }
+                    _ => {
+                        continue;
+                    }
+                };
+                let unit_name = match song.herd.units.get(ev.unit) {
+                    Some(unit) => unit.name.clone(),
+                    None => format!("No such unit: {}", ev.unit.0),
+                };
+                ui.horizontal(|ui| {
+                    ui.label(ev.tick.to_string());
+                    ui.colored_label(unit_color(ev.unit), unit_name);
+                    ui.label(payload_text);
+                });
+            }
+        });
+    }
+}
+
+fn events_popup_window_ui(
+    song: &mut SongState,
+    state: &mut PianoRollState,
+    ui: &mut egui::Ui,
+    cmd: &mut CommandQueue,
+) {
+    if let Some(popup) = &mut state.evs_popup {
+        let mut open = true;
+        egui::Window::new(popup.title)
+            .default_pos(popup.pos)
+            .open(&mut open)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Up 1 key").clicked() {
+                        for &idx in &popup.indices {
+                            let ev = &mut song.song.events[idx];
+                            if let EventPayload::Key(key) = &mut ev.payload {
+                                *key += 256;
+                            }
+                        }
+                    }
+                    if ui.button("Down 1 key").clicked() {
+                        for &idx in &popup.indices {
+                            let ev = &mut song.song.events[idx];
+                            if let EventPayload::Key(key) = &mut ev.payload {
+                                *key -= 256;
+                            }
+                        }
+                    }
+                });
+                ui.separator();
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui::Grid::new("events_win_events")
+                        .striped(true)
+                        .show(ui, |ui| {
+                            events_window_inner_ui(song, cmd, ui, popup);
+                        });
+                });
+            });
+        if !open {
+            state.evs_popup = None;
         }
     }
 }
