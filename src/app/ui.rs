@@ -234,7 +234,7 @@ fn piano_freeplay_play_note(
         &[],
         0,
         state.duration,
-        tick,
+        0,
         song.herd.smp_end,
         std::slice::from_ref(&song.preview_voice),
     );

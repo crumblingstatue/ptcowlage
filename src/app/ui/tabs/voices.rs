@@ -295,14 +295,13 @@ fn voice_import_preview(
         song.song.master.timing,
         std::slice::from_ref(&song.preview_voice),
     );
-    let tick = ptcow::current_tick(&song.herd, &song.ins);
     song.voice_test_unit.on(
         SharedUiState::VOICE_TEST_UNIT_IDX,
         &song.ins,
         &[],
         0,
         1000,
-        tick,
+        0,
         song.herd.smp_end,
         std::slice::from_ref(&song.preview_voice),
     );
