@@ -769,6 +769,7 @@ impl App {
                 let song = &mut *song;
                 self.ui_state.voices.soft_reset(
                     &song.ins,
+                    std::slice::from_ref(&song.preview_voice),
                     &song.song.master,
                     &mut song.voice_test_unit,
                 );
@@ -882,7 +883,12 @@ impl App {
                     .units
                     .get_mut(unit)
                     .unwrap_or(&mut song.voice_test_unit);
-                unit.reset_voice(&song.ins, voice, song.song.master.timing);
+                unit.reset_voice(
+                    &song.ins,
+                    voice,
+                    song.song.master.timing,
+                    std::slice::from_ref(&song.preview_voice),
+                );
             }
             Cmd::Modal(f) => {
                 f(&mut self.modal);
@@ -1048,7 +1054,12 @@ fn do_tick0_events(song: &mut SongState) {
             EventPayload::Velocity(vel) => unit.velocity = vel,
             EventPayload::Volume(vol) => unit.volume = vol,
             EventPayload::SetVoice(idx) => {
-                unit.reset_voice(&song.ins, idx, song.song.master.timing);
+                unit.reset_voice(
+                    &song.ins,
+                    idx,
+                    song.song.master.timing,
+                    std::slice::from_ref(&song.preview_voice),
+                );
             }
             EventPayload::SetGroup(group_idx) => unit.group = group_idx,
             _ => {}

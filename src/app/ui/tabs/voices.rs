@@ -2,9 +2,10 @@ use {
     crate::{
         app::{
             command_queue::{Cmd, CommandQueue},
+            just_load_ptnoise, just_load_ptvoice,
             ui::{
-                SharedUiState, envelope_edit_widget, img, unit_color, voice_data_img, voice_img,
-                waveform_edit_widget_16_bit_interleaved_stereo,
+                SharedUiState, envelope_edit_widget, file_ops::FileOp, img, unit_color,
+                voice_data_img, voice_img, waveform_edit_widget_16_bit_interleaved_stereo,
             },
         },
         audio_out::SongState,
@@ -18,6 +19,7 @@ use {
         NoiseDesignUnit, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData,
         VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints, noise_to_pcm,
     },
+    std::path::PathBuf,
 };
 
 #[derive(Default)]
@@ -31,6 +33,7 @@ pub struct VoicesUiState {
     /// A "reset slot", and 3 manually saved slots for quicksaving/loading the currently edited voice
     save_slots: [Option<Voice>; 4],
     last_hovered_wave_idx: Option<usize>,
+    file_dia_prev_sel: Option<PathBuf>,
 }
 
 impl VoicesUiState {
@@ -38,6 +41,7 @@ impl VoicesUiState {
     pub fn soft_reset(
         &mut self,
         song_ins: &MooInstructions,
+        extra_voices: &[Voice],
         song_master: &Master,
         voice_test_unit: &mut ptcow::Unit,
     ) {
@@ -46,10 +50,15 @@ impl VoicesUiState {
         self.inst_env_sub = SubSliceUi::default();
         self.selected_noise_unit = 0;
         self.save_slots = [const { None }; 4];
-        if let Some(voice) = song_ins.voices.get(self.selected_idx) {
+        if let Some(voice) = song_ins.voices.get(self.selected_idx, extra_voices) {
             self.save_slots[0] = Some(voice.clone());
         }
-        voice_test_unit.reset_voice(song_ins, self.selected_idx, song_master.timing);
+        voice_test_unit.reset_voice(
+            song_ins,
+            self.selected_idx,
+            song_master.timing,
+            extra_voices,
+        );
     }
 }
 
@@ -78,6 +87,7 @@ pub fn ui(
     shared: &mut SharedUiState,
     out_rate: SampleRate,
     app_cmd: &mut CommandQueue,
+    #[cfg(not(target_arch = "wasm32"))] app_file_dia: &mut egui_file_dialog::FileDialog,
 ) {
     let mut op = None;
     ui.horizontal_wrapped(|ui| {
@@ -157,7 +167,12 @@ pub fn ui(
             });
             if re.clicked() {
                 ui_state.selected_idx = i;
-                ui_state.soft_reset(&song.ins, &song.song.master, &mut song.voice_test_unit);
+                ui_state.soft_reset(
+                    &song.ins,
+                    std::slice::from_ref(&song.preview_voice),
+                    &song.song.master,
+                    &mut song.voice_test_unit,
+                );
             }
             if re.drag_started() {
                 ui_state.dragged_idx = Some(i);
@@ -231,6 +246,64 @@ pub fn ui(
             }
         }
     }
+    // If file dialog has a voice selected, try to preview it
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(en) = app_file_dia.selected_entry() {
+        if ui_state.file_dia_prev_sel.as_deref() != Some(en.as_path()) {
+            ui_state.file_dia_prev_sel = Some(en.to_path_buf());
+            if en.as_path().is_dir() {
+                return;
+            }
+            if let Some(op) = app_file_dia.user_data::<FileOp>() {
+                match op {
+                    FileOp::ImportPtVoice | FileOp::ReplacePtVoiceSingle(_) => {
+                        voice_import_preview(song, out_rate, en, just_load_ptvoice);
+                    }
+                    FileOp::ImportPtNoise | FileOp::ReplacePtNoiseSingle(_) => {
+                        voice_import_preview(song, out_rate, en, just_load_ptnoise);
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn voice_import_preview(
+    song: &mut SongState,
+    out_rate: u16,
+    en: &egui_file_dialog::DirectoryEntry,
+    load_fun: fn(&[u8], path: &std::path::Path) -> ptcow::ReadResult<ptcow::Voice>,
+) {
+    let data = std::fs::read(en.as_path()).unwrap();
+    let noise_tbl = NoiseTable::generate();
+    match load_fun(&data, en.as_path()) {
+        Ok(mut voice) => {
+            voice.recalculate(&noise_tbl, out_rate);
+            song.preview_voice = voice;
+        }
+        Err(e) => {
+            eprintln!("Error loading voice: {e}");
+        }
+    }
+    song.voice_test_unit.reset_voice(
+        &song.ins,
+        VoiceIdx(100),
+        song.song.master.timing,
+        std::slice::from_ref(&song.preview_voice),
+    );
+    let tick = ptcow::current_tick(&song.herd, &song.ins);
+    song.voice_test_unit.on(
+        SharedUiState::VOICE_TEST_UNIT_IDX,
+        &song.ins,
+        &[],
+        0,
+        1000,
+        tick,
+        song.herd.smp_end,
+        std::slice::from_ref(&song.preview_voice),
+    );
 }
 
 fn bass_drum_voice() -> Voice {

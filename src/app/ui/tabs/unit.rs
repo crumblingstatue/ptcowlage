@@ -36,6 +36,7 @@ pub fn ui(
                 shared.active_unit,
                 unit,
                 &song.ins,
+                std::slice::from_ref(&song.preview_voice),
                 &mut cmd,
                 app_cmd,
                 &song.song.events,

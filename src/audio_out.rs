@@ -1,4 +1,5 @@
 use {
+    crate::pxtone_misc,
     ptcow::{Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, Voice},
     std::{
         iter::zip,
@@ -50,6 +51,8 @@ pub struct SongState {
     pub pause: bool,
     pub master_vol: f32,
     pub voice_test_unit: Unit,
+    /// Used for previewing voices in file dialog selection
+    pub preview_voice: Voice,
 }
 
 impl SongState {
@@ -65,6 +68,7 @@ impl SongState {
                 volume: 100,
                 ..Default::default()
             },
+            preview_voice: Voice::from_data(ptcow::VoiceData::Wave(pxtone_misc::square_wave())),
         };
         // Set the end meas for new songs to make sure there is nice big area to play around with
         this.song.master.loop_points.last = Some(std::num::NonZero::new(100).unwrap());
@@ -102,6 +106,7 @@ pub fn prepare_song(song: &mut SongState, loop_: bool) {
             meas_repeat: None,
             loop_,
         },
+        std::slice::from_ref(&song.preview_voice),
     );
 }
 
@@ -129,6 +134,7 @@ pub fn spawn_ptcow_audio_thread(
             out_buf_mut_ref,
             !song.pause,
             std::slice::from_mut(&mut song.voice_test_unit),
+            std::slice::from_ref(&song.preview_voice),
         );
         drop(song_g);
         // End critical section

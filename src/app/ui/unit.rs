@@ -12,7 +12,8 @@ use {
     },
     eframe::egui::{self, AtomExt},
     ptcow::{
-        EveList, Event, EventPayload, GroupIdx, MooInstructions, PanTime, Unit, UnitIdx, VoiceIdx,
+        EveList, Event, EventPayload, GroupIdx, MooInstructions, PanTime, Unit, UnitIdx, Voice,
+        VoiceIdx,
     },
 };
 
@@ -31,6 +32,7 @@ pub fn unit_ui(
     idx: UnitIdx,
     unit: &mut Unit,
     ins: &MooInstructions,
+    extra_voices: &[Voice],
     cmd: &mut Option<UnitsCmd>,
     app_cmd: &mut CommandQueue,
     evelist: &[Event],
@@ -177,7 +179,7 @@ pub fn unit_ui(
             &mut unit.voice_idx.0,
             0..=ins.voices.len().saturating_sub(1),
         ));
-        if let Some(voice) = ins.voices.get(unit.voice_idx) {
+        if let Some(voice) = ins.voices.get(unit.voice_idx, extra_voices) {
             ui.image(voice_img(voice));
             if ui.link(&voice.name).clicked() {
                 app_cmd.push(Cmd::OpenVoice(unit.voice_idx));
@@ -200,7 +202,7 @@ pub fn unit_ui(
                 && let EventPayload::SetVoice(voic) = &ev.payload
             {
                 any_voice_ev = true;
-                let Some(voice) = &ins.voices.get(*voic) else {
+                let Some(voice) = &ins.voices.get(*voic, extra_voices) else {
                     ui.label("Invalid voice index");
                     return;
                 };
@@ -352,13 +354,14 @@ pub fn unit_popup_ctx_menu(
     idx: UnitIdx,
     unit: &mut Unit,
     ins: &mut MooInstructions,
+    extra_voices: &[Voice],
     cmd: &mut Option<UnitsCmd>,
     app_cmd: &mut CommandQueue,
     evelist: &EveList,
 ) {
     egui::Popup::context_menu(re)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| unit_ui(ui, idx, unit, ins, cmd, app_cmd, evelist));
+        .show(|ui| unit_ui(ui, idx, unit, ins, extra_voices, cmd, app_cmd, evelist));
 }
 
 const UNIT_COLORS: [egui::Color32; 22] = [
@@ -392,9 +395,12 @@ pub fn unit_color(idx: UnitIdx) -> egui::Color32 {
 
 pub fn unit_voice_img(
     ins: &ptcow::MooInstructions,
+    extra_voices: &[Voice],
     unit: &ptcow::Unit,
 ) -> egui::ImageSource<'static> {
-    ins.voices.get(unit.voice_idx).map_or(img::X, voice_img)
+    ins.voices
+        .get(unit.voice_idx, extra_voices)
+        .map_or(img::X, voice_img)
 }
 
 pub fn unit_mute_unmute_all_ui(ui: &mut egui::Ui, units: &mut [ptcow::Unit]) {

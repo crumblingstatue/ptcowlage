@@ -221,6 +221,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 Tab::Voices => {
                     app.ui_state.voices.soft_reset(
                         &song.ins,
+                        std::slice::from_ref(&song.preview_voice),
                         &song.song.master,
                         &mut song.voice_test_unit,
                     );
@@ -438,6 +439,7 @@ fn timing_popup_ui(
                 meas_repeat: None,
                 loop_: true,
             },
+            std::slice::from_ref(&song.preview_voice),
         );
     }
     ui.end_row();

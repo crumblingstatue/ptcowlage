@@ -234,6 +234,7 @@ fn piano_freeplay_play_note(
         state.duration,
         tick,
         song.herd.smp_end,
+        std::slice::from_ref(&song.preview_voice),
     );
     if state.record {
         song.song.events.sort();
@@ -362,6 +363,8 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.shared,
             app.out.rate,
             &mut app.cmd,
+            #[cfg(not(target_arch = "wasm32"))]
+            &mut app.file_dia,
         ),
         Tab::Unit => tabs::unit::ui(
             ui,

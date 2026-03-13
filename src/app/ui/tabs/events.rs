@@ -15,7 +15,7 @@ use {
     eframe::egui::{self, AtomExt},
     egui_extras::{Column, TableBody},
     egui_toast::ToastKind,
-    ptcow::{Event, EventPayload, GroupIdx, PanTime, SampleRate, UnitIdx, VoiceIdx},
+    ptcow::{Event, EventPayload, GroupIdx, PanTime, SampleRate, UnitIdx, Voice, VoiceIdx},
 };
 
 pub struct RawEventsUiState {
@@ -335,7 +335,16 @@ fn table_body_ui(
                         match kind {
                             PopupKind::UnitUi => {
                                 let idx = ev.unit;
-                                unit_ui(ui, idx, unit, &song.ins, unit_cmd, app_cmd, &eves_clone);
+                                unit_ui(
+                                    ui,
+                                    idx,
+                                    unit,
+                                    &song.ins,
+                                    std::slice::from_ref(&song.preview_voice),
+                                    unit_cmd,
+                                    app_cmd,
+                                    &eves_clone,
+                                );
                             }
                             PopupKind::UnitPicker => {
                                 for (idx, unit_name) in unit_names.iter().enumerate() {
@@ -369,6 +378,7 @@ fn table_body_ui(
                 out_rate,
                 &mut song.herd,
                 &mut song.ins,
+                std::slice::from_ref(&song.preview_voice),
             );
         });
     });
@@ -382,6 +392,7 @@ fn payload_coumn_ui(
     out_rate: SampleRate,
     herd: &mut ptcow::Herd,
     ins: &mut ptcow::MooInstructions,
+    extra_voices: &[Voice],
 ) {
     match &mut ev.payload {
         EventPayload::Null => {
@@ -443,7 +454,7 @@ fn payload_coumn_ui(
         }
         EventPayload::SetVoice(v_idx) => {
             ui.horizontal(|ui| {
-                let v_opt = ins.voices.get(*v_idx);
+                let v_opt = ins.voices.get(*v_idx, extra_voices);
                 let mut s = String::new();
                 let name = v_opt.map_or_else(
                     || {

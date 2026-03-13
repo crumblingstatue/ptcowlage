@@ -99,19 +99,20 @@ fn playback_cows_ui(
                     unit.mute ^= true;
                 }
             }
-
+            let extra_voices = std::slice::from_ref(&song.preview_voice);
             crate::app::ui::unit::unit_popup_ctx_menu(
                 &re,
                 i,
                 unit,
                 &mut song.ins,
+                extra_voices,
                 &mut cmd,
                 app_cmd,
                 &song.song.events,
             );
             // Make the left cow's instrument represent the voice unit 1,
             // and right cow unit 2, if exists. Otherwise, right cow represents unit 1 as well.
-            let opt_voice = song.ins.voices.get(unit.voice_idx);
+            let opt_voice = song.ins.voices.get(unit.voice_idx, extra_voices);
             let vu1_img = opt_voice.map_or(img::X, |voice| voice_data_img(&voice.base.data));
             ui.add(egui::Image::new(vu1_img.clone()).hflip());
             let p = ui.painter();
@@ -139,6 +140,7 @@ fn playback_cows_ui(
                 i,
                 unit,
                 &mut song.ins,
+                extra_voices,
                 &mut cmd,
                 app_cmd,
                 &song.song.events,

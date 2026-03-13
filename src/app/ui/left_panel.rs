@@ -18,7 +18,7 @@ use {
         self,
         containers::menu::{MenuButton, MenuConfig},
     },
-    ptcow::{EveList, MooInstructions, Unit, UnitIdx},
+    ptcow::{EveList, MooInstructions, Unit, UnitIdx, Voice},
     rustc_hash::FxHashSet,
 };
 
@@ -43,6 +43,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     &song.ins,
                     app.ui_state.voices.selected_idx,
                     song.song.master.timing,
+                    std::slice::from_ref(&song.preview_voice),
                 );
                 let toot_idx = song.herd.units.len();
                 song.herd.units.push(unit);
@@ -59,6 +60,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     &mut app.ui_state,
                     ui,
                     &mut song.ins,
+                    std::slice::from_ref(&song.preview_voice),
                     &mut cmd,
                     n_units,
                     i,
@@ -72,6 +74,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 &mut app.ui_state,
                 ui,
                 &mut song.ins,
+                std::slice::from_ref(&song.preview_voice),
                 &mut cmd,
                 n_units,
                 UnitIdx(255),
@@ -124,6 +127,7 @@ fn unit_ui(
     ui_state: &mut UiState,
     ui: &mut egui::Ui,
     ins: &mut MooInstructions,
+    extra_voices: &[Voice],
     cmd: &mut Option<UnitsCmd>,
     n_units: u8,
     i: UnitIdx,
@@ -149,7 +153,7 @@ fn unit_ui(
         }
         any_hovered |= ui
             .add(
-                egui::Image::new(unit_voice_img(ins, unit))
+                egui::Image::new(unit_voice_img(ins, extra_voices, unit))
                     .sense(egui::Sense::click())
                     .hflip(),
             )
@@ -179,7 +183,7 @@ fn unit_ui(
         if re.double_clicked() {
             ui_state.tab = super::Tab::Unit;
         }
-        unit_popup_ctx_menu(&re, i, unit, ins, cmd, app_cmd, evelist);
+        unit_popup_ctx_menu(&re, i, unit, ins, extra_voices, cmd, app_cmd, evelist);
         any_hovered |= re.contains_pointer();
         if any_hovered {
             // Toggle unit solo/mute
