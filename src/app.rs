@@ -340,10 +340,17 @@ impl App {
         match load_and_recalc_voice(data, path, just_load_ptvoice, self.out.rate) {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
+                let song = &mut *song;
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
-                reset_voice_for_units_with_voice_idx(&mut song, idx);
+                reset_voice_for_units_with_voice_idx(song, idx);
                 self.ui_state.voices.selected_idx = idx;
+                self.ui_state.voices.soft_reset(
+                    &song.ins,
+                    &[],
+                    &song.song.master,
+                    &mut song.voice_test_unit,
+                );
             }
             Err(e) => self.modal.msg(e),
         }
@@ -353,10 +360,17 @@ impl App {
         match load_and_recalc_voice(data, path, just_load_ptnoise, self.out.rate) {
             Ok(voice) => {
                 let mut song = self.song.lock().unwrap();
+                let song = &mut *song;
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
-                reset_voice_for_units_with_voice_idx(&mut song, idx);
+                reset_voice_for_units_with_voice_idx(song, idx);
                 self.ui_state.voices.selected_idx = idx;
+                self.ui_state.voices.soft_reset(
+                    &song.ins,
+                    &[],
+                    &song.song.master,
+                    &mut song.voice_test_unit,
+                );
             }
             Err(e) => self.modal.msg(e),
         }

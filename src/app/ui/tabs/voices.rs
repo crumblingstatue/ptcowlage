@@ -98,6 +98,7 @@ pub fn ui(
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
                 ui_state.selected_idx = idx;
+                ui_state.soft_reset(&song.ins, &[], &song.song.master, &mut song.voice_test_unit);
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
             if ui.button((img::DRUM.smol(), "Noise")).clicked() {
@@ -106,6 +107,7 @@ pub fn ui(
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
                 ui_state.selected_idx = idx;
+                ui_state.soft_reset(&song.ins, &[], &song.song.master, &mut song.voice_test_unit);
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
         });
