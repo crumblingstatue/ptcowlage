@@ -5,7 +5,10 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
-            ui::{Tab, group_idx_slider, img, modal::Modal, tabs::events::Filter, voice_img},
+            ui::{
+                SharedUiState, Tab, group_idx_slider, img, modal::Modal, tabs::events::Filter,
+                voice_img,
+            },
         },
         audio_out::SongState,
         egui_ext::ImageExt as _,
@@ -41,13 +44,14 @@ pub fn unit_ui(
         ui.add(egui::Image::new(img::COW).hflip());
         ui.heading(format!("{} {}", idx.0, unit.name));
         ui.text_edit_singleline(&mut unit.name);
-        if ui
-            .button(
-                egui::RichText::new("Delete unit")
-                    .background_color(egui::Color32::DARK_RED)
-                    .color(egui::Color32::WHITE),
-            )
-            .clicked()
+        if idx.0 < 50
+            && ui
+                .button(
+                    egui::RichText::new("Delete unit")
+                        .background_color(egui::Color32::DARK_RED)
+                        .color(egui::Color32::WHITE),
+                )
+                .clicked()
         {
             *cmd = Some(UnitsCmd::DeleteUnit { idx });
         }
@@ -266,7 +270,12 @@ pub fn unit_ui(
     });
 }
 
-pub fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState, app_modal: &mut Modal) {
+pub fn handle_units_command(
+    cmd: Option<UnitsCmd>,
+    song: &mut SongState,
+    app_modal: &mut Modal,
+    shared: &mut SharedUiState,
+) {
     if let Some(cmd) = cmd {
         match cmd {
             UnitsCmd::ToggleSolo { idx } => {
@@ -337,6 +346,10 @@ pub fn handle_units_command(cmd: Option<UnitsCmd>, song: &mut SongState, app_mod
                     retain
                 });
                 song.herd.units.remove(idx.usize());
+                // If there are no units left, set index to voice test unit
+                if song.herd.units.is_empty() {
+                    shared.active_unit = SharedUiState::VOICE_TEST_UNIT_IDX;
+                }
             }
             UnitsCmd::MigrateUnitEvents { idx } => {
                 poly_migrate_single(app_modal, song, idx);

@@ -3,7 +3,7 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                Tab, group_idx_slider,
+                SharedUiState, Tab, group_idx_slider,
                 modal::Modal,
                 unit::{UnitsCmd, handle_units_command, unit_ui},
                 unit_color, voice_img, voice_img_opt,
@@ -73,6 +73,7 @@ pub fn ui(
     out_rate: SampleRate,
     app_cmd: &mut CommandQueue,
     app_modal: &mut Modal,
+    shared: &mut SharedUiState,
 ) {
     top_ui(ui, song, ui_state, app_cmd);
 
@@ -174,7 +175,7 @@ pub fn ui(
             }
         }
     }
-    handle_units_command(unit_cmd, song, app_modal);
+    handle_units_command(unit_cmd, song, app_modal, shared);
     if let Some(cmd) = ev_list_cmd {
         match cmd {
             EventListCmd::Remove { idx } => {

@@ -83,7 +83,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 &song.song.events,
             );
         });
-    handle_units_command(cmd, song, &mut app.modal);
+    handle_units_command(cmd, song, &mut app.modal, &mut app.ui_state.shared);
     ui.checkbox(&mut app.ui_state.left.select_mode, "Select mode");
     if !app.ui_state.left.selected_units.is_empty() {
         let button = MenuButton::new("Actions").config(

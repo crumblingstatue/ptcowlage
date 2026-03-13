@@ -147,5 +147,5 @@ fn playback_cows_ui(
             );
         });
     }
-    handle_units_command(cmd, song, app_modal);
+    handle_units_command(cmd, song, app_modal, shared);
 }

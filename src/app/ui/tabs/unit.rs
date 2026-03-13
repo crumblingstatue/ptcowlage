@@ -42,5 +42,5 @@ pub fn ui(
                 &song.song.events,
             );
         });
-    handle_units_command(cmd, song, app_modal);
+    handle_units_command(cmd, song, app_modal, shared);
 }
