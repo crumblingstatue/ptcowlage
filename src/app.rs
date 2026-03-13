@@ -17,9 +17,7 @@ use {
                 modal::Modal,
             },
         },
-        audio_out::{
-            AuxAudioState, OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread,
-        },
+        audio_out::{OutParams, SongState, SongStateHandle, spawn_ptcow_audio_thread},
         evilscript,
         pxtone_misc::{poly_migrate_units, reset_voice_for_units_with_voice_idx},
     },
@@ -85,10 +83,6 @@ pub struct App {
     open_file: Option<PathBuf>,
     modal: Modal,
     pub(crate) cmd: CommandQueue,
-    /// Auxiliary audio output (for example playing voice samples in voice UI)
-    ///
-    /// Spawned on-demand, mainly due to web needing interaction before spawning audio context.
-    aux_state: Option<AuxAudioState>,
     /// If active, we don't try to lock the song Mutex, because it's being used
     song_lock: SongLock,
     #[cfg(target_arch = "wasm32")]
@@ -195,7 +189,6 @@ impl App {
             open_file: None,
             modal,
             cmd: CommandQueue::default(),
-            aux_state: None,
             song_lock: SongLock::default(),
             #[cfg(target_arch = "wasm32")]
             web_cmd: Default::default(),

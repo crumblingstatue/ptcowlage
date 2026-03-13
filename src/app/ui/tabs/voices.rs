@@ -7,7 +7,7 @@ use {
                 waveform_edit_widget_16_bit_interleaved_stereo,
             },
         },
-        audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
+        audio_out::SongState,
         pxtone_misc::{bass_drum, reset_voice_for_units_with_voice_idx, square_wave},
     },
     arrayvec::ArrayVec,
@@ -18,7 +18,6 @@ use {
         NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags, VoiceIdx, VoiceUnit,
         WaveData, WaveDataPoints, noise_to_pcm,
     },
-    rustc_hash::FxHashMap,
 };
 
 #[derive(Default)]
@@ -26,8 +25,6 @@ pub struct VoicesUiState {
     pub selected_idx: VoiceIdx,
     sel_slot: SelectedSlot,
     dragged_idx: Option<VoiceIdx>,
-    // Keep track of (preview) sounds playing for each voice
-    playing_sounds: FxHashMap<VoiceIdx, AuxAudioKey>,
     inst_sub: SubSliceUi,
     inst_env_sub: SubSliceUi,
     selected_noise_unit: usize,
@@ -74,7 +71,6 @@ pub fn ui(
     ui_state: &mut VoicesUiState,
     shared: &mut SharedUiState,
     out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
     app_cmd: &mut CommandQueue,
 ) {
     let mut op = None;
@@ -191,7 +187,6 @@ pub fn ui(
             ui_state.selected_idx,
             &mut op,
             out_rate,
-            aux,
             ui_state,
             shared,
             &mut song.herd,
@@ -261,18 +256,13 @@ fn voice_ui(
     idx: VoiceIdx,
     op: &mut Option<VoiceUiOp>,
     out_rate: SampleRate,
-    aux: &mut Option<AuxAudioState>,
     ui_state: &mut VoicesUiState,
     shared: &mut SharedUiState,
     herd: &mut ptcow::Herd,
     app_cmd: &mut CommandQueue,
 ) {
-    let aux = aux.get_or_insert_with(|| crate::audio_out::spawn_aux_audio_thread(out_rate, 1024));
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut voice.name);
-        for slot in voice.slots() {
-            play_sound_ui(ui, aux, ui_state, idx, &slot.inst.sample_buf);
-        }
         if ui.button("⬆").clicked() {
             *op = Some(VoiceUiOp::MoveUp(idx));
         }
@@ -337,16 +327,7 @@ fn voice_ui(
         }
     });
 
-    voice_ui_inner(
-        ui,
-        voice,
-        idx,
-        out_rate,
-        aux,
-        ui_state,
-        app_cmd,
-        &herd.units,
-    );
+    voice_ui_inner(ui, voice, idx, out_rate, ui_state, app_cmd, &herd.units);
 }
 
 pub struct SubSliceUi {
@@ -400,7 +381,6 @@ pub fn voice_ui_inner(
     voice: &mut Voice,
     voice_idx: VoiceIdx,
     out_rate: SampleRate,
-    aux: &mut AuxAudioState,
     ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
     units: &ptcow::Units,
@@ -458,7 +438,6 @@ pub fn voice_ui_inner(
                 out_rate,
                 voice_idx,
                 ui_state,
-                aux,
                 ui_state.sel_slot,
                 app_cmd,
             );
@@ -474,7 +453,6 @@ pub fn voice_ui_inner(
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Sample buf");
-                    play_sound_ui(ui, aux, ui_state, voice_idx, &slot.inst.sample_buf);
                     ui.label(format!(
                         "{} samples, {} bytes",
                         slot.inst.num_samples,
@@ -520,34 +498,6 @@ pub fn voice_ui_inner(
                 ui.add(egui::DragValue::new(&mut slot.inst.env_release));
             })
     });
-}
-
-fn play_sound_ui(
-    ui: &mut egui::Ui,
-    aux: &AuxAudioState,
-    ui_state: &mut VoicesUiState,
-    voice_idx: VoiceIdx,
-    data: &[u8],
-) {
-    if let Some(sound_key) = ui_state.playing_sounds.get(&voice_idx) {
-        if ui.button("Stop").clicked() {
-            aux.send
-                .send(AuxMsg::StopAudio { key: *sound_key })
-                .unwrap();
-            ui_state.playing_sounds.remove(&voice_idx);
-        }
-    } else {
-        if ui.button("▶ Play").clicked() {
-            let key = aux.next_key();
-            ui_state.playing_sounds.insert(voice_idx, key);
-            aux.send
-                .send(AuxMsg::PlaySamples16 {
-                    key,
-                    sample_data: bytemuck::pod_collect_to_vec(data),
-                })
-                .unwrap();
-        }
-    }
 }
 
 fn osci_ui(ui: &mut egui::Ui, osci: &mut NoiseDesignOscillator, name: &str) {
@@ -611,7 +561,6 @@ fn voice_unit_ui(
     out_rate: SampleRate,
     voice_idx: VoiceIdx,
     ui_state: &mut VoicesUiState,
-    aux: &AuxAudioState,
     sel_slot: SelectedSlot,
     app_cmd: &mut CommandQueue,
 ) {
@@ -838,15 +787,6 @@ fn voice_unit_ui(
         }
     }
     slot_wave_extra_ui(ui, slot, out_rate, sel_slot);
-    // If the sound is aux playing currently, update its buffer as well
-    if let Some(key) = ui_state.playing_sounds.get(&voice_idx) {
-        aux.send
-            .send(AuxMsg::PlaySamples16 {
-                key: *key,
-                sample_data: bytemuck::pod_collect_to_vec(&slot.inst.sample_buf),
-            })
-            .unwrap();
-    }
     ui.horizontal_wrapped(|ui| {
         ui.label("Flags");
         for (name, flag) in VoiceFlags::iter_defined_names() {

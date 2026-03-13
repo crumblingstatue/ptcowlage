@@ -386,7 +386,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.voices,
             &mut app.ui_state.shared,
             app.out.rate,
-            &mut app.aux_state,
             &mut app.cmd,
         ),
         Tab::Unit => tabs::unit::ui(

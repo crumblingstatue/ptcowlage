@@ -1,9 +1,6 @@
 use {
     ptcow::{Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, Voice},
-    rustc_hash::FxHashMap,
     std::{
-        cell::Cell,
-        collections::hash_map::Entry,
         iter::zip,
         ops::RangeInclusive,
         sync::{Arc, Mutex},
@@ -135,108 +132,4 @@ pub fn spawn_ptcow_audio_thread(
 
 fn s16_to_f32(src: i16) -> f32 {
     f32::from(src) / 32768.0
-}
-
-/// Auxiliary audio thread for playing additional sounds on top of the PxTone music playback
-pub fn spawn_aux_audio_thread(out_rate: SampleRate, out_buf_size: usize) -> AuxAudioState {
-    let params = tinyaudio::OutputDeviceParameters {
-        sample_rate: out_rate as usize,
-        channels_count: 2,
-        channel_sample_count: out_buf_size / 2,
-    };
-    let (send, recv) = std::sync::mpsc::channel();
-    let mut playing: FxHashMap<AuxAudioKey, SamplePlayer> = FxHashMap::default();
-    let dev = tinyaudio::run_output_device(params, move |out_buf| {
-        out_buf.fill(0.0);
-        match recv.try_recv() {
-            Ok(msg) => match msg {
-                AuxMsg::PlaySamples16 { key, sample_data } => match playing.entry(key) {
-                    Entry::Occupied(mut occupied_entry) => {
-                        occupied_entry.get_mut().samp_data = sample_data;
-                    }
-                    Entry::Vacant(vacant_entry) => {
-                        vacant_entry.insert(SamplePlayer::new(sample_data));
-                    }
-                },
-                AuxMsg::StopAudio { key } => {
-                    playing.remove(&key);
-                }
-                AuxMsg::StopAll => {
-                    playing.clear();
-                }
-            },
-            Err(e) => match e {
-                std::sync::mpsc::TryRecvError::Empty => {}
-                std::sync::mpsc::TryRecvError::Disconnected => todo!(),
-            },
-        }
-        for player in playing.values_mut() {
-            // Do nothing if sample data is empty.
-            if player.samp_data.is_empty() {
-                break;
-            }
-            let mut n_rendered = 0;
-            for (src, dst) in zip(&player.samp_data[player.cursor..], &mut *out_buf) {
-                // Mix in the sample
-                *dst += s16_to_f32(*src);
-                n_rendered += 1;
-            }
-            player.cursor += n_rendered;
-            // Wrap around when cursor got to the end
-            // INVARIANT: `samp_data` not empty
-            player.cursor %= player.samp_data.len();
-        }
-    })
-    .unwrap();
-    AuxAudioState {
-        _device: dev,
-        send,
-        key_counter: Cell::new(0),
-    }
-}
-
-pub struct AuxAudioState {
-    _device: tinyaudio::OutputDevice,
-    pub send: std::sync::mpsc::Sender<AuxMsg>,
-    key_counter: Cell<AuxAudioKey>,
-}
-
-impl AuxAudioState {
-    pub fn next_key(&self) -> AuxAudioKey {
-        let key = self.key_counter.get();
-        self.key_counter.set(key + 1);
-        key
-    }
-}
-
-// Key for an aux audio
-pub type AuxAudioKey = u64;
-
-pub enum AuxMsg {
-    /// Insert sample data for playback (or replace existing sample data for `key`)
-    ///
-    /// TODO: Maybe it makes sense to have separate play (that resets cursor) and update (that doesn't)
-    PlaySamples16 {
-        key: AuxAudioKey,
-        sample_data: Vec<i16>,
-    },
-    StopAudio {
-        key: AuxAudioKey,
-    },
-    #[expect(dead_code, reason = "useful in the future")]
-    StopAll,
-}
-
-struct SamplePlayer {
-    samp_data: Vec<i16>,
-    cursor: usize,
-}
-
-impl SamplePlayer {
-    pub fn new(samp_data: Vec<i16>) -> Self {
-        Self {
-            samp_data,
-            cursor: 0,
-        }
-    }
 }
