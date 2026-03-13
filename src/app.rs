@@ -202,7 +202,7 @@ impl App {
         };
         load_persistence(cc, &mut this);
         // SongState comes with a default unit by... default, so let's toot that
-        this.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
+        this.ui_state.shared.active_unit = Some(UnitIdx(0));
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
                 this.modal.msg(format!("Error loading project:\n{e}"));
@@ -243,7 +243,7 @@ impl App {
                 self.modal.msg(e);
             }
         }
-        post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
+        post_load_prep(song, self.out.rate, &mut self.ui_state.shared.active_unit);
     }
 
     fn import_piyopiyo_from_bytes(&mut self, data: &[u8]) {
@@ -257,7 +257,7 @@ impl App {
             &mut song.ins,
             self.out.rate,
         );
-        post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
+        post_load_prep(song, self.out.rate, &mut self.ui_state.shared.active_unit);
     }
 
     fn import_organya_from_bytes(&mut self, data: &[u8]) {
@@ -272,7 +272,7 @@ impl App {
             &mut song.ins,
             self.out.rate,
         );
-        post_load_prep(song, self.out.rate, &mut self.ui_state.freeplay_piano.toot);
+        post_load_prep(song, self.out.rate, &mut self.ui_state.shared.active_unit);
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
@@ -600,7 +600,7 @@ impl eframe::App for App {
                 post_load_prep(
                     &mut self.song.lock().unwrap(),
                     self.out.rate,
-                    &mut self.ui_state.freeplay_piano.toot,
+                    &mut self.ui_state.shared.active_unit,
                 );
                 self.song_lock.my.locked = false;
                 let err = self.song_lock.shared.error.read().unwrap();
@@ -736,7 +736,7 @@ impl App {
         post_load_prep(
             song_ref,
             self.out.rate,
-            &mut self.ui_state.freeplay_piano.toot,
+            &mut self.ui_state.shared.active_unit,
         );
         Ok(())
     }
@@ -869,7 +869,7 @@ impl App {
                 song.prepare(self.out.rate);
                 self.open_file = None;
                 // Toot default unit that comes with clean state
-                self.ui_state.freeplay_piano.toot = Some(UnitIdx(0));
+                self.ui_state.shared.active_unit = Some(UnitIdx(0));
             }
             #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {

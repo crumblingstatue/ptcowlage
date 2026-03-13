@@ -152,7 +152,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 crate::app::post_load_prep(
                     song,
                     app.out.rate,
-                    &mut app.ui_state.freeplay_piano.toot,
+                    &mut app.ui_state.shared.active_unit,
                 );
             }
             ui.separator();
@@ -260,6 +260,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             app.out.rate,
             ui,
             &mut app.ui_state.freeplay_piano,
+            &mut app.ui_state.shared,
             #[cfg(not(target_arch = "wasm32"))]
             (app.file_dia.state() == &egui_file_dialog::DialogState::Open),
             #[cfg(target_arch = "wasm32")]

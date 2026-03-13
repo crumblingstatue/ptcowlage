@@ -170,6 +170,7 @@ pub fn ui(
         piano_ui(
             song,
             state,
+            shared,
             ui,
             state.prev_frame_piano_roll_y_offset,
             piano_state,
@@ -425,7 +426,7 @@ fn roll_ui_inner(
         }
     }
     // Toot the current row with backtick key
-    let toot_unit = shared.active_unit.or(piano_state.toot);
+    let toot_unit = shared.active_unit;
     if let Some(mp) = mouse_screen_pos
         && let Some(unit) = toot_unit
     {
@@ -925,6 +926,7 @@ fn key_y(lowest_semitone: u8, row_size: f32, rect: egui::Rect, k: i32) -> f32 {
 fn piano_ui(
     song: &mut SongState,
     state: &mut PianoRollState,
+    shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     y_offset: f32,
     piano_state: &mut FreeplayPianoState,
@@ -1007,7 +1009,7 @@ fn piano_ui(
                 // We let the keyboard key also be pressed with a keyboard key, because
                 // it can be more ergonomic in certain cases.
                 let mouse_toot_key = egui::Key::Backtick;
-                if let Some(unit_no) = piano_state.toot
+                if let Some(unit_no) = shared.active_unit
                     && let Some(mouse_pos) = ui.input(|inp| inp.pointer.latest_pos())
                     && ui.ui_contains_pointer()
                     && ui.input(|inp| {

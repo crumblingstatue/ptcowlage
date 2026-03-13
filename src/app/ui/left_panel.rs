@@ -46,7 +46,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 );
                 let toot_idx = song.herd.units.len();
                 song.herd.units.push(unit);
-                app.ui_state.freeplay_piano.toot = Some(UnitIdx(toot_idx));
+                app.ui_state.shared.active_unit = Some(UnitIdx(toot_idx));
             }
         });
     });

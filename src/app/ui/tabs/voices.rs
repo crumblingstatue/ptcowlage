@@ -3,8 +3,8 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                FreeplayPianoState, SharedUiState, envelope_edit_widget, img, unit_color,
-                voice_data_img, voice_img, waveform_edit_widget_16_bit_interleaved_stereo,
+                SharedUiState, envelope_edit_widget, img, unit_color, voice_data_img, voice_img,
+                waveform_edit_widget_16_bit_interleaved_stereo,
             },
         },
         audio_out::{AuxAudioKey, AuxAudioState, AuxMsg, SongState},
@@ -75,7 +75,6 @@ pub fn ui(
     shared: &mut SharedUiState,
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
-    piano_state: &FreeplayPianoState,
     app_cmd: &mut CommandQueue,
 ) {
     let mut op = None;
@@ -194,7 +193,7 @@ pub fn ui(
             out_rate,
             aux,
             ui_state,
-            piano_state,
+            shared,
             &mut song.herd,
             app_cmd,
         );
@@ -264,7 +263,7 @@ fn voice_ui(
     out_rate: SampleRate,
     aux: &mut Option<AuxAudioState>,
     ui_state: &mut VoicesUiState,
-    piano_state: &FreeplayPianoState,
+    shared: &mut SharedUiState,
     herd: &mut ptcow::Herd,
     app_cmd: &mut CommandQueue,
 ) {
@@ -289,7 +288,7 @@ fn voice_ui(
         if ui.button("del").clicked() {
             *op = Some(VoiceUiOp::Delete(idx));
         }
-        if let Some(unit_idx) = piano_state.toot {
+        if let Some(unit_idx) = shared.active_unit {
             let unit = &mut herd.units[unit_idx];
             let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
                 .color(unit_color(unit_idx));

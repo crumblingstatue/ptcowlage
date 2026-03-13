@@ -22,7 +22,7 @@ use {
             windows::Windows,
         },
     },
-    eframe::egui::{self, AtomExt},
+    eframe::egui,
     egui_toast::Toasts,
     ptcow::{
         Event, EventPayload, GroupIdx, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
@@ -42,8 +42,6 @@ pub mod tabs {
 }
 
 pub struct FreeplayPianoState {
-    /// Make this unit available for keyboard play
-    pub toot: Option<UnitIdx>,
     /// Toot duration
     duration: u32,
     play_octave: i32,
@@ -55,7 +53,6 @@ pub struct FreeplayPianoState {
 impl Default for FreeplayPianoState {
     fn default() -> Self {
         Self {
-            toot: None,
             // Long enough for default "moo" noise :)
             duration: 1024,
             play_octave: 7,
@@ -75,42 +72,19 @@ fn piano_freeplay_ui(
     dst_sps: SampleRate,
     ui: &mut egui::Ui,
     state: &mut FreeplayPianoState,
+    shared: &mut SharedUiState,
     file_dia_open: bool,
 ) {
     // Avoid tooting when we're inside a text edit, etc.
     if !ui.ctx().wants_keyboard_input() {
-        piano_freeplay_input(song, dst_sps, ui, state, file_dia_open);
+        piano_freeplay_input(song, dst_sps, ui, state, shared, file_dia_open);
     }
-    let (selected_text, selected_color) = state.toot.map_or(("None", egui::Color32::GRAY), |idx| {
-        (
-            song.herd
-                .units
-                .get(idx)
-                .map_or("<invalid>", |unit| &unit.name),
-            unit_color(idx),
-        )
-    });
     ui.label("🎹").on_hover_text("Piano freeplay UI");
-    if let Some(toot) = state.toot
+    if let Some(toot) = shared.active_unit
         && let Some(unit) = song.herd.units.get(toot)
     {
         ui.image(unit_voice_img(&song.ins, unit));
     }
-    egui::ComboBox::new("unit_cb", "Unit")
-        .selected_text(egui::RichText::new(selected_text).color(selected_color))
-        .show_ui(ui, |ui| {
-            ui.selectable_value(&mut state.toot, None, "None");
-            for (unit_idx, unit) in song.herd.units.enumerated() {
-                ui.selectable_value(
-                    &mut state.toot,
-                    Some(unit_idx),
-                    (
-                        unit_voice_img(&song.ins, unit).atom_size(egui::vec2(14.0, 14.0)),
-                        egui::RichText::new(&unit.name).color(unit_color(unit_idx)),
-                    ),
-                );
-            }
-        });
     ui.label("Octave");
     ui.add(
         egui::DragValue::new(&mut state.play_octave)
@@ -147,11 +121,12 @@ fn piano_freeplay_input(
     dst_sps: SampleRate,
     ui: &mut egui::Ui,
     state: &mut FreeplayPianoState,
+    shared: &mut SharedUiState,
     file_dia_open: bool,
 ) {
     // Play a cow on the keyboard
     // Ignores the keyboard if an egui popup is open or the file dialog is open
-    if let Some(unit_no) = state.toot
+    if let Some(unit_no) = shared.active_unit
         && !egui::Popup::is_any_open(ui.ctx())
         && !file_dia_open
     {
@@ -311,6 +286,7 @@ pub struct UiState {
 pub struct SharedUiState {
     /// The active unit is the one that is:
     /// - Used to place notes in the piano roll
+    /// - Used for freeplay
     /// - Shows up in the unit UI
     /// - Is highlighted in the left side units panel
     pub active_unit: Option<UnitIdx>,
@@ -378,7 +354,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
         Tab::Playback => tabs::playback::ui(
             ui,
             &mut song,
-            &mut app.ui_state.freeplay_piano,
+            &mut app.ui_state.shared,
             &mut app.cmd,
             &mut app.modal,
         ),
@@ -411,7 +387,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut app.ui_state.shared,
             app.out.rate,
             &mut app.aux_state,
-            &app.ui_state.freeplay_piano,
             &mut app.cmd,
         ),
         Tab::Unit => tabs::unit::ui(

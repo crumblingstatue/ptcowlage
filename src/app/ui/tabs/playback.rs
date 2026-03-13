@@ -4,7 +4,7 @@ use {
             SongState,
             command_queue::CommandQueue,
             ui::{
-                FreeplayPianoState, img,
+                SharedUiState, img,
                 modal::Modal,
                 unit::{UnitsCmd, handle_units_command, unit_mute_unmute_all_ui},
                 unit_color, voice_data_img,
@@ -18,7 +18,7 @@ use {
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    piano_state: &mut FreeplayPianoState,
+    shared: &mut SharedUiState,
     app_cmd: &mut CommandQueue,
     app_modal: &mut Modal,
 ) {
@@ -52,7 +52,7 @@ pub fn ui(
         .max_height(ui.available_height() - 32.0)
         .auto_shrink([false, true])
         .show(ui, |ui| {
-            playback_cows_ui(ui, song, piano_state, app_cmd, app_modal);
+            playback_cows_ui(ui, song, shared, app_cmd, app_modal);
         });
     ui.label("Cows are interactive. m: mute, s: solo");
 
@@ -65,7 +65,7 @@ pub fn ui(
 fn playback_cows_ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    piano_state: &mut FreeplayPianoState,
+    shared: &mut SharedUiState,
     app_cmd: &mut CommandQueue,
     app_modal: &mut Modal,
 ) {
@@ -76,7 +76,7 @@ fn playback_cows_ui(
             ui.scope(|ui| {
                 ui.set_width(120.0);
                 ui.label(egui::RichText::new(&unit.name).color(unit_color(i)));
-                if piano_state.toot == Some(i) {
+                if shared.active_unit == Some(i) {
                     ui.label("*");
                 }
                 if unit.mute {
@@ -90,7 +90,7 @@ fn playback_cows_ui(
             );
             if re.contains_pointer() {
                 if ui.input(|inp| inp.pointer.primary_clicked()) {
-                    piano_state.toot = Some(i);
+                    shared.active_unit = Some(i);
                 }
                 if ui.input(|inp| inp.key_pressed(egui::Key::S)) {
                     cmd = Some(UnitsCmd::ToggleSolo { idx: i });
