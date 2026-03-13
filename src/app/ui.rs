@@ -196,8 +196,10 @@ fn piano_freeplay_play_note(
         .units
         .get_mut(unit_no)
         .unwrap_or(&mut song.voice_test_unit);
+    // Don't try to record if the unit number doesn't point inside the herd
+    let record = state.record && unit_no.0 < 50;
     unit.set_key(key);
-    if state.record {
+    if record {
         // If the song is paused, unpause it
         song.pause = false;
         // Push the event
@@ -209,7 +211,7 @@ fn piano_freeplay_play_note(
     }
     // Set velocity
     unit.velocity = state.velocity;
-    if state.record {
+    if record {
         song.song.events.push(Event {
             payload: EventPayload::Velocity(state.velocity),
             unit: unit_no,
@@ -217,7 +219,7 @@ fn piano_freeplay_play_note(
         });
     }
     // Play the note
-    if state.record {
+    if record {
         song.song.events.push(Event {
             payload: EventPayload::On {
                 duration: state.duration,
@@ -236,7 +238,7 @@ fn piano_freeplay_play_note(
         song.herd.smp_end,
         std::slice::from_ref(&song.preview_voice),
     );
-    if state.record {
+    if record {
         song.song.events.sort();
     }
 }
