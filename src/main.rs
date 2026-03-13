@@ -75,9 +75,15 @@ struct CliArgs {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    use {clap::Parser as _, eframe::egui};
+    use {
+        clap::Parser as _,
+        eframe::egui::{self, ViewportBuilder},
+    };
     egui_logger::builder().init().unwrap();
-    let opts = eframe::NativeOptions::default();
+    let opts = eframe::NativeOptions {
+        viewport: ViewportBuilder::default().with_min_inner_size([960., 600.]),
+        ..Default::default()
+    };
     let args = CliArgs::parse();
     eframe::run_native(
         "ptcowlage",
