@@ -279,6 +279,10 @@ pub fn handle_units_command(
     if let Some(cmd) = cmd {
         match cmd {
             UnitsCmd::ToggleSolo { idx } => {
+                // Do nothing if index refers to a custom unit
+                if idx.0 >= 50 {
+                    return;
+                }
                 let me_playing = !song.herd.units[idx].mute;
                 let mut any_playing = false;
                 for (i, unit) in song.herd.units.iter_mut().enumerate() {

@@ -13,6 +13,7 @@ use {
         egui_ext::ImageExt as _,
     },
     eframe::egui,
+    ptcow::UnitIdx,
 };
 
 pub fn ui(
@@ -70,7 +71,12 @@ fn playback_cows_ui(
     app_modal: &mut Modal,
 ) {
     let mut cmd = None;
-    for (i, unit) in song.herd.units.enumerated_mut() {
+    for (i, unit) in song
+        .herd
+        .units
+        .enumerated_mut()
+        .chain(std::iter::once((UnitIdx(255), &mut song.voice_test_unit)))
+    {
         ui.horizontal(|ui| {
             ui.set_height(32.0);
             ui.scope(|ui| {

@@ -1,6 +1,6 @@
 use {
     crate::pxtone_misc,
-    ptcow::{Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, Voice},
+    ptcow::{Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, Voice, VoiceIdx},
     std::{
         iter::zip,
         ops::RangeInclusive,
@@ -72,14 +72,12 @@ impl SongState {
         };
         // Set the end meas for new songs to make sure there is nice big area to play around with
         this.song.master.loop_points.last = Some(std::num::NonZero::new(100).unwrap());
-        this.herd.units.push(Unit {
-            name: "Cow".into(),
-            ..Default::default()
-        });
         let noise_data = NoiseData::from_ptnoise(include_bytes!("../res/cow.ptnoise")).unwrap();
         let mut voice = Voice::from_data(ptcow::VoiceData::Noise(noise_data));
         voice.name = "Moo".into();
         this.ins.voices.push(voice);
+        this.voice_test_unit
+            .reset_voice(&this.ins, VoiceIdx(0), this.song.master.timing, &[]);
         this
     }
     pub fn prepare(&mut self, sample_rate: SampleRate) {
