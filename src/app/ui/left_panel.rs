@@ -46,7 +46,7 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 );
                 let toot_idx = song.herd.units.len();
                 song.herd.units.push(unit);
-                app.ui_state.shared.active_unit = Some(UnitIdx(toot_idx));
+                app.ui_state.shared.active_unit = UnitIdx(toot_idx);
             }
         });
     });
@@ -67,6 +67,18 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                     &song.song.events,
                 );
             }
+            ui.separator();
+            unit_ui(
+                &mut app.ui_state,
+                ui,
+                &mut song.ins,
+                &mut cmd,
+                n_units,
+                UnitIdx(255),
+                &mut song.voice_test_unit,
+                &mut app.cmd,
+                &song.song.events,
+            );
         });
     handle_units_command(cmd, song, &mut app.modal);
     ui.checkbox(&mut app.ui_state.left.select_mode, "Select mode");
@@ -154,16 +166,14 @@ fn unit_ui(
                 egui::Stroke::new(3.0, c),
             );
         }
-        if let Some(idx) = ui_state.shared.active_unit
-            && idx == i
-        {
+        if ui_state.shared.active_unit == i {
             ui.painter().debug_rect(re.rect, egui::Color32::YELLOW, "");
         }
         if ui_state.shared.highlight_set.contains(&i) {
             ui.painter().debug_rect(re.rect, egui::Color32::WHITE, "");
         }
         if re.clicked() {
-            ui_state.shared.active_unit = Some(i);
+            ui_state.shared.active_unit = i;
         }
         // Got to "Unit" tab on double click
         if re.double_clicked() {

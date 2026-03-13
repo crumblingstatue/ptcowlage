@@ -76,7 +76,7 @@ fn playback_cows_ui(
             ui.scope(|ui| {
                 ui.set_width(120.0);
                 ui.label(egui::RichText::new(&unit.name).color(unit_color(i)));
-                if shared.active_unit == Some(i) {
+                if shared.active_unit == i {
                     ui.label("*");
                 }
                 if unit.mute {
@@ -90,7 +90,7 @@ fn playback_cows_ui(
             );
             if re.contains_pointer() {
                 if ui.input(|inp| inp.pointer.primary_clicked()) {
-                    shared.active_unit = Some(i);
+                    shared.active_unit = i;
                 }
                 if ui.input(|inp| inp.key_pressed(egui::Key::S)) {
                     cmd = Some(UnitsCmd::ToggleSolo { idx: i });

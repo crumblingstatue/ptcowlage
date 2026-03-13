@@ -14,9 +14,9 @@ use {
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
-        Bps, ChNum, EnvPt, EnvelopeSrc, NoiseDesignOscillator, NoiseDesignUnit, NoiseTable,
-        NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData, VoiceFlags, VoiceIdx, VoiceUnit,
-        WaveData, WaveDataPoints, noise_to_pcm,
+        Bps, ChNum, EnvPt, EnvelopeSrc, Master, MooInstructions, NoiseDesignOscillator,
+        NoiseDesignUnit, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData,
+        VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints, noise_to_pcm,
     },
 };
 
@@ -35,15 +35,21 @@ pub struct VoicesUiState {
 
 impl VoicesUiState {
     /// "Soft reset" the state when clicking a new voice
-    pub fn soft_reset(&mut self, voices: &ptcow::Voices) {
+    pub fn soft_reset(
+        &mut self,
+        song_ins: &MooInstructions,
+        song_master: &Master,
+        voice_test_unit: &mut ptcow::Unit,
+    ) {
         self.sel_slot = SelectedSlot::Base;
         self.inst_sub = SubSliceUi::default();
         self.inst_env_sub = SubSliceUi::default();
         self.selected_noise_unit = 0;
         self.save_slots = [const { None }; 4];
-        if let Some(voice) = voices.get(self.selected_idx) {
+        if let Some(voice) = song_ins.voices.get(self.selected_idx) {
             self.save_slots[0] = Some(voice.clone());
         }
+        voice_test_unit.reset_voice(song_ins, self.selected_idx, song_master.timing);
     }
 }
 
@@ -151,7 +157,7 @@ pub fn ui(
             });
             if re.clicked() {
                 ui_state.selected_idx = i;
-                ui_state.soft_reset(&song.ins.voices);
+                ui_state.soft_reset(&song.ins, &song.song.master, &mut song.voice_test_unit);
             }
             if re.drag_started() {
                 ui_state.dragged_idx = Some(i);
@@ -190,6 +196,7 @@ pub fn ui(
             ui_state,
             shared,
             &mut song.herd,
+            &mut song.voice_test_unit,
             app_cmd,
         );
     }
@@ -259,6 +266,7 @@ fn voice_ui(
     ui_state: &mut VoicesUiState,
     shared: &mut SharedUiState,
     herd: &mut ptcow::Herd,
+    voice_test_unit: &mut ptcow::Unit,
     app_cmd: &mut CommandQueue,
 ) {
     ui.horizontal(|ui| {
@@ -278,16 +286,17 @@ fn voice_ui(
         if ui.button("del").clicked() {
             *op = Some(VoiceUiOp::Delete(idx));
         }
-        if let Some(unit_idx) = shared.active_unit {
-            let unit = &mut herd.units[unit_idx];
-            let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
-                .color(unit_color(unit_idx));
-            if ui.button(label).clicked() {
-                app_cmd.push(Cmd::ResetUnitVoice {
-                    unit: unit_idx,
-                    voice: idx,
-                });
-            }
+        let unit = herd
+            .units
+            .get_mut(shared.active_unit)
+            .unwrap_or(voice_test_unit);
+        let label = egui::RichText::new(format!("🎹 Test with {}", unit.name))
+            .color(unit_color(shared.active_unit));
+        if ui.button(label).clicked() {
+            app_cmd.push(Cmd::ResetUnitVoice {
+                unit: shared.active_unit,
+                voice: idx,
+            });
         }
         match &voice.base.data {
             VoiceData::Noise(_) => {

@@ -24,10 +24,7 @@ use {
     },
     eframe::egui,
     egui_toast::Toasts,
-    ptcow::{
-        Event, EventPayload, GroupIdx, SampleRate, UnitIdx, Voice, VoiceData, VoiceIdx,
-        WaveDataPoints,
-    },
+    ptcow::{Event, EventPayload, GroupIdx, UnitIdx, Voice, VoiceData, VoiceIdx, WaveDataPoints},
     rustc_hash::FxHashSet,
 };
 
@@ -69,7 +66,6 @@ pub const fn piano_key_to_pxtone_key(key: i32) -> i32 {
 
 fn piano_freeplay_ui(
     song: &mut SongState,
-    dst_sps: SampleRate,
     ui: &mut egui::Ui,
     state: &mut FreeplayPianoState,
     shared: &mut SharedUiState,
@@ -77,14 +73,9 @@ fn piano_freeplay_ui(
 ) {
     // Avoid tooting when we're inside a text edit, etc.
     if !ui.ctx().wants_keyboard_input() {
-        piano_freeplay_input(song, dst_sps, ui, state, shared, file_dia_open);
+        piano_freeplay_input(song, ui, state, shared, file_dia_open);
     }
     ui.label("🎹").on_hover_text("Piano freeplay UI");
-    if let Some(toot) = shared.active_unit
-        && let Some(unit) = song.herd.units.get(toot)
-    {
-        ui.image(unit_voice_img(&song.ins, unit));
-    }
     ui.label("Octave");
     ui.add(
         egui::DragValue::new(&mut state.play_octave)
@@ -118,7 +109,6 @@ fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
 
 fn piano_freeplay_input(
     song: &mut SongState,
-    dst_sps: SampleRate,
     ui: &mut egui::Ui,
     state: &mut FreeplayPianoState,
     shared: &mut SharedUiState,
@@ -126,10 +116,8 @@ fn piano_freeplay_input(
 ) {
     // Play a cow on the keyboard
     // Ignores the keyboard if an egui popup is open or the file dialog is open
-    if let Some(unit_no) = shared.active_unit
-        && !egui::Popup::is_any_open(ui.ctx())
-        && !file_dia_open
-    {
+
+    if !egui::Popup::is_any_open(ui.ctx()) && !file_dia_open {
         let piano_keys: [bool; 30] = ui.input(|inp| {
             let mut down = [false; _];
             let kb_keys = [
@@ -187,7 +175,7 @@ fn piano_freeplay_input(
                 // I dunno, magic
                 let base_key = 8;
                 let piano_key = base_key + (state.play_octave * 12) + key as i32;
-                piano_freeplay_play_note(song, dst_sps, state, piano_key, unit_no);
+                piano_freeplay_play_note(song, state, piano_key, shared.active_unit);
             }
         }
     }
@@ -195,73 +183,57 @@ fn piano_freeplay_input(
 
 fn piano_freeplay_play_note(
     song: &mut SongState,
-    dst_sps: u16,
     state: &mut FreeplayPianoState,
     piano_key: i32,
     unit_no: UnitIdx,
 ) {
     let tick = ptcow::current_tick(&song.herd, &song.ins);
     // Set key
-    let ev = Event {
-        payload: EventPayload::Key(piano_key_to_pxtone_key(piano_key)),
-        unit: unit_no,
-        tick,
-    };
+    let key = piano_key_to_pxtone_key(piano_key);
+    // Fall back to the "voice test unit" if the index is out of bounds
+    let unit = song
+        .herd
+        .units
+        .get_mut(unit_no)
+        .unwrap_or(&mut song.voice_test_unit);
+    unit.set_key(key);
     if state.record {
         // If the song is paused, unpause it
         song.pause = false;
         // Push the event
-        song.song.events.push(ev);
+        song.song.events.push(Event {
+            payload: EventPayload::Key(key),
+            unit: unit_no,
+            tick,
+        });
     }
-    let _ = ptcow::do_event(
-        &mut song.herd,
-        &song.ins,
-        &song.song.events,
-        &song.song.master,
-        tick,
-        dst_sps,
-        &ev,
-        true,
-    );
     // Set velocity
-    let ev = Event {
-        payload: EventPayload::Velocity(state.velocity),
-        unit: unit_no,
-        tick,
-    };
-    let _ = ptcow::do_event(
-        &mut song.herd,
-        &song.ins,
-        &song.song.events,
-        &song.song.master,
-        tick,
-        dst_sps,
-        &ev,
-        true,
-    );
+    unit.velocity = state.velocity;
     if state.record {
-        song.song.events.push(ev);
+        song.song.events.push(Event {
+            payload: EventPayload::Velocity(state.velocity),
+            unit: unit_no,
+            tick,
+        });
     }
     // Play the note
-    let ev = Event {
-        payload: EventPayload::On {
-            duration: state.duration,
-        },
-        unit: unit_no,
-        tick,
-    };
     if state.record {
-        song.song.events.push(ev);
+        song.song.events.push(Event {
+            payload: EventPayload::On {
+                duration: state.duration,
+            },
+            unit: unit_no,
+            tick,
+        });
     }
-    let _ = ptcow::do_event(
-        &mut song.herd,
+    unit.on(
+        unit_no,
         &song.ins,
-        &song.song.events,
-        &song.song.master,
+        &[],
+        0,
+        state.duration,
         tick,
-        dst_sps,
-        &ev,
-        true,
+        song.herd.smp_end,
     );
     if state.record {
         song.song.events.sort();
@@ -289,16 +261,20 @@ pub struct SharedUiState {
     /// - Used for freeplay
     /// - Shows up in the unit UI
     /// - Is highlighted in the left side units panel
-    pub active_unit: Option<UnitIdx>,
+    pub active_unit: UnitIdx,
     pub toasts: Toasts,
     /// Units in this set will be highlighted
     pub highlight_set: FxHashSet<UnitIdx>,
 }
 
+impl SharedUiState {
+    pub const VOICE_TEST_UNIT_IDX: UnitIdx = UnitIdx(255);
+}
+
 impl Default for SharedUiState {
     fn default() -> Self {
         Self {
-            active_unit: None,
+            active_unit: Self::VOICE_TEST_UNIT_IDX,
             toasts: Toasts::new()
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
@@ -368,7 +344,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
                 &mut app.ui_state.piano_roll,
                 &mut app.ui_state.shared,
                 &mut app.cmd,
-                app.out.rate,
                 &mut app.ui_state.freeplay_piano,
             );
         }

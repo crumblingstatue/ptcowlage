@@ -5,7 +5,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
             ui::{
-                Tab,
+                SharedUiState, Tab,
                 modal::Modal,
                 piano_freeplay_ui,
                 windows::{LogWindow, TitleAndCommentWindow},
@@ -219,7 +219,12 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             #[expect(clippy::single_match)]
             match app.ui_state.tab {
                 Tab::Voices => {
-                    app.ui_state.voices.soft_reset(&song.ins.voices);
+                    app.ui_state.voices.soft_reset(
+                        &song.ins,
+                        &song.song.master,
+                        &mut song.voice_test_unit,
+                    );
+                    app.ui_state.shared.active_unit = SharedUiState::VOICE_TEST_UNIT_IDX;
                 }
                 _ => {}
             }
@@ -257,7 +262,6 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         ui.separator();
         piano_freeplay_ui(
             &mut song_g,
-            app.out.rate,
             ui,
             &mut app.ui_state.freeplay_piano,
             &mut app.ui_state.shared,

@@ -25,25 +25,21 @@ pub fn ui(
     let mut cmd = None;
     egui::ScrollArea::vertical()
         .auto_shrink(false)
-        .show(ui, |ui| match shared.active_unit {
-            Some(unit_idx) => {
-                let Some(unit) = song.herd.units.get_mut(unit_idx) else {
-                    ui.label("Invalid selected unit");
-                    return;
-                };
-                unit_ui(
-                    ui,
-                    unit_idx,
-                    unit,
-                    &song.ins,
-                    &mut cmd,
-                    app_cmd,
-                    &song.song.events,
-                );
-            }
-            None => {
-                ui.label("Select a unit from the left panel");
-            }
+        .show(ui, |ui| {
+            let unit = song
+                .herd
+                .units
+                .get_mut(shared.active_unit)
+                .unwrap_or(&mut song.voice_test_unit);
+            unit_ui(
+                ui,
+                shared.active_unit,
+                unit,
+                &song.ins,
+                &mut cmd,
+                app_cmd,
+                &song.song.events,
+            );
         });
     handle_units_command(cmd, song, app_modal);
 }

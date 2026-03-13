@@ -9,7 +9,7 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                Tab,
+                SharedUiState, Tab,
                 file_ops::{
                     self, FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileFilt,
                     FileOp,
@@ -195,7 +195,7 @@ impl App {
         };
         load_persistence(cc, &mut this);
         // SongState comes with a default unit by... default, so let's toot that
-        this.ui_state.shared.active_unit = Some(UnitIdx(0));
+        this.ui_state.shared.active_unit = UnitIdx(0);
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
                 this.modal.msg(format!("Error loading project:\n{e}"));
@@ -765,9 +765,13 @@ impl App {
             Cmd::OpenVoice(idx) => {
                 self.ui_state.tab = Tab::Voices;
                 self.ui_state.voices.selected_idx = idx;
-                self.ui_state
-                    .voices
-                    .soft_reset(&self.song.lock().unwrap().ins.voices);
+                let mut song = self.song.lock().unwrap();
+                let song = &mut *song;
+                self.ui_state.voices.soft_reset(
+                    &song.ins,
+                    &song.song.master,
+                    &mut song.voice_test_unit,
+                );
             }
             Cmd::OverwriteEvent { idx, payload } => {
                 let mut song = self.song.lock().unwrap();
@@ -862,7 +866,7 @@ impl App {
                 song.prepare(self.out.rate);
                 self.open_file = None;
                 // Toot default unit that comes with clean state
-                self.ui_state.shared.active_unit = Some(UnitIdx(0));
+                self.ui_state.shared.active_unit = UnitIdx(0);
             }
             #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {
@@ -873,9 +877,12 @@ impl App {
             Cmd::ResetUnitVoice { unit, voice } => {
                 let mut song = self.song.lock().unwrap();
                 let song = &mut *song;
-                if let Some(unit) = song.herd.units.get_mut(unit) {
-                    unit.reset_voice(&song.ins, voice, song.song.master.timing);
-                }
+                let unit = song
+                    .herd
+                    .units
+                    .get_mut(unit)
+                    .unwrap_or(&mut song.voice_test_unit);
+                unit.reset_voice(&song.ins, voice, song.song.master.timing);
             }
             Cmd::Modal(f) => {
                 f(&mut self.modal);
@@ -1009,11 +1016,7 @@ impl App {
     }
 }
 
-fn post_load_prep(
-    song_ref: &mut SongState,
-    out_rate: SampleRate,
-    freeplay_toot: &mut Option<UnitIdx>,
-) {
+fn post_load_prep(song_ref: &mut SongState, out_rate: SampleRate, freeplay_toot: &mut UnitIdx) {
     // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
     crate::audio_out::prepare_song(song_ref, true);
     ptcow::rebuild_tones(
@@ -1023,24 +1026,13 @@ fn post_load_prep(
         &mut song_ref.herd.overdrives,
         &song_ref.song.master,
     );
-    // Set a default toot unit if units aren't empty
     let has_units = !song_ref.herd.units.is_empty();
     if has_units {
-        match freeplay_toot {
-            Some(val) => {
-                // Reset the toot value if it's out of bounds, otherwise leave it alone.
-                if val.0 >= song_ref.herd.units.len() {
-                    *val = UnitIdx(0);
-                }
-            }
-            // If it's not set, set it to unit 0
-            None => *freeplay_toot = Some(UnitIdx(0)),
-        }
         // Set initial voices, etc.
         do_tick0_events(song_ref);
     } else {
-        // If there are no units, set it to `None`.
-        *freeplay_toot = None;
+        // If there are no units, set it to the voice test unit.
+        *freeplay_toot = SharedUiState::VOICE_TEST_UNIT_IDX;
     }
     // Make sure `moo_end` is not set, so mooing does something
     song_ref.herd.moo_end = false;

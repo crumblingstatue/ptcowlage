@@ -13,7 +13,7 @@ use {
     arrayvec::ArrayVec,
     eframe::egui::{self, PopupAnchor, scroll_area::ScrollBarVisibility},
     ptcow::{
-        EventPayload, Key, Meas, SampleRate, SampleT, Tick, Timing, Unit, UnitIdx,
+        EventPayload, Key, Meas, SampleT, Tick, Timing, Unit, UnitIdx,
         timing::{NonZeroMeas, tick_to_meas},
     },
     rustc_hash::FxHashSet,
@@ -117,8 +117,10 @@ fn top_ui(
             || key_f3
         {
             state.interact_mode = InteractMode::Place;
-            if shared.active_unit.is_none() && !song.herd.units.is_empty() {
-                shared.active_unit = Some(UnitIdx(0));
+            if shared.active_unit == SharedUiState::VOICE_TEST_UNIT_IDX
+                && !song.herd.units.is_empty()
+            {
+                shared.active_unit = UnitIdx(0);
             }
         }
         let re = ui
@@ -161,7 +163,6 @@ pub fn ui(
     state: &mut PianoRollState,
     shared: &mut SharedUiState,
     cmd: &mut CommandQueue,
-    dst_sps: SampleRate,
     piano_state: &mut FreeplayPianoState,
 ) {
     top_ui(ui, song, state, shared);
@@ -174,9 +175,8 @@ pub fn ui(
             ui,
             state.prev_frame_piano_roll_y_offset,
             piano_state,
-            dst_sps,
         );
-        roll_ui(song, state, shared, ui, cmd, dst_sps, piano_state);
+        roll_ui(song, state, shared, ui, cmd, piano_state);
     });
 }
 
@@ -186,7 +186,6 @@ fn roll_ui(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
-    dst_sps: SampleRate,
     piano_state: &mut FreeplayPianoState,
 ) {
     // We make the scroll bars be outside of the ScrollArea to resolve a conundrum of
@@ -207,7 +206,7 @@ fn roll_ui(
     let out = egui::ScrollArea::both()
         .scroll_source(scroll_source)
         .show(ui, |ui| {
-            roll_ui_inner(song, state, shared, ui, cmd, dst_sps, piano_state);
+            roll_ui_inner(song, state, shared, ui, cmd, piano_state);
         });
     state.prev_frame_piano_roll_y_offset = out.state.offset.y;
 }
@@ -220,7 +219,6 @@ fn roll_ui_inner(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
-    dst_sps: SampleRate,
     piano_state: &mut FreeplayPianoState,
 ) {
     let last_note_tick = song.song.events.last().map_or(0, |ev| ev.tick);
@@ -352,9 +350,10 @@ fn roll_ui_inner(
                         break 'block;
                     }
                     // Place note
-                    let Some(unit) = shared.active_unit else {
+                    if shared.active_unit == SharedUiState::VOICE_TEST_UNIT_IDX {
                         return;
-                    };
+                    }
+                    let unit = shared.active_unit;
                     let Some(piano_key) = piano_key_from_y(pos, &re, rect, state) else {
                         return;
                     };
@@ -366,7 +365,7 @@ fn roll_ui_inner(
                         scaled as u32
                     };
                     state.just_placed_note = Some(PlacedNote { tick, unit, key });
-                    piano_freeplay_play_note(song, dst_sps, piano_state, piano_key, unit);
+                    piano_freeplay_play_note(song, piano_state, piano_key, unit);
                 }
             }
         }
@@ -426,15 +425,12 @@ fn roll_ui_inner(
         }
     }
     // Toot the current row with backtick key
-    let toot_unit = shared.active_unit;
-    if let Some(mp) = mouse_screen_pos
-        && let Some(unit) = toot_unit
-    {
+    if let Some(mp) = mouse_screen_pos {
         if ui.input(|inp| inp.key_pressed(egui::Key::Backtick)) {
             let Some(piano_key) = piano_key_from_y(mp, &re, rect, state) else {
                 return;
             };
-            piano_freeplay_play_note(song, dst_sps, piano_state, piano_key, unit);
+            piano_freeplay_play_note(song, piano_state, piano_key, shared.active_unit);
         }
     }
     // Scroll left/right when pressing arrow keys
@@ -930,7 +926,6 @@ fn piano_ui(
     ui: &mut egui::Ui,
     y_offset: f32,
     piano_state: &mut FreeplayPianoState,
-    dst_sps: SampleRate,
 ) {
     egui::ScrollArea::vertical()
         .id_salt("left")
@@ -1009,8 +1004,7 @@ fn piano_ui(
                 // We let the keyboard key also be pressed with a keyboard key, because
                 // it can be more ergonomic in certain cases.
                 let mouse_toot_key = egui::Key::Backtick;
-                if let Some(unit_no) = shared.active_unit
-                    && let Some(mouse_pos) = ui.input(|inp| inp.pointer.latest_pos())
+                if let Some(mouse_pos) = ui.input(|inp| inp.pointer.latest_pos())
                     && ui.ui_contains_pointer()
                     && ui.input(|inp| {
                         inp.pointer.primary_pressed() || inp.key_pressed(mouse_toot_key)
@@ -1018,7 +1012,7 @@ fn piano_ui(
                 {
                     let piano_key = i32::from(key) + i32::from(state.lowest_semitone);
                     if key_rect.y_range().contains(mouse_pos.y) {
-                        piano_freeplay_play_note(song, dst_sps, piano_state, piano_key, unit_no);
+                        piano_freeplay_play_note(song, piano_state, piano_key, shared.active_unit);
                     }
                 }
             }

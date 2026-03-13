@@ -49,6 +49,7 @@ pub struct SongState {
     pub ins: MooInstructions,
     pub pause: bool,
     pub master_vol: f32,
+    pub voice_test_unit: Unit,
 }
 
 impl SongState {
@@ -59,6 +60,11 @@ impl SongState {
             ins: MooInstructions::new(sample_rate),
             pause: true,
             master_vol: 1.0,
+            voice_test_unit: Unit {
+                name: "Voice test".into(),
+                volume: 100,
+                ..Default::default()
+            },
         };
         // Set the end meas for new songs to make sure there is nice big area to play around with
         this.song.master.loop_points.last = Some(std::num::NonZero::new(100).unwrap());
@@ -117,8 +123,13 @@ pub fn spawn_ptcow_audio_thread(
         let master_vol = song.master_vol;
         let out_buf_mut_ref = &mut out_buf_s16;
         // INVARIANT: We assume `moo` never panics. Panicking is a bug.
-        song.herd
-            .moo(&song.ins, &song.song, out_buf_mut_ref, !song.pause);
+        song.herd.moo(
+            &song.ins,
+            &song.song,
+            out_buf_mut_ref,
+            !song.pause,
+            std::slice::from_mut(&mut song.voice_test_unit),
+        );
         drop(song_g);
         // End critical section
 
