@@ -1,5 +1,5 @@
 use {
-    crate::pxtone_misc::square_wave_voice,
+    crate::pxtone_misc::{hat_close_voice, square_wave_voice},
     midly::{MetaMessage, MidiMessage, TrackEventKind, num::u7},
     ptcow::{Event, EventPayload, Herd, MooInstructions, Song, Unit, UnitIdx, VoiceIdx},
     rustc_hash::FxHashMap,
@@ -20,6 +20,10 @@ fn guess_tempo(tracks: &[midly::Track]) -> Option<u32> {
     }
     None
 }
+
+const DRUM_CH: u8 = 9;
+// "Special" drum program to map to a drum instrument
+const DRUM_PRG: u8 = 255;
 
 struct ChannelState {
     rpn_lsb: u8,
@@ -61,6 +65,8 @@ impl ChannelMapping {
     }
 }
 
+type UsedPrograms = FxHashMap<u8, VoiceIdx>;
+
 /// Write midi song to pxtone
 #[expect(
     clippy::unnecessary_wraps,
@@ -72,7 +78,7 @@ pub fn write_midi_to_pxtone(
     song: &mut Song,
     ins: &mut MooInstructions,
 ) -> anyhow::Result<()> {
-    let mut used_programs = FxHashMap::default();
+    let mut used_programs: UsedPrograms = FxHashMap::default();
     let (header, track_iter) = midly::parse(mid_data).unwrap();
     let tracks = track_iter.collect_tracks().unwrap();
     let ticks_per_beat = match header.timing {
@@ -147,6 +153,11 @@ pub fn write_midi_to_pxtone(
                         }
                         MidiMessage::ProgramChange { program } => {
                             let len = used_programs.len();
+                            let program = if channel.as_int() == DRUM_CH {
+                                DRUM_PRG
+                            } else {
+                                program.as_int()
+                            };
                             let idx = used_programs
                                 .entry(program)
                                 .or_insert(VoiceIdx(len.try_into().unwrap()));
@@ -246,15 +257,21 @@ pub fn write_midi_to_pxtone(
 }
 
 /// Replace the existing voices with a voice mapped for each "program"
-fn replace_voices(ins: &mut MooInstructions, used_programs: FxHashMap<u7, VoiceIdx>) {
+fn replace_voices(ins: &mut MooInstructions, used_programs: UsedPrograms) {
     ins.voices.clear();
     let mut pairs: Vec<_> = used_programs.into_iter().collect();
     pairs.sort_by_key(|pair| pair.1.0);
     for (prg, _) in pairs {
-        let mut voice = square_wave_voice();
-        let nam = PROGRAM_NAMES[prg.as_int() as usize];
-        voice.name = format!("[{prg}] {nam}");
-        ins.voices.push(voice);
+        if prg == DRUM_PRG {
+            let mut voice = hat_close_voice();
+            voice.name = "drum".into();
+            ins.voices.push(voice);
+        } else {
+            let mut voice = square_wave_voice();
+            let nam = PROGRAM_NAMES[prg as usize];
+            voice.name = format!("[{prg}] {nam}");
+            ins.voices.push(voice);
+        }
     }
     // If there were no program events or whatever, we still want at least one voice
     if ins.voices.is_empty() {
