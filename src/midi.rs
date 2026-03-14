@@ -90,7 +90,7 @@ pub fn write_midi_to_pxtone(
         for (ev_idx, event) in track.iter().enumerate() {
             // The delta is how much after the previous event this current event is,
             // so we start by incrementing the clock
-            clock += f64::from(event.delta.as_int()) as u32;
+            clock += event.delta.as_int();
             match event.kind {
                 TrackEventKind::Midi { channel, message } => {
                     let unit = ch_map.get_or_insert_for_ch(channel);
