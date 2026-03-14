@@ -234,7 +234,7 @@ pub fn square_wave() -> WaveData {
         },
         envelope: EnvelopeSrc::default(),
         pan: 64,
-        volume: 127,
+        volume: 48,
     }
 }
 
