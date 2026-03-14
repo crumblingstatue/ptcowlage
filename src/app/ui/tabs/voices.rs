@@ -281,6 +281,8 @@ pub fn ui(
     }
 }
 
+const PREVIEW_VOICE_IDX: VoiceIdx = VoiceIdx(100);
+
 #[cfg(not(target_arch = "wasm32"))]
 fn voice_import_preview(
     song: &mut SongState,
@@ -301,7 +303,7 @@ fn voice_import_preview(
     }
     song.voice_test_unit.reset_voice(
         &song.ins,
-        VoiceIdx(100),
+        PREVIEW_VOICE_IDX,
         song.song.master.timing,
         std::slice::from_ref(&song.preview_voice),
     );

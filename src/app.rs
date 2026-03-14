@@ -415,6 +415,8 @@ impl App {
                         } else {
                             song.ins.voices.push(voice);
                         }
+                        // Reset back test unit voice idx from preview, to the normal one
+                        song.voice_test_unit.voice_idx = voice_idx;
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
@@ -432,6 +434,8 @@ impl App {
                         } else {
                             song.ins.voices.push(voice);
                         }
+                        // Reset back test unit voice idx from preview, to the normal one
+                        song.voice_test_unit.voice_idx = voice_idx;
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
