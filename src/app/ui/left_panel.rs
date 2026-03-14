@@ -151,15 +151,15 @@ fn unit_ui(
         if ui_state.piano_roll.hidden_units.contains(&i) {
             any_hovered |= ui.label("h").contains_pointer();
         }
-        any_hovered |= ui
-            .add(
+        let re = ui.selectable_label(
+            ui_state.shared.active_unit == i,
+            (
                 egui::Image::new(unit_voice_img(ins, extra_voices, unit))
                     .sense(egui::Sense::click())
                     .hflip(),
-            )
-            .contains_pointer();
-
-        let re = ui.label(egui::RichText::new(&unit.name).color(c));
+                egui::RichText::new(&unit.name).color(c),
+            ),
+        );
         if n != 0 {
             // We need to ensure min <= max when clamping, otherwise panic
             let max = f32::max(4.0, ui.available_width());
@@ -169,9 +169,6 @@ fn unit_ui(
                 [left_center, left_center + egui::vec2(w, 0.0)],
                 egui::Stroke::new(3.0, c),
             );
-        }
-        if ui_state.shared.active_unit == i {
-            ui.painter().debug_rect(re.rect, egui::Color32::YELLOW, "");
         }
         if ui_state.shared.highlight_set.contains(&i) {
             ui.painter().debug_rect(re.rect, egui::Color32::WHITE, "");
