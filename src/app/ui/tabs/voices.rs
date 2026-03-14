@@ -852,16 +852,11 @@ fn voice_unit_ui(
                                     ui_state.last_hovered_wave_idx = Some(i);
                                 }
                                 if ui
-                                    .add(
-                                        egui::DragValue::new(&mut pt.y)
-                                            .prefix("y ")
-                                            .range(-128..=127),
-                                    )
+                                    .add(egui::Slider::new(&mut pt.y, -128..=127).prefix("y "))
                                     .hovered()
                                 {
                                     ui_state.last_hovered_wave_idx = Some(i);
                                 }
-                                ui.add_space(5.0);
                             }
                         });
                     });
