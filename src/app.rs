@@ -126,6 +126,7 @@ impl App {
                 &mid_data,
                 &mut song_state.herd,
                 &mut song_state.song,
+                &mut song_state.ins,
             ) {
                 Ok(()) => {
                     song_state.song.recalculate_length();
@@ -228,7 +229,12 @@ impl App {
     fn import_midi_from_bytes(&mut self, mid_data: &[u8]) {
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
-        match crate::midi::write_midi_to_pxtone(mid_data, &mut song.herd, &mut song.song) {
+        match crate::midi::write_midi_to_pxtone(
+            mid_data,
+            &mut song.herd,
+            &mut song.song,
+            &mut song.ins,
+        ) {
             Ok(()) => {
                 song.song.recalculate_length();
             }

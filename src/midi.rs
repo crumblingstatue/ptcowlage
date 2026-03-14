@@ -1,6 +1,10 @@
 use {
+    crate::pxtone_misc,
     midly::{MetaMessage, MidiMessage, TrackEventKind, num::u7},
-    ptcow::{Event, EventPayload, Herd, Song, Unit, UnitIdx, VoiceIdx},
+    ptcow::{
+        Event, EventPayload, Herd, MooInstructions, Song, Unit, UnitIdx, Voice, VoiceFlags,
+        VoiceIdx,
+    },
     rustc_hash::FxHashMap,
 };
 
@@ -67,6 +71,7 @@ pub fn write_midi_to_pxtone(
     mid_data: &[u8],
     herd: &mut Herd,
     song: &mut Song,
+    ins: &mut MooInstructions,
 ) -> anyhow::Result<()> {
     let mut used_programs = FxHashMap::default();
     let (header, track_iter) = midly::parse(mid_data).unwrap();
@@ -235,12 +240,28 @@ pub fn write_midi_to_pxtone(
         });
     }
 
+    replace_voices(ins, used_programs);
     // Unset the last point (let it be calculated by PxTone)
     song.master.loop_points.last = None;
 
     // PxTone events seem to need to be stored in order of increasing clock value
     song.events.eves.sort_by_key(|ev| ev.tick);
     Ok(())
+}
+
+/// Replace the existing voices with a voice mapped for each "program"
+fn replace_voices(ins: &mut MooInstructions, used_programs: FxHashMap<u7, VoiceIdx>) {
+    ins.voices.clear();
+    let mut pairs: Vec<_> = used_programs.into_iter().collect();
+    pairs.sort_by_key(|pair| pair.1.0);
+    for (prg, _) in pairs {
+        let mut voice = Voice::from_data(ptcow::VoiceData::Wave(pxtone_misc::square_wave()));
+        // Seem to be commonly used by wave voices, and sounds better?
+        voice.base.unit.basic_key = 11520;
+        voice.base.unit.flags.insert(VoiceFlags::WAVE_LOOP);
+        voice.name = format!("prg{prg}");
+        ins.voices.push(voice);
+    }
 }
 
 fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, state: &ChannelState, key: u7) {
