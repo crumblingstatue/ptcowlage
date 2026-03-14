@@ -1,10 +1,7 @@
 use {
-    crate::pxtone_misc,
+    crate::pxtone_misc::square_wave_voice,
     midly::{MetaMessage, MidiMessage, TrackEventKind, num::u7},
-    ptcow::{
-        Event, EventPayload, Herd, MooInstructions, Song, Unit, UnitIdx, Voice, VoiceFlags,
-        VoiceIdx,
-    },
+    ptcow::{Event, EventPayload, Herd, MooInstructions, Song, Unit, UnitIdx, VoiceIdx},
     rustc_hash::FxHashMap,
 };
 
@@ -254,10 +251,7 @@ fn replace_voices(ins: &mut MooInstructions, used_programs: FxHashMap<u7, VoiceI
     let mut pairs: Vec<_> = used_programs.into_iter().collect();
     pairs.sort_by_key(|pair| pair.1.0);
     for (prg, _) in pairs {
-        let mut voice = Voice::from_data(ptcow::VoiceData::Wave(pxtone_misc::square_wave()));
-        // Seem to be commonly used by wave voices, and sounds better?
-        voice.base.unit.basic_key = 11520;
-        voice.base.unit.flags.insert(VoiceFlags::WAVE_LOOP);
+        let mut voice = square_wave_voice();
         voice.name = format!("prg{prg}");
         ins.voices.push(voice);
     }

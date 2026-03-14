@@ -9,7 +9,9 @@ use {
             },
         },
         audio_out::SongState,
-        pxtone_misc::{bass_drum, reset_voice_for_units_with_voice_idx, square_wave},
+        pxtone_misc::{
+            bass_drum, reset_voice_for_units_with_voice_idx, square_wave, square_wave_voice,
+        },
     },
     arrayvec::ArrayVec,
     bitflags::Flags as _,
@@ -318,15 +320,6 @@ fn voice_import_preview(
 fn bass_drum_voice() -> Voice {
     let data = VoiceData::Noise(bass_drum());
     Voice::from_unit_and_data(VoiceUnit::default(), data)
-}
-
-fn square_wave_voice() -> Voice {
-    let unit = VoiceUnit {
-        flags: VoiceFlags::WAVE_LOOP,
-        ..VoiceUnit::default()
-    };
-    let data = VoiceData::Wave(square_wave());
-    Voice::from_unit_and_data(unit, data)
 }
 
 enum VoiceUiOp {

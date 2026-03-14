@@ -1,8 +1,8 @@
 use arrayvec::ArrayVec;
 use ptcow::{
     DEFAULT_KEY, EnvPt, EnvelopeSrc, EveList, Event, EventPayload, NoiseData,
-    NoiseDesignOscillator, NoiseDesignUnit, NoiseType, OsciPt, Song, Unit, UnitIdx, VoiceIdx,
-    WaveData, WaveDataPoints,
+    NoiseDesignOscillator, NoiseDesignUnit, NoiseType, OsciPt, Song, Unit, UnitIdx, Voice,
+    VoiceData, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints,
 };
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -236,6 +236,17 @@ pub fn square_wave() -> WaveData {
         pan: 64,
         volume: 48,
     }
+}
+
+pub fn square_wave_voice() -> Voice {
+    let unit = VoiceUnit {
+        flags: VoiceFlags::WAVE_LOOP,
+        // 11520 seems to be the most commonly used key for wave voices, and it sounds better
+        basic_key: 11520,
+        ..VoiceUnit::default()
+    };
+    let data = VoiceData::Wave(square_wave());
+    Voice::from_unit_and_data(unit, data)
 }
 
 pub fn bass_drum() -> NoiseData {
