@@ -674,39 +674,7 @@ fn voice_unit_ui(
     sel_slot: SelectedSlot,
     app_cmd: &mut CommandQueue,
 ) {
-    ui.horizontal(|ui| {
-        let mut changed = false;
-        ui.label("Key");
-        changed |= ui
-            .add_enabled(
-                !slot.unit.flags.contains(VoiceFlags::BEAT_FIT),
-                egui::DragValue::new(&mut slot.unit.basic_key),
-            )
-            .changed();
-        ui.label("Tune");
-        changed |= ui
-            .add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.0001))
-            .changed();
-        for (name, flag) in VoiceFlags::iter_defined_names() {
-            let mut contains = slot.unit.flags.contains(flag);
-            // TODO: This is stupid
-            let name = match name {
-                "WAVE_LOOP" => "loop",
-                "SMOOTH" => "smooth",
-                "BEAT_FIT" => "fit",
-                etc => etc,
-            };
-            if ui.checkbox(&mut contains, name).clicked() {
-                if name == "fit" {
-                    changed = true;
-                }
-                slot.unit.flags ^= flag;
-            }
-        }
-        if changed {
-            app_cmd.push(Cmd::ResetVoiceForUnitsWithVoiceIdx { idx: voice_idx });
-        }
-    });
+    key_tune_flags_ui(ui, slot, voice_idx, app_cmd);
 
     match &mut slot.data {
         VoiceData::Noise(noise) => {
@@ -935,6 +903,47 @@ fn voice_unit_ui(
         }
     }
     slot_wave_extra_ui(ui, slot, out_rate, sel_slot);
+}
+
+fn key_tune_flags_ui(
+    ui: &mut egui::Ui,
+    slot: &mut ptcow::VoiceSlot,
+    voice_idx: VoiceIdx,
+    app_cmd: &mut CommandQueue,
+) {
+    ui.horizontal(|ui| {
+        let mut changed = false;
+        ui.label("Key");
+        changed |= ui
+            .add_enabled(
+                !slot.unit.flags.contains(VoiceFlags::BEAT_FIT),
+                egui::DragValue::new(&mut slot.unit.basic_key),
+            )
+            .changed();
+        ui.label("Tune");
+        changed |= ui
+            .add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.0001))
+            .changed();
+        for (name, flag) in VoiceFlags::iter_defined_names() {
+            let mut contains = slot.unit.flags.contains(flag);
+            // TODO: This is stupid
+            let name = match name {
+                "WAVE_LOOP" => "loop",
+                "SMOOTH" => "smooth",
+                "BEAT_FIT" => "fit",
+                etc => etc,
+            };
+            if ui.checkbox(&mut contains, name).clicked() {
+                if name == "fit" {
+                    changed = true;
+                }
+                slot.unit.flags ^= flag;
+            }
+        }
+        if changed {
+            app_cmd.push(Cmd::ResetVoiceForUnitsWithVoiceIdx { idx: voice_idx });
+        }
+    });
 }
 
 fn default_noise_unit() -> NoiseDesignUnit {
