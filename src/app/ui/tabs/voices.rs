@@ -756,6 +756,10 @@ fn voice_unit_ui(
         }
         VoiceData::Wave(wave_data) => {
             ui.horizontal(|ui| {
+                ui.label("Volume");
+                ui.add(egui::DragValue::new(&mut wave_data.volume));
+                ui.label("Pan");
+                ui.add(egui::Slider::new(&mut wave_data.pan, 0..=128));
                 ui.label("Kind");
                 if ui
                     .selectable_label(
@@ -790,36 +794,52 @@ fn voice_unit_ui(
                         );
                     });
                 }
+                ui.separator();
+                match &mut wave_data.points {
+                    WaveDataPoints::Coord { points, resolution } => {
+                        ui.label("Resolution");
+                        ui.add(egui::DragValue::new(resolution)).changed();
+                        ui.end_row();
+                        ui.label(format!("{} points", points.len()));
+                        if ui.button("+").clicked() {
+                            points.push(OsciPt {
+                                x: points.last().map_or(0, |pt| pt.x) + 1,
+                                y: 0,
+                            });
+                        }
+                        if ui.button("-").clicked() {
+                            points.pop();
+                        }
+                        if ui.button("Fix x coordinates").clicked() {
+                            for i in 0..points.len() {
+                                let Ok([a, b]) = points.get_disjoint_mut([i, i + 1]) else {
+                                    break;
+                                };
+                                if b.x <= a.x {
+                                    b.x = a.x + 1;
+                                }
+                            }
+                        }
+                    }
+                    WaveDataPoints::Overtone { points } => {
+                        ui.label(format!("{} points", points.len()));
+                        if ui.button("+").clicked() {
+                            points.push(OsciPt {
+                                x: points.last().map_or(0, |pt| pt.x) + 1,
+                                y: 1,
+                            });
+                        }
+                        if ui.button("-").clicked() {
+                            points.pop();
+                        }
+                    }
+                }
             });
             match &mut wave_data.points {
                 WaveDataPoints::Coord { points, resolution } => {
                     ui.horizontal_top(|ui| {
                         draw_coord_wavebox(ui, points, resolution, ui_state.last_hovered_wave_idx);
                         ui.horizontal_wrapped(|ui| {
-                            ui.label("Resolution");
-                            ui.add(egui::DragValue::new(resolution)).changed();
-                            ui.end_row();
-                            ui.label(format!("{} points", points.len()));
-                            if ui.button("+").clicked() {
-                                points.push(OsciPt {
-                                    x: points.last().map_or(0, |pt| pt.x) + 1,
-                                    y: 0,
-                                });
-                            }
-                            if ui.button("-").clicked() {
-                                points.pop();
-                            }
-                            if ui.button("Fix x coordinates").clicked() {
-                                for i in 0..points.len() {
-                                    let Ok([a, b]) = points.get_disjoint_mut([i, i + 1]) else {
-                                        break;
-                                    };
-                                    if b.x <= a.x {
-                                        b.x = a.x + 1;
-                                    }
-                                }
-                            }
-                            ui.end_row();
                             // Highlight the hovered control in the wave visualization
                             ui_state.last_hovered_wave_idx = None;
                             for (i, pt) in points.iter_mut().enumerate() {
@@ -851,17 +871,6 @@ fn voice_unit_ui(
                         draw_overtone_wavebox(ui, wave_data.volume, points);
                         ui.horizontal_wrapped(|ui| {
                             ui.style_mut().spacing.slider_width = 512.0;
-                            ui.label(format!("{} points", points.len()));
-                            if ui.button("+").clicked() {
-                                points.push(OsciPt {
-                                    x: points.last().map_or(0, |pt| pt.x) + 1,
-                                    y: 1,
-                                });
-                            }
-                            if ui.button("-").clicked() {
-                                points.pop();
-                            }
-                            ui.end_row();
                             for pt in &mut *points {
                                 ui.add(egui::DragValue::new(&mut pt.x).range(1..=512).prefix("x "))
                                     .changed();
@@ -925,12 +934,6 @@ fn slot_wave_extra_ui(
     let VoiceData::Wave(data) = &mut slot.data else {
         return;
     };
-    ui.horizontal(|ui| {
-        ui.label("Volume");
-        ui.add(egui::DragValue::new(&mut data.volume));
-        ui.label("Pan");
-        ui.add(egui::Slider::new(&mut data.pan, 0..=128));
-    });
     // When calculating width, ignore last point (release)
     let env_w: u16 = data.envelope.points[..data.envelope.points.len().saturating_sub(1)]
         .iter()
