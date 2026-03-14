@@ -394,6 +394,7 @@ pub fn envelope_edit_widget(
     voice_idx: VoiceIdx,
     sel_slot: SelectedSlot,
     units: &ptcow::Units,
+    voice_test_unit: &ptcow::Unit,
 ) {
     // Unique ID to store previous pointer pos across frames
     let id = ui.id().with(id);
@@ -464,7 +465,10 @@ pub fn envelope_edit_widget(
     painter.line(points, egui::Stroke::new(1.0, egui::Color32::YELLOW));
 
     // For units that are playing this voice, draw a line for what position they are in the envelope
-    for (idx, unit) in units.enumerated() {
+    for (idx, unit) in units.enumerated().chain(std::iter::once((
+        SongState::VOICE_TEST_UNIT_IDX,
+        voice_test_unit,
+    ))) {
         if unit.voice_idx == voice_idx {
             let tone = &unit.tones[sel_slot as usize];
             let pos = tone.env_pos;

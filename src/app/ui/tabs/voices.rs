@@ -418,7 +418,16 @@ fn voice_ui(
         }
     });
 
-    voice_ui_inner(ui, voice, idx, out_rate, ui_state, app_cmd, &herd.units);
+    voice_ui_inner(
+        ui,
+        voice,
+        idx,
+        out_rate,
+        ui_state,
+        app_cmd,
+        &herd.units,
+        voice_test_unit,
+    );
 }
 
 pub struct SubSliceUi {
@@ -475,6 +484,7 @@ pub fn voice_ui_inner(
     ui_state: &mut VoicesUiState,
     app_cmd: &mut CommandQueue,
     units: &ptcow::Units,
+    voice_test_unit: &ptcow::Unit,
 ) {
     // Add a slot selection UI for wave voices
     if let VoiceData::Wave(_) = &voice.base.data {
@@ -591,6 +601,7 @@ pub fn voice_ui_inner(
                                 voice_idx,
                                 ui_state.sel_slot,
                                 units,
+                                voice_test_unit,
                             );
                         }
                     }
