@@ -284,7 +284,6 @@ fn replace_voices(ins: &mut MooInstructions, used_programs: UsedPrograms) {
 fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, state: &ChannelState, key: u7) {
     let base_key = 27;
     let raw_key = i32::from(key.as_int() + base_key) * 256;
-    // TODO: 2560 magic number, based on ear (and it being 10 times 256, something to do with cents?)
     let bend_mod = state.pitch_bend * f64::from(state.pitch_bend_range_semitones) * 256.0;
     if bend_mod != 0.0 {
         song.events.eves.push(Event {
