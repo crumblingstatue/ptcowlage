@@ -275,9 +275,15 @@ impl App {
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
+        use egui_file_dialog::DialogState;
+
         self.file_dia.update(ctx);
         let picked_path = self.file_dia.take_picked();
         let file_op = self.file_dia.user_data::<FileOp>().copied();
+        if *self.file_dia.state() == DialogState::Cancelled {
+            // Reset voice test unit index after closing dialog (after preview)
+            self.song.lock().unwrap().voice_test_unit.voice_idx = self.ui_state.voices.selected_idx;
+        }
         (picked_path, file_op)
     }
 
