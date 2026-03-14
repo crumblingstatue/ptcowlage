@@ -20,6 +20,44 @@ fn guess_tempo(tracks: &[midly::Track]) -> Option<u32> {
     None
 }
 
+struct ChannelState {
+    rpn_lsb: u8,
+    rpn_msb: u8,
+    pitch_bend: f64,
+    pitch_bend_range_semitones: u8,
+}
+
+impl Default for ChannelState {
+    fn default() -> Self {
+        Self {
+            rpn_lsb: 0,
+            rpn_msb: 0,
+            pitch_bend: 0.0,
+            pitch_bend_range_semitones: 2,
+        }
+    }
+}
+
+/// Unit index to channel mapping
+#[derive(Default)]
+struct ChannelMapping {
+    vec: Vec<u8>,
+}
+
+impl ChannelMapping {
+    fn get_or_insert_for_ch(&mut self, ch: midly::num::u4) -> UnitIdx {
+        if let Some(pos) = self.vec.iter().position(|ch2| *ch2 == ch.as_int()) {
+            UnitIdx(pos as u8)
+        } else {
+            self.vec.push(ch.as_int());
+            UnitIdx((self.vec.len() - 1) as u8)
+        }
+    }
+    fn into_iter(self) -> impl Iterator<Item = u8> {
+        self.vec.into_iter()
+    }
+}
+
 /// Write midi song to pxtone
 #[expect(
     clippy::unnecessary_wraps,
@@ -42,104 +80,138 @@ pub fn write_midi_to_pxtone(
     herd.units.clear();
     song.master.timing.ticks_per_beat = ticks_per_beat;
     let mut max_clock = 0;
-    let mut unit_counter = UnitIdx(0);
-    for (track_idx, track) in tracks.iter().enumerate() {
+    let mut ch_map = ChannelMapping::default();
+    let mut channel_states: FxHashMap<u8, ChannelState> = FxHashMap::default();
+    for track in &tracks {
         // Whether this track needs a unit to allocate
         // We assume if there is no "NoteOn" event for this track, there is no need for a unit
-        let mut needs_unit = false;
         let mut clock = 0;
-        let mut pitch_bend: f64 = 0.0;
         let mut last_key = None;
         for (ev_idx, event) in track.iter().enumerate() {
             // The delta is how much after the previous event this current event is,
             // so we start by incrementing the clock
             clock += f64::from(event.delta.as_int()) as u32;
             match event.kind {
-                TrackEventKind::Midi { message, .. } => match message {
-                    MidiMessage::NoteOff { .. } => {
-                        // We calculate how long notes last in the `NoteOn` event, so we do nothing here
-                    }
-                    MidiMessage::NoteOn { key, vel } => {
-                        needs_unit = true;
-                        last_key = Some(key);
-                        push_key_event(song, unit_counter, clock, pitch_bend, key);
-                        // If velocity is zero, we don't want to emit an `On` event.
-                        if vel == 0 {
-                            //continue;
+                TrackEventKind::Midi { channel, message } => {
+                    let unit = ch_map.get_or_insert_for_ch(channel);
+                    let state = channel_states.entry(channel.as_int()).or_default();
+                    match message {
+                        MidiMessage::NoteOff { .. } => {
+                            // We calculate how long notes last in the `NoteOn` event, so we do nothing here
                         }
-                        song.events.eves.push(Event {
-                            payload: EventPayload::Velocity(i16::from(vel.as_int())),
-                            unit: unit_counter,
-                            tick: clock,
-                        });
-                        // Find the next note off event for the duration
-                        let duration = 'block: {
-                            let mut clock2 = clock;
-                            for ev in track.iter().skip(ev_idx) {
-                                clock2 += ev.delta.as_int();
-                                if let TrackEventKind::Midi {
-                                    channel: _,
-                                    message,
-                                } = ev.kind
-                                {
-                                    match message {
-                                        MidiMessage::NoteOff { key: key2, .. } if key2 == key => {
-                                            break 'block clock2 - clock;
+                        MidiMessage::NoteOn { key, vel } => {
+                            last_key = Some(key);
+                            push_key_event(song, unit, clock, state, key);
+                            // If velocity is zero, we don't want to emit an `On` event.
+                            if vel == 0 {
+                                //continue;
+                            }
+                            song.events.eves.push(Event {
+                                payload: EventPayload::Velocity(i16::from(vel.as_int())),
+                                unit,
+                                tick: clock,
+                            });
+                            // Find the next note off event for the duration
+                            let duration = 'block: {
+                                let mut clock2 = clock;
+                                for ev in track.iter().skip(ev_idx) {
+                                    clock2 += ev.delta.as_int();
+                                    if let TrackEventKind::Midi {
+                                        channel: _,
+                                        message,
+                                    } = ev.kind
+                                    {
+                                        match message {
+                                            MidiMessage::NoteOff { key: key2, .. }
+                                                if key2 == key =>
+                                            {
+                                                break 'block clock2 - clock;
+                                            }
+                                            // Tricky, but NoteOn with velocity of 0 also means note off, apparently.
+                                            MidiMessage::NoteOn { vel, key: key2 }
+                                                if key2 == key && vel == 0 =>
+                                            {
+                                                break 'block clock2 - clock;
+                                            }
+                                            _ => (),
                                         }
-                                        // Tricky, but NoteOn with velocity of 0 also means note off, apparently.
-                                        MidiMessage::NoteOn { vel, key: key2 }
-                                            if key2 == key && vel == 0 =>
-                                        {
-                                            break 'block clock2 - clock;
-                                        }
-                                        _ => (),
                                     }
                                 }
-                            }
-                            panic!("Couldn't determine note duration");
-                        };
-                        song.events.eves.push(Event {
-                            payload: EventPayload::On { duration },
-                            unit: unit_counter,
-                            tick: clock,
-                        });
-                    }
-                    MidiMessage::ProgramChange { program } => {
-                        let len = used_programs.len();
-                        let idx = used_programs
-                            .entry(program)
-                            .or_insert(VoiceIdx(len.try_into().unwrap()));
-                        log::info!("Instrument change of {track_idx} to {program}");
-                        song.events.eves.push(Event {
-                            payload: EventPayload::SetVoice(*idx),
-                            unit: unit_counter,
-                            tick: clock,
-                        });
-                    }
-                    MidiMessage::PitchBend { bend } => {
-                        pitch_bend = bend.as_f64();
-                        if let Some(last) = last_key {
-                            push_key_event(song, unit_counter, clock, pitch_bend, last);
+                                panic!("Couldn't determine note duration");
+                            };
+                            song.events.eves.push(Event {
+                                payload: EventPayload::On { duration },
+                                unit,
+                                tick: clock,
+                            });
                         }
-                    }
-                    MidiMessage::Controller { controller, value } => {
-                        match controller.as_int() {
-                            // 7: "Channel volume"
-                            // 11: "Expression" or secondary volume controller
-                            7 | 11 => {
-                                song.events.eves.push(Event {
-                                    payload: EventPayload::Volume(i16::from(value.as_int())),
-                                    unit: unit_counter,
-                                    tick: clock,
-                                });
-                            }
-                            _ => {
-                                log::info!("c {controller} = {value}");
+                        MidiMessage::ProgramChange { program } => {
+                            let len = used_programs.len();
+                            let idx = used_programs
+                                .entry(program)
+                                .or_insert(VoiceIdx(len.try_into().unwrap()));
+                            log::info!("Instrument change of {channel} to {program}");
+                            song.events.eves.push(Event {
+                                payload: EventPayload::SetVoice(*idx),
+                                unit,
+                                tick: clock,
+                            });
+                        }
+                        MidiMessage::PitchBend { bend } => {
+                            state.pitch_bend = bend.as_f64();
+                            if let Some(last) = last_key {
+                                push_key_event(song, unit, clock, state, last);
                             }
                         }
+                        MidiMessage::Controller { controller, value } => {
+                            log::error!("Controller event for channel {channel}");
+                            match controller.as_int() {
+                                // 7: "Channel volume"
+                                // 11: "Expression" or secondary volume controller
+                                7 | 11 => {
+                                    song.events.eves.push(Event {
+                                        payload: EventPayload::Volume(i16::from(value.as_int())),
+                                        unit,
+                                        tick: clock,
+                                    });
+                                }
+                                6 => {
+                                    if state.rpn_lsb == 0 && state.rpn_msb == 0 {
+                                        log::info!("Pitch bend range msb: {value}");
+                                        state.pitch_bend_range_semitones = value.as_int();
+                                    } else {
+                                        log::warn!(
+                                            "Unhandled rpn {} {}",
+                                            state.rpn_lsb,
+                                            state.rpn_msb
+                                        );
+                                    }
+                                }
+                                38 => {
+                                    if state.rpn_lsb == 0 && state.rpn_msb == 0 {
+                                        log::info!("Pitch bend range lsb: {value}");
+                                    } else {
+                                        log::warn!(
+                                            "Unhandled rpn {} {}",
+                                            state.rpn_lsb,
+                                            state.rpn_msb
+                                        );
+                                    }
+                                }
+                                100 => {
+                                    state.rpn_lsb = value.as_int();
+                                }
+                                101 => {
+                                    state.rpn_msb = value.as_int();
+                                }
+                                _ => {
+                                    log::info!("c {controller} = {value}");
+                                }
+                            }
+                        }
+                        _ => log::warn!("Unhandled mid msg: {message:?}"),
                     }
-                    _ => log::warn!("Unhandled mid msg: {message:?}"),
-                },
+                }
                 TrackEventKind::Meta(meta_message) => match meta_message {
                     MetaMessage::TrackName(name_bytes) => {
                         log::info!("Track name: {:?}", std::str::from_utf8(name_bytes));
@@ -154,15 +226,15 @@ pub fn write_midi_to_pxtone(
             }
         }
         max_clock = max_clock.max(clock);
-        if needs_unit {
-            let unit = Unit {
-                name: format!("mtrk{track_idx:02}"),
-                ..Default::default()
-            };
-            herd.units.push(unit);
-            unit_counter.0 += 1;
-        }
     }
+
+    for ch in ch_map.into_iter() {
+        herd.units.push(Unit {
+            name: format!("ch{ch}"),
+            ..Default::default()
+        });
+    }
+
     // Unset the last point (let it be calculated by PxTone)
     song.master.loop_points.last = None;
 
@@ -171,11 +243,11 @@ pub fn write_midi_to_pxtone(
     Ok(())
 }
 
-fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, pitch_bend: f64, key: u7) {
+fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, state: &ChannelState, key: u7) {
     let base_key = 27;
     let raw_key = i32::from(key.as_int() + base_key) * 256;
     // TODO: 2560 magic number, based on ear (and it being 10 times 256, something to do with cents?)
-    let bend_mod = pitch_bend * 2560.0;
+    let bend_mod = state.pitch_bend * f64::from(state.pitch_bend_range_semitones) * 256.0;
     if bend_mod != 0.0 {
         song.events.eves.push(Event {
             payload: EventPayload::PtcowDebug(bend_mod as i32),
