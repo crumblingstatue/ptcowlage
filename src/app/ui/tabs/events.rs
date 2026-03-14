@@ -585,7 +585,7 @@ fn top_ui(
                     ui_state.filter.event = None;
                     ui_state.filter_needs_recalc = true;
                 }
-                for i in 0..16 {
+                for i in 0..=16 {
                     if ui
                         .selectable_label(ui_state.filter.event == Some(i), ev_discr_name(i))
                         .clicked()
