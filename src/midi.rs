@@ -255,6 +255,12 @@ fn replace_voices(ins: &mut MooInstructions, used_programs: FxHashMap<u7, VoiceI
         voice.name = format!("prg{prg}");
         ins.voices.push(voice);
     }
+    // If there were no program events or whatever, we still want at least one voice
+    if ins.voices.is_empty() {
+        let mut voice = square_wave_voice();
+        voice.name = "fallback".into();
+        ins.voices.push(voice);
+    }
 }
 
 fn push_key_event(song: &mut Song, unit_idx: UnitIdx, clock: u32, state: &ChannelState, key: u7) {
