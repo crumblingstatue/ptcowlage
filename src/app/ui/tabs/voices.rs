@@ -674,6 +674,26 @@ fn voice_unit_ui(
     sel_slot: SelectedSlot,
     app_cmd: &mut CommandQueue,
 ) {
+    ui.horizontal(|ui| {
+        ui.label("Key");
+        ui.add(egui::DragValue::new(&mut slot.unit.basic_key));
+        ui.label("Tune");
+        ui.add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.001));
+        for (name, flag) in VoiceFlags::iter_defined_names() {
+            let mut contains = slot.unit.flags.contains(flag);
+            // TODO: This is stupid
+            let name = match name {
+                "WAVE_LOOP" => "loop",
+                "SMOOTH" => "smooth",
+                "BEAT_FIT" => "fit",
+                etc => etc,
+            };
+            if ui.checkbox(&mut contains, name).clicked() {
+                slot.unit.flags ^= flag;
+            }
+        }
+    });
+
     match &mut slot.data {
         VoiceData::Noise(noise) => {
             let total = noise.units.len();
@@ -901,20 +921,6 @@ fn voice_unit_ui(
         }
     }
     slot_wave_extra_ui(ui, slot, out_rate, sel_slot);
-    ui.horizontal_wrapped(|ui| {
-        ui.label("Flags");
-        for (name, flag) in VoiceFlags::iter_defined_names() {
-            let mut contains = slot.unit.flags.contains(flag);
-            if ui.checkbox(&mut contains, name).clicked() {
-                slot.unit.flags ^= flag;
-            }
-        }
-        ui.end_row();
-        ui.label("Basic key");
-        ui.add(egui::DragValue::new(&mut slot.unit.basic_key));
-        ui.label("Tuning");
-        ui.add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.001));
-    });
 }
 
 fn default_noise_unit() -> NoiseDesignUnit {
