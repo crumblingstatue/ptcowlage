@@ -10,7 +10,7 @@ use {
         },
         audio_out::SongState,
         pxtone_misc::{
-            bass_drum, reset_voice_for_units_with_voice_idx, square_wave, square_wave_voice,
+            hat_close_voice, reset_voice_for_units_with_voice_idx, square_wave, square_wave_voice,
         },
     },
     arrayvec::ArrayVec,
@@ -19,7 +19,7 @@ use {
     ptcow::{
         Bps, ChNum, EnvPt, EnvelopeSrc, Master, MooInstructions, NoiseDesignOscillator,
         NoiseDesignUnit, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData,
-        VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints, noise_to_pcm,
+        VoiceFlags, VoiceIdx, WaveData, WaveDataPoints, noise_to_pcm,
     },
     std::path::PathBuf,
 };
@@ -112,7 +112,7 @@ pub fn ui(
                 reset_voice_for_units_with_voice_idx(song, idx);
             }
             if ui.button((img::DRUM.smol(), "Noise")).clicked() {
-                let mut voice = bass_drum_voice();
+                let mut voice = hat_close_voice();
                 voice.name = format!("Noise {}", song.ins.voices.len());
                 song.ins.voices.push(voice);
                 let idx = VoiceIdx(song.ins.voices.len() - 1);
@@ -159,7 +159,7 @@ pub fn ui(
                 }
                 if ui.button((img::DRUM.smol(), "Noise")).clicked() {
                     if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        let bass = bass_drum_voice();
+                        let bass = hat_close_voice();
                         voice.base.data = bass.base.data;
                         voice.base.unit = bass.base.unit;
                         reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
@@ -317,11 +317,6 @@ fn voice_import_preview(
         song.herd.smp_end,
         std::slice::from_ref(&song.preview_voice),
     );
-}
-
-fn bass_drum_voice() -> Voice {
-    let data = VoiceData::Noise(bass_drum());
-    Voice::from_unit_and_data(VoiceUnit::default(), data)
 }
 
 enum VoiceUiOp {

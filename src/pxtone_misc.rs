@@ -249,38 +249,37 @@ pub fn square_wave_voice() -> Voice {
     Voice::from_unit_and_data(unit, data)
 }
 
-pub fn bass_drum() -> NoiseData {
+pub fn hat_close() -> NoiseData {
     NoiseData {
-        smp_num_44k: 8000,
+        smp_num_44k: 4444,
         units: ArrayVec::try_from(
             &[NoiseDesignUnit {
                 enves: [
-                    EnvPt { x: 1, y: 100 },
-                    EnvPt { x: 100, y: 20 },
-                    EnvPt { x: 200, y: 0 },
+                    EnvPt { x: 0, y: 100 },
+                    EnvPt { x: 10, y: 40 },
+                    EnvPt { x: 100, y: 0 },
                 ]
                 .into(),
 
                 pan: 0,
                 main: NoiseDesignOscillator {
-                    type_: NoiseType::Sine,
-                    freq: 50.0,
-                    volume: 180.0,
-                    offset: 2.0,
-                    invert: false,
-                },
-                freq: NoiseDesignOscillator {
-                    type_: NoiseType::Saw,
-                    freq: 5.0,
-                    volume: 2.0,
+                    type_: NoiseType::Random,
+                    freq: 30000.0,
+                    volume: 60.0,
                     offset: 0.0,
                     invert: false,
                 },
+                freq: NoiseDesignOscillator::default(),
                 volu: NoiseDesignOscillator::default(),
             }][..],
         )
         .unwrap(),
     }
+}
+
+pub fn hat_close_voice() -> Voice {
+    let data = VoiceData::Noise(hat_close());
+    Voice::from_unit_and_data(VoiceUnit::default(), data)
 }
 
 pub fn reset_loop_points(song: &mut SongState) {
