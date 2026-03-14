@@ -1059,9 +1059,12 @@ fn draw_coord_wavebox(
         .iter()
         .map(|pt| egui::pos2(lc.x + f32::from(pt.x), lc.y - f32::from(pt.y)))
         .collect();
-    // pxtone Voice seems to add this point when drawing it
-    egui_points.push(rect.right_center());
-    let hi_point = highlight.map(|idx| egui_points[idx]);
+    // We insert points at each extreme, to accurately reflect that
+    // the generated waveform loops back onto itself.
+    let fst_y = egui_points.first().map_or(rect.left_center().y, |pt| pt.y);
+    egui_points.insert(0, egui::pos2(rect.left(), fst_y));
+    egui_points.push(egui::pos2(rect.right(), fst_y));
+    let hi_point = highlight.map(|idx| egui_points[idx + 1]);
     p.line(egui_points, egui::Stroke::new(2.0, PAL.wave_stroke));
     if let Some(pt) = hi_point {
         p.circle_filled(pt, 4.0, egui::Color32::YELLOW);
