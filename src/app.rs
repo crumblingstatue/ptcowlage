@@ -907,6 +907,10 @@ impl App {
             Cmd::Modal(f) => {
                 f(&mut self.modal);
             }
+            Cmd::ResetVoiceForUnitsWithVoiceIdx { idx } => {
+                let mut song = self.song.lock().unwrap();
+                reset_voice_for_units_with_voice_idx(&mut song, idx);
+            }
         }
     }
     #[cfg(target_arch = "wasm32")]

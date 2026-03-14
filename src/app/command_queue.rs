@@ -60,6 +60,9 @@ pub enum Cmd {
     },
     Modal(Box<dyn FnOnce(&mut Modal)>),
     PromptImportOggVorbis,
+    ResetVoiceForUnitsWithVoiceIdx {
+        idx: VoiceIdx,
+    },
 }
 
 #[derive(Default)]

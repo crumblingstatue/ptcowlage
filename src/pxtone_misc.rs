@@ -203,7 +203,12 @@ fn next_on(eves: &[Event], idx: usize) -> Option<usize> {
 }
 
 pub fn reset_voice_for_units_with_voice_idx(song: &mut SongState, idx: VoiceIdx) {
-    for unit in song.herd.units.iter_mut() {
+    for unit in song
+        .herd
+        .units
+        .iter_mut()
+        .chain(std::iter::once(&mut song.voice_test_unit))
+    {
         if unit.voice_idx == idx {
             unit.reset_voice(
                 &song.ins,

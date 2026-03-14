@@ -675,10 +675,18 @@ fn voice_unit_ui(
     app_cmd: &mut CommandQueue,
 ) {
     ui.horizontal(|ui| {
+        let mut changed = false;
         ui.label("Key");
-        ui.add(egui::DragValue::new(&mut slot.unit.basic_key));
+        changed |= ui
+            .add_enabled(
+                !slot.unit.flags.contains(VoiceFlags::BEAT_FIT),
+                egui::DragValue::new(&mut slot.unit.basic_key),
+            )
+            .changed();
         ui.label("Tune");
-        ui.add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.001));
+        changed |= ui
+            .add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.0001))
+            .changed();
         for (name, flag) in VoiceFlags::iter_defined_names() {
             let mut contains = slot.unit.flags.contains(flag);
             // TODO: This is stupid
@@ -689,8 +697,14 @@ fn voice_unit_ui(
                 etc => etc,
             };
             if ui.checkbox(&mut contains, name).clicked() {
+                if name == "fit" {
+                    changed = true;
+                }
                 slot.unit.flags ^= flag;
             }
+        }
+        if changed {
+            app_cmd.push(Cmd::ResetVoiceForUnitsWithVoiceIdx { idx: voice_idx });
         }
     });
 
