@@ -5,7 +5,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             poly_migrate_single,
             ui::{
-                SharedUiState, Tab,
+                Tab,
                 modal::Modal,
                 piano_freeplay_ui,
                 windows::{LogWindow, TitleAndCommentWindow},
@@ -225,7 +225,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                         &song.song.master,
                         &mut song.voice_test_unit,
                     );
-                    app.ui_state.shared.active_unit = SharedUiState::VOICE_TEST_UNIT_IDX;
+                    app.ui_state.shared.active_unit = SongState::VOICE_TEST_UNIT_IDX;
                 }
                 _ => {}
             }

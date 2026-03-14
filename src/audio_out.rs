@@ -1,6 +1,8 @@
 use {
     crate::pxtone_misc,
-    ptcow::{Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, Voice, VoiceIdx},
+    ptcow::{
+        Herd, MooInstructions, MooPlan, NoiseData, SampleRate, Song, Unit, UnitIdx, Voice, VoiceIdx,
+    },
     std::{
         iter::zip,
         ops::RangeInclusive,
@@ -56,6 +58,8 @@ pub struct SongState {
 }
 
 impl SongState {
+    pub const VOICE_TEST_UNIT_IDX: UnitIdx = UnitIdx(255);
+
     pub fn new(sample_rate: SampleRate) -> Self {
         let mut this = Self {
             herd: Herd::default(),

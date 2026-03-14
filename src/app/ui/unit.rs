@@ -352,7 +352,7 @@ pub fn handle_units_command(
                 song.herd.units.remove(idx.usize());
                 // If there are no units left, set index to voice test unit
                 if song.herd.units.is_empty() {
-                    shared.active_unit = SharedUiState::VOICE_TEST_UNIT_IDX;
+                    shared.active_unit = SongState::VOICE_TEST_UNIT_IDX;
                 }
             }
             UnitsCmd::MigrateUnitEvents { idx } => {

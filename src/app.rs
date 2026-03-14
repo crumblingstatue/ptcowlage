@@ -9,7 +9,7 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                SharedUiState, Tab,
+                Tab,
                 file_ops::{
                     self, FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileFilt,
                     FileOp,
@@ -1052,7 +1052,7 @@ fn post_load_prep(song_ref: &mut SongState, out_rate: SampleRate, freeplay_toot:
         do_tick0_events(song_ref);
     } else {
         // If there are no units, set it to the voice test unit.
-        *freeplay_toot = SharedUiState::VOICE_TEST_UNIT_IDX;
+        *freeplay_toot = SongState::VOICE_TEST_UNIT_IDX;
     }
     // Make sure `moo_end` is not set, so mooing does something
     song_ref.herd.moo_end = false;

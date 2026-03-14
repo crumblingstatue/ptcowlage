@@ -117,9 +117,7 @@ fn top_ui(
             || key_f3
         {
             state.interact_mode = InteractMode::Place;
-            if shared.active_unit == SharedUiState::VOICE_TEST_UNIT_IDX
-                && !song.herd.units.is_empty()
-            {
+            if shared.active_unit == SongState::VOICE_TEST_UNIT_IDX && !song.herd.units.is_empty() {
                 shared.active_unit = UnitIdx(0);
             }
         }
@@ -350,7 +348,7 @@ fn roll_ui_inner(
                         break 'block;
                     }
                     // Place note
-                    if shared.active_unit == SharedUiState::VOICE_TEST_UNIT_IDX {
+                    if shared.active_unit == SongState::VOICE_TEST_UNIT_IDX {
                         return;
                     }
                     let unit = shared.active_unit;
@@ -973,7 +971,7 @@ fn piano_ui(
                 // Display highlight for up to 4 simultaneously playing units
                 let mut playing_colors = ArrayVec::<_, 4>::new();
                 for (i, unit) in song.herd.units.enumerated().chain(std::iter::once((
-                    SharedUiState::VOICE_TEST_UNIT_IDX,
+                    SongState::VOICE_TEST_UNIT_IDX,
                     &song.voice_test_unit,
                 ))) {
                     if unit.key_now / 256 == i32::from(semitone) && !unit.mute && unit_alive(unit) {

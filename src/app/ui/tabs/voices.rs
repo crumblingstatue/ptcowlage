@@ -296,7 +296,7 @@ fn voice_import_preview(
         std::slice::from_ref(&song.preview_voice),
     );
     song.voice_test_unit.on(
-        SharedUiState::VOICE_TEST_UNIT_IDX,
+        SongState::VOICE_TEST_UNIT_IDX,
         &song.ins,
         &[],
         0,

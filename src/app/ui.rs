@@ -270,14 +270,10 @@ pub struct SharedUiState {
     pub highlight_set: FxHashSet<UnitIdx>,
 }
 
-impl SharedUiState {
-    pub const VOICE_TEST_UNIT_IDX: UnitIdx = UnitIdx(255);
-}
-
 impl Default for SharedUiState {
     fn default() -> Self {
         Self {
-            active_unit: Self::VOICE_TEST_UNIT_IDX,
+            active_unit: SongState::VOICE_TEST_UNIT_IDX,
             toasts: Toasts::new()
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
