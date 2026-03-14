@@ -88,8 +88,6 @@ pub fn write_midi_to_pxtone(
     let mut ch_map = ChannelMapping::default();
     let mut channel_states: FxHashMap<u8, ChannelState> = FxHashMap::default();
     for track in &tracks {
-        // Whether this track needs a unit to allocate
-        // We assume if there is no "NoteOn" event for this track, there is no need for a unit
         let mut clock = 0;
         let mut last_key = None;
         for (ev_idx, event) in track.iter().enumerate() {
