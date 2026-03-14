@@ -34,6 +34,14 @@ pub struct VoicesUiState {
     save_slots: [Option<Voice>; 4],
     last_hovered_wave_idx: Option<usize>,
     file_dia_prev_sel: Option<PathBuf>,
+    instance_tab: InstanceTab,
+}
+
+#[derive(Default, PartialEq)]
+enum InstanceTab {
+    #[default]
+    Samples,
+    Envelope,
 }
 
 impl VoicesUiState {
@@ -528,57 +536,65 @@ pub fn voice_ui_inner(
     ui.separator();
     cs.show_header(ui, |ui| {
         ui.strong("📈 Instance");
+        ui.selectable_value(&mut ui_state.instance_tab, InstanceTab::Samples, "Samples");
+        ui.selectable_value(
+            &mut ui_state.instance_tab,
+            InstanceTab::Envelope,
+            "Envelope",
+        );
+        match ui_state.instance_tab {
+            InstanceTab::Samples => {
+                ui.label(format!(
+                    "{} samples, {} bytes",
+                    slot.inst.num_samples,
+                    slot.inst.sample_buf.len()
+                ));
+            }
+            InstanceTab::Envelope => {
+                ui.label(format!(
+                    "{} points, release: {}",
+                    slot.inst.env.len(),
+                    slot.inst.env_release
+                ));
+            }
+        }
     })
     .body(|ui| {
         egui::ScrollArea::vertical()
             .id_salt("inst")
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label("Sample buf");
-                    ui.label(format!(
-                        "{} samples, {} bytes",
-                        slot.inst.num_samples,
-                        slot.inst.sample_buf.len()
-                    ));
-                });
-                if slot.inst.sample_buf.is_empty() {
-                    // Avoid (bytemuck) panic on empty sample buffer
-                    ui.colored_label(egui::Color32::GRAY, "No sample data");
-                } else {
-                    let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
-                    let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
-                    waveform_edit_widget_16_bit_interleaved_stereo(
-                        ui,
-                        view,
-                        256.,
-                        egui::Id::new("smp_buf"),
-                    );
-                }
-                ui.horizontal(|ui| {
-                    ui.label("Envelope");
-                    let mut len = slot.inst.env.len();
-                    if ui
-                        .add(egui::DragValue::new(&mut len).update_while_editing(false))
-                        .changed()
-                    {
-                        slot.inst.env.resize(len, 0);
+                match ui_state.instance_tab {
+                    InstanceTab::Samples => {
+                        if slot.inst.sample_buf.is_empty() {
+                            // Avoid (bytemuck) panic on empty sample buffer
+                            ui.colored_label(egui::Color32::GRAY, "No sample data");
+                        } else {
+                            let samples = bytemuck::cast_slice_mut(&mut slot.inst.sample_buf);
+                            let view = ui_state.inst_sub.subslice_ui(ui, samples, 2);
+                            waveform_edit_widget_16_bit_interleaved_stereo(
+                                ui,
+                                view,
+                                256.,
+                                egui::Id::new("smp_buf"),
+                            );
+                        }
                     }
-                });
-                if !slot.inst.env.is_empty() {
-                    let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env, 1);
-                    envelope_edit_widget(
-                        ui,
-                        view,
-                        256.0,
-                        egui::Id::new("env_buf"),
-                        voice_idx,
-                        ui_state.sel_slot,
-                        units,
-                    );
+                    InstanceTab::Envelope => {
+                        if !slot.inst.env.is_empty() {
+                            let view = ui_state.inst_env_sub.subslice_ui(ui, &mut slot.inst.env, 1);
+                            envelope_edit_widget(
+                                ui,
+                                view,
+                                256.0,
+                                egui::Id::new("env_buf"),
+                                voice_idx,
+                                ui_state.sel_slot,
+                                units,
+                            );
+                        }
+                    }
                 }
-                ui.label("Envelope release");
-                ui.add(egui::DragValue::new(&mut slot.inst.env_release));
             })
     });
 }
