@@ -29,6 +29,7 @@ struct ChannelState {
     rpn_msb: u8,
     pitch_bend: f64,
     pitch_bend_range_semitones: u8,
+    last_key: Option<midly::num::u7>,
 }
 
 impl Default for ChannelState {
@@ -38,6 +39,7 @@ impl Default for ChannelState {
             rpn_msb: 0,
             pitch_bend: 0.0,
             pitch_bend_range_semitones: 2,
+            last_key: None,
         }
     }
 }
@@ -89,7 +91,6 @@ pub fn write_midi_to_pxtone(
     let mut channel_states: FxHashMap<u8, ChannelState> = FxHashMap::default();
     for track in &tracks {
         let mut clock = 0;
-        let mut last_key = None;
         for (ev_idx, event) in track.iter().enumerate() {
             // The delta is how much after the previous event this current event is,
             // so we start by incrementing the clock
@@ -103,7 +104,7 @@ pub fn write_midi_to_pxtone(
                             // We calculate how long notes last in the `NoteOn` event, so we do nothing here
                         }
                         MidiMessage::NoteOn { key, vel } => {
-                            last_key = Some(key);
+                            state.last_key = Some(key);
                             push_key_event(song, unit, clock, state, key);
                             // If velocity is zero, we don't want to emit an `On` event.
                             if vel == 0 {
@@ -162,7 +163,7 @@ pub fn write_midi_to_pxtone(
                         }
                         MidiMessage::PitchBend { bend } => {
                             state.pitch_bend = bend.as_f64();
-                            if let Some(last) = last_key {
+                            if let Some(last) = state.last_key {
                                 push_key_event(song, unit, clock, state, last);
                             }
                         }
