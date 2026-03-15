@@ -99,7 +99,23 @@ pub fn write_midi_to_pxtone(
             match event.kind {
                 TrackEventKind::Midi { channel, message } => {
                     let unit = ch_map.get_or_insert_for_ch(channel);
-                    let state = channel_states.entry(channel.as_int()).or_default();
+                    let state = channel_states.entry(channel.as_int()).or_insert_with(|| {
+                        // Here we can put code that runs once on each new channel.
+
+                        // Always insert drum voice for the drum channel, even if there is no
+                        // midi program change event that does it
+                        if channel == DRUM_CH {
+                            program_change(
+                                song,
+                                &mut used_programs,
+                                clock,
+                                channel,
+                                unit,
+                                DRUM_PRG,
+                            );
+                        }
+                        ChannelState::default()
+                    });
                     match message {
                         MidiMessage::NoteOff { .. } => {
                             // We calculate how long notes last in the `NoteOn` event, so we do nothing here
@@ -151,21 +167,14 @@ pub fn write_midi_to_pxtone(
                             });
                         }
                         MidiMessage::ProgramChange { program } => {
-                            let len = used_programs.len();
-                            let program = if channel.as_int() == DRUM_CH {
-                                DRUM_PRG
-                            } else {
-                                program.as_int()
-                            };
-                            let idx = used_programs
-                                .entry(program)
-                                .or_insert(VoiceIdx(len.try_into().unwrap()));
-                            log::info!("Instrument change of {channel} to {program}");
-                            song.events.eves.push(Event {
-                                payload: EventPayload::SetVoice(*idx),
+                            program_change(
+                                song,
+                                &mut used_programs,
+                                clock,
+                                channel,
                                 unit,
-                                tick: clock,
-                            });
+                                program.as_int(),
+                            );
                         }
                         MidiMessage::PitchBend { bend } => {
                             state.pitch_bend = bend.as_f64();
@@ -251,6 +260,31 @@ pub fn write_midi_to_pxtone(
     // PxTone events seem to need to be stored in order of increasing clock value
     song.events.eves.sort_by_key(|ev| ev.tick);
     Ok(())
+}
+
+fn program_change(
+    song: &mut Song,
+    used_programs: &mut UsedPrograms,
+    clock: u32,
+    channel: midly::num::u4,
+    unit: UnitIdx,
+    program: u8,
+) {
+    let len = used_programs.len();
+    let program = if channel.as_int() == DRUM_CH {
+        DRUM_PRG
+    } else {
+        program
+    };
+    let idx = used_programs
+        .entry(program)
+        .or_insert(VoiceIdx(len.try_into().unwrap()));
+    log::info!("Instrument change of {channel} to {program}");
+    song.events.eves.push(Event {
+        payload: EventPayload::SetVoice(*idx),
+        unit,
+        tick: clock,
+    });
 }
 
 /// Replace the existing voices with a voice mapped for each "program"
