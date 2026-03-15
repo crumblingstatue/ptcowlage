@@ -247,8 +247,13 @@ pub fn write_midi_to_pxtone(
 
     herd.units.clear();
     for ch in ch_map.into_iter() {
+        let name = if ch == DRUM_CH {
+            "drum ch".into()
+        } else {
+            format!("ch{ch}")
+        };
         herd.units.push(Unit {
-            name: format!("ch{ch}"),
+            name,
             ..Default::default()
         });
     }
