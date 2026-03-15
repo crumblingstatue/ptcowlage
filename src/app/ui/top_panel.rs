@@ -269,6 +269,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             (app.file_dia.state() == &egui_file_dialog::DialogState::Open),
             #[cfg(target_arch = "wasm32")]
             false,
+            true,
         );
     });
     drop(song_g);

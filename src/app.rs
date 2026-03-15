@@ -306,6 +306,7 @@ impl App {
                             &mut self.ui_state.shared,
                             // FIXME: We're lying here, lol
                             false,
+                            false,
                         );
                     });
             }

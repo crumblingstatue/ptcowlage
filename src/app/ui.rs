@@ -71,6 +71,7 @@ pub fn piano_freeplay_ui(
     ui: &mut egui::Ui,
     shared: &mut SharedUiState,
     file_dia_open: bool,
+    show_record_ckbox: bool,
 ) {
     // Avoid tooting when we're inside a text edit, etc.
     if !ui.ctx().wants_keyboard_input() {
@@ -95,8 +96,10 @@ pub fn piano_freeplay_ui(
     } else {
         egui::Color32::GRAY
     };
-    ui.checkbox(&mut state.record, egui::RichText::new("⏺ Record").color(c))
-        .on_hover_text("Record freeplay (ctrl+space)");
+    if show_record_ckbox {
+        ui.checkbox(&mut state.record, egui::RichText::new("⏺ Record").color(c))
+            .on_hover_text("Record freeplay (ctrl+space)");
+    }
 }
 
 fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
