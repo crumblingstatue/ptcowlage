@@ -38,7 +38,7 @@ pub mod tabs {
     pub mod voices;
 }
 
-pub struct FreeplayPianoState {
+pub struct FreeplayState {
     /// Toot duration
     duration: u32,
     play_octave: i32,
@@ -47,7 +47,7 @@ pub struct FreeplayPianoState {
     velocity: i16,
 }
 
-impl Default for FreeplayPianoState {
+impl Default for FreeplayState {
     fn default() -> Self {
         Self {
             // Long enough for default "moo" noise :)
@@ -67,7 +67,7 @@ pub const fn piano_key_to_pxtone_key(key: i32) -> i32 {
 pub fn piano_freeplay_ui(
     song: &mut SongState,
     ui: &mut egui::Ui,
-    state: &mut FreeplayPianoState,
+    state: &mut FreeplayState,
     shared: &mut SharedUiState,
     file_dia_open: bool,
 ) {
@@ -110,7 +110,7 @@ fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
 pub fn piano_freeplay_input(
     song: &mut SongState,
     ui: &mut egui::Ui,
-    state: &mut FreeplayPianoState,
+    state: &mut FreeplayState,
     shared: &mut SharedUiState,
     file_dia_open: bool,
 ) {
@@ -183,7 +183,7 @@ pub fn piano_freeplay_input(
 
 fn piano_freeplay_play_note(
     song: &mut SongState,
-    state: &mut FreeplayPianoState,
+    state: &mut FreeplayState,
     piano_key: i32,
     unit_no: UnitIdx,
 ) {
@@ -248,7 +248,7 @@ pub struct UiState {
     pub tab: Tab,
     pub piano_roll: PianoRollState,
     pub map: MapState,
-    pub freeplay_piano: FreeplayPianoState,
+    pub freeplay: FreeplayState,
     pub raw_events: RawEventsUiState,
     pub voices: VoicesUiState,
     pub effects: EffectsUiState,
@@ -312,7 +312,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
     if k_space {
         if m_ctrl {
             // Toggle record
-            app.ui_state.freeplay_piano.record ^= true;
+            app.ui_state.freeplay.record ^= true;
         } else {
             // Toggle pause
             let should_toggle_pause = !egui::Popup::is_any_open(ui.ctx())
@@ -343,7 +343,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
                 &mut app.ui_state.piano_roll,
                 &mut app.ui_state.shared,
                 &mut app.cmd,
-                &mut app.ui_state.freeplay_piano,
+                &mut app.ui_state.freeplay,
             );
         }
         Tab::Events => tabs::events::ui(

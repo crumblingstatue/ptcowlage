@@ -295,7 +295,7 @@ impl App {
                             ui::piano_freeplay_input(
                                 &mut song,
                                 ui,
-                                &mut self.ui_state.freeplay_piano,
+                                &mut self.ui_state.freeplay,
                                 &mut self.ui_state.shared,
                                 // FIXME: We're lying here, lol
                                 false,
@@ -304,7 +304,7 @@ impl App {
                         ui::piano_freeplay_ui(
                             &mut song,
                             ui,
-                            &mut self.ui_state.freeplay_piano,
+                            &mut self.ui_state.freeplay,
                             &mut self.ui_state.shared,
                             // FIXME: We're lying here, lol
                             false,

@@ -3,8 +3,8 @@ use {
         app::{
             command_queue::{Cmd, CommandQueue},
             ui::{
-                FreeplayPianoState, SharedUiState, piano_freeplay_play_note,
-                tabs::events::invert_color, unit_color,
+                FreeplayState, SharedUiState, piano_freeplay_play_note, tabs::events::invert_color,
+                unit_color,
             },
         },
         audio_out::SongState,
@@ -161,7 +161,7 @@ pub fn ui(
     state: &mut PianoRollState,
     shared: &mut SharedUiState,
     cmd: &mut CommandQueue,
-    piano_state: &mut FreeplayPianoState,
+    piano_state: &mut FreeplayState,
 ) {
     top_ui(ui, song, state, shared);
     ui.horizontal_top(|ui| {
@@ -184,7 +184,7 @@ fn roll_ui(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
-    piano_state: &mut FreeplayPianoState,
+    piano_state: &mut FreeplayState,
 ) {
     // We make the scroll bars be outside of the ScrollArea to resolve a conundrum of
     // `Response::contains_pointer` being true when dragging the scroll bars, and
@@ -217,7 +217,7 @@ fn roll_ui_inner(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
-    piano_state: &mut FreeplayPianoState,
+    piano_state: &mut FreeplayState,
 ) {
     let last_note_tick = song.song.events.last().map_or(0, |ev| ev.tick);
     let last_meas_tick =
@@ -923,7 +923,7 @@ fn piano_ui(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     y_offset: f32,
-    piano_state: &mut FreeplayPianoState,
+    piano_state: &mut FreeplayState,
 ) {
     egui::ScrollArea::vertical()
         .id_salt("left")
