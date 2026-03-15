@@ -264,7 +264,6 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         piano_freeplay_ui(
             &mut song_g,
             ui,
-            &mut app.ui_state.freeplay,
             &mut app.ui_state.shared,
             #[cfg(not(target_arch = "wasm32"))]
             (app.file_dia.state() == &egui_file_dialog::DialogState::Open),

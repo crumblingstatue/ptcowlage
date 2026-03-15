@@ -2,10 +2,7 @@ use {
     crate::{
         app::{
             command_queue::{Cmd, CommandQueue},
-            ui::{
-                FreeplayState, SharedUiState, piano_freeplay_play_note, tabs::events::invert_color,
-                unit_color,
-            },
+            ui::{SharedUiState, piano_freeplay_play_note, tabs::events::invert_color, unit_color},
         },
         audio_out::SongState,
         herd_ext::HerdExt,
@@ -161,7 +158,6 @@ pub fn ui(
     state: &mut PianoRollState,
     shared: &mut SharedUiState,
     cmd: &mut CommandQueue,
-    piano_state: &mut FreeplayState,
 ) {
     top_ui(ui, song, state, shared);
     ui.horizontal_top(|ui| {
@@ -172,9 +168,8 @@ pub fn ui(
             shared,
             ui,
             state.prev_frame_piano_roll_y_offset,
-            piano_state,
         );
-        roll_ui(song, state, shared, ui, cmd, piano_state);
+        roll_ui(song, state, shared, ui, cmd);
     });
 }
 
@@ -184,7 +179,6 @@ fn roll_ui(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
-    piano_state: &mut FreeplayState,
 ) {
     // We make the scroll bars be outside of the ScrollArea to resolve a conundrum of
     // `Response::contains_pointer` being true when dragging the scroll bars, and
@@ -204,7 +198,7 @@ fn roll_ui(
     let out = egui::ScrollArea::both()
         .scroll_source(scroll_source)
         .show(ui, |ui| {
-            roll_ui_inner(song, state, shared, ui, cmd, piano_state);
+            roll_ui_inner(song, state, shared, ui, cmd);
         });
     state.prev_frame_piano_roll_y_offset = out.state.offset.y;
 }
@@ -217,7 +211,6 @@ fn roll_ui_inner(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     cmd: &mut CommandQueue,
-    piano_state: &mut FreeplayState,
 ) {
     let last_note_tick = song.song.events.last().map_or(0, |ev| ev.tick);
     let last_meas_tick =
@@ -363,7 +356,7 @@ fn roll_ui_inner(
                         scaled as u32
                     };
                     state.just_placed_note = Some(PlacedNote { tick, unit, key });
-                    piano_freeplay_play_note(song, piano_state, piano_key, unit);
+                    piano_freeplay_play_note(song, &mut shared.freeplay, piano_key, unit);
                 }
             }
         }
@@ -428,7 +421,7 @@ fn roll_ui_inner(
             let Some(piano_key) = piano_key_from_y(mp, &re, rect, state) else {
                 return;
             };
-            piano_freeplay_play_note(song, piano_state, piano_key, shared.active_unit);
+            piano_freeplay_play_note(song, &mut shared.freeplay, piano_key, shared.active_unit);
         }
     }
     // Scroll left/right when pressing arrow keys
@@ -923,7 +916,6 @@ fn piano_ui(
     shared: &mut SharedUiState,
     ui: &mut egui::Ui,
     y_offset: f32,
-    piano_state: &mut FreeplayState,
 ) {
     egui::ScrollArea::vertical()
         .id_salt("left")
@@ -1013,7 +1005,12 @@ fn piano_ui(
                 {
                     let piano_key = i32::from(key) + i32::from(state.lowest_semitone);
                     if key_rect.y_range().contains(mouse_pos.y) {
-                        piano_freeplay_play_note(song, piano_state, piano_key, shared.active_unit);
+                        piano_freeplay_play_note(
+                            song,
+                            &mut shared.freeplay,
+                            piano_key,
+                            shared.active_unit,
+                        );
                     }
                 }
             }

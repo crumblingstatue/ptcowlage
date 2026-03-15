@@ -67,16 +67,16 @@ pub const fn piano_key_to_pxtone_key(key: i32) -> i32 {
 pub fn piano_freeplay_ui(
     song: &mut SongState,
     ui: &mut egui::Ui,
-    state: &mut FreeplayState,
     shared: &mut SharedUiState,
     file_dia_open: bool,
 ) {
     // Avoid tooting when we're inside a text edit, etc.
     if !ui.ctx().wants_keyboard_input() {
-        piano_freeplay_input(song, ui, state, shared, file_dia_open);
+        piano_freeplay_input(song, ui, shared, file_dia_open);
     }
     ui.label("🎹").on_hover_text("Piano freeplay UI");
     ui.label("Octave");
+    let state = &mut shared.freeplay;
     ui.add(
         egui::DragValue::new(&mut state.play_octave)
             .speed(0.05)
@@ -110,7 +110,6 @@ fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
 pub fn piano_freeplay_input(
     song: &mut SongState,
     ui: &mut egui::Ui,
-    state: &mut FreeplayState,
     shared: &mut SharedUiState,
     file_dia_open: bool,
 ) {
@@ -174,8 +173,8 @@ pub fn piano_freeplay_input(
             if *down {
                 // I dunno, magic
                 let base_key = 8;
-                let piano_key = base_key + (state.play_octave * 12) + key as i32;
-                piano_freeplay_play_note(song, state, piano_key, shared.active_unit);
+                let piano_key = base_key + (shared.freeplay.play_octave * 12) + key as i32;
+                piano_freeplay_play_note(song, &mut shared.freeplay, piano_key, shared.active_unit);
             }
         }
     }
@@ -248,7 +247,6 @@ pub struct UiState {
     pub tab: Tab,
     pub piano_roll: PianoRollState,
     pub map: MapState,
-    pub freeplay: FreeplayState,
     pub raw_events: RawEventsUiState,
     pub voices: VoicesUiState,
     pub effects: EffectsUiState,
@@ -268,6 +266,7 @@ pub struct SharedUiState {
     pub toasts: Toasts,
     /// Units in this set will be highlighted
     pub highlight_set: FxHashSet<UnitIdx>,
+    pub freeplay: FreeplayState,
 }
 
 impl Default for SharedUiState {
@@ -278,6 +277,7 @@ impl Default for SharedUiState {
                 .anchor(egui::Align2::RIGHT_BOTTOM, egui::Pos2::ZERO)
                 .direction(egui::Direction::BottomUp),
             highlight_set: FxHashSet::default(),
+            freeplay: FreeplayState::default(),
         }
     }
 }
@@ -312,7 +312,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
     if k_space {
         if m_ctrl {
             // Toggle record
-            app.ui_state.freeplay.record ^= true;
+            app.ui_state.shared.freeplay.record ^= true;
         } else {
             // Toggle pause
             let should_toggle_pause = !egui::Popup::is_any_open(ui.ctx())
@@ -343,7 +343,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
                 &mut app.ui_state.piano_roll,
                 &mut app.ui_state.shared,
                 &mut app.cmd,
-                &mut app.ui_state.freeplay,
             );
         }
         Tab::Events => tabs::events::ui(
