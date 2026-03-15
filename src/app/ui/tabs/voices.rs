@@ -253,10 +253,10 @@ pub fn ui(
             if let Some(op) = app_file_dia.user_data::<FileOp>() {
                 match op {
                     FileOp::ImportPtVoice | FileOp::ReplacePtVoiceSingle(_) => {
-                        voice_import_preview(song, out_rate, en, just_load_ptvoice);
+                        voice_import_preview(song, out_rate, en, just_load_ptvoice, shared);
                     }
                     FileOp::ImportPtNoise | FileOp::ReplacePtNoiseSingle(_) => {
-                        voice_import_preview(song, out_rate, en, just_load_ptnoise);
+                        voice_import_preview(song, out_rate, en, just_load_ptnoise, shared);
                     }
                     _ => {}
                 }
@@ -273,6 +273,7 @@ fn voice_import_preview(
     out_rate: u16,
     en: &egui_file_dialog::DirectoryEntry,
     load_fun: fn(&[u8], path: &std::path::Path) -> ptcow::ReadResult<ptcow::Voice>,
+    shared: &mut SharedUiState,
 ) {
     let data = std::fs::read(en.as_path()).unwrap();
     let noise_tbl = NoiseTable::generate();
@@ -291,6 +292,8 @@ fn voice_import_preview(
         song.song.master.timing,
         std::slice::from_ref(&song.preview_voice),
     );
+    song.voice_test_unit
+        .set_key(shared.freeplay.last_played_key);
     song.voice_test_unit.on(
         SongState::VOICE_TEST_UNIT_IDX,
         &song.ins,

@@ -45,6 +45,7 @@ pub struct FreeplayState {
     // Live record performance (store toots in events)
     record: bool,
     velocity: i16,
+    last_played_key: ptcow::Key,
 }
 
 impl Default for FreeplayState {
@@ -55,6 +56,7 @@ impl Default for FreeplayState {
             play_octave: 7,
             record: false,
             velocity: 100,
+            last_played_key: ptcow::DEFAULT_KEY,
         }
     }
 }
@@ -240,6 +242,7 @@ fn piano_freeplay_play_note(
     if record {
         song.song.events.sort();
     }
+    state.last_played_key = key;
 }
 
 #[derive(Default)]
