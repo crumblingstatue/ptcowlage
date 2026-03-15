@@ -957,10 +957,10 @@ impl App {
             WebCmd::ImportOggVorbis { data, name } => {
                 self.import_ogg_vorbis(&data, name.as_ref());
             }
-            WebCmd::ReplaceVoicesPtCop { data } => {
+            WebCmd::ImportAllPtcop { data } => {
                 let (_, _, ins) = ptcow::read_song(&data, 44_100).unwrap();
                 let mut song = self.song.lock().unwrap();
-                song.ins.voices = ins.voices;
+                song.ins.voices.extend(ins.voices.iter().cloned());
             }
             WebCmd::ReplacePtVoiceSingle {
                 data,

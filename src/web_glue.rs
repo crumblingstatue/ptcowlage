@@ -93,7 +93,7 @@ pub enum WebCmd {
         data: Vec<u8>,
         name: String,
     },
-    ReplaceVoicesPtCop {
+    ImportAllPtcop {
         data: Vec<u8>,
     },
     ReplacePtVoiceSingle {
@@ -112,7 +112,7 @@ impl WebCmd {
     pub fn from_file_op(file_op: FileOp, data: Vec<u8>, name: String) -> Self {
         match file_op {
             FileOp::OpenProj => Self::OpenFile { data, name },
-            FileOp::ReplaceVoicesPtcop => Self::ReplaceVoicesPtCop { data },
+            FileOp::ImportAllPtcop => Self::ImportAllPtcop { data },
             FileOp::ImportMidi => Self::ImportMidi { data },
             FileOp::SaveProjAs => todo!(),
             FileOp::ImportPiyoPiyo => Self::ImportPiyo { data },
