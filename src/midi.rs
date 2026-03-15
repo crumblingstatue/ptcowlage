@@ -88,7 +88,6 @@ pub fn write_midi_to_pxtone(
     song.master.timing.bpm = guess_tempo(&tracks).map_or(120.0, ms_per_beat_to_bpm);
     song.events.eves.clear();
     song.master.timing.ticks_per_beat = ticks_per_beat;
-    let mut max_clock = 0;
     let mut ch_map = ChannelMapping::default();
     let mut channel_states: FxHashMap<u8, ChannelState> = FxHashMap::default();
     for track in &tracks {
@@ -235,7 +234,6 @@ pub fn write_midi_to_pxtone(
                 _ => log::warn!("Unhandled event kind: {:?}", event.kind),
             }
         }
-        max_clock = max_clock.max(clock);
     }
 
     herd.units.clear();
