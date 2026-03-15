@@ -3,19 +3,51 @@ use {
     midly::{MetaMessage, MidiMessage, TrackEventKind, num::u7},
     ptcow::{Event, EventPayload, Herd, MooInstructions, Song, Unit, UnitIdx, VoiceIdx},
     rustc_hash::FxHashMap,
+    std::cmp::Ordering,
 };
+
+struct MidiEv<'a> {
+    tick: u32,
+    /// Can be ignored, only used for sorting
+    track: usize,
+    payload: &'a TrackEventKind<'a>,
+}
+
+fn midi_tracks_to_event_stream<'a>(smf: &'a midly::Smf<'a>) -> Vec<MidiEv<'a>> {
+    let mut events = Vec::new();
+
+    for (track_index, track) in smf.tracks.iter().enumerate() {
+        let mut abs_tick: u32 = 0;
+
+        for event in track {
+            abs_tick += event.delta.as_int();
+
+            events.push(MidiEv {
+                tick: abs_tick,
+                track: track_index,
+                payload: &event.kind,
+            });
+        }
+    }
+    // Order by tick, then by track number
+    // Seems to be necessary in order to be accurate
+    events.sort_by(|a, b| match a.tick.cmp(&b.tick) {
+        Ordering::Equal => a.track.cmp(&b.track),
+        other => other,
+    });
+
+    events
+}
 
 /// Assume first tempo is "default" tempo.
 ///
 /// We can't really handle songs with changing tempos.
-fn guess_tempo(tracks: &[midly::Track]) -> Option<u32> {
-    for track in tracks {
-        for ev in track {
-            if let TrackEventKind::Meta(msg) = ev.kind
-                && let MetaMessage::Tempo(u24) = msg
-            {
-                return Some(u24.as_int());
-            }
+fn guess_tempo(events: &[MidiEv]) -> Option<u32> {
+    for ev in events {
+        if let TrackEventKind::Meta(msg) = *ev.payload
+            && let MetaMessage::Tempo(u24) = msg
+        {
+            return Some(u24.as_int());
         }
     }
     None
@@ -79,172 +111,155 @@ pub fn write_midi_to_pxtone(
     ins: &mut MooInstructions,
 ) -> anyhow::Result<()> {
     let mut used_programs: UsedPrograms = FxHashMap::default();
-    let (header, track_iter) = midly::parse(mid_data).unwrap();
-    let tracks = track_iter.collect_tracks().unwrap();
-    let ticks_per_beat = match header.timing {
+    let smf = midly::Smf::parse(mid_data).unwrap();
+    let ticks_per_beat = match smf.header.timing {
         midly::Timing::Metrical(u15) => u15.as_int(),
         midly::Timing::Timecode(_fps, _) => todo!(),
     };
-    song.master.timing.bpm = guess_tempo(&tracks).map_or(120.0, ms_per_beat_to_bpm);
+    let events = midi_tracks_to_event_stream(&smf);
+    song.master.timing.bpm = guess_tempo(&events).map_or(120.0, ms_per_beat_to_bpm);
     song.events.eves.clear();
     song.master.timing.ticks_per_beat = ticks_per_beat;
     let mut ch_map = ChannelMapping::default();
     let mut channel_states: FxHashMap<u8, ChannelState> = FxHashMap::default();
-    for track in &tracks {
-        let mut clock = 0;
-        for (ev_idx, event) in track.iter().enumerate() {
-            // The delta is how much after the previous event this current event is,
-            // so we start by incrementing the clock
-            clock += event.delta.as_int();
-            match event.kind {
-                TrackEventKind::Midi { channel, message } => {
-                    let unit = ch_map.get_or_insert_for_ch(channel);
-                    let state = channel_states.entry(channel.as_int()).or_insert_with(|| {
-                        // Here we can put code that runs once on each new channel.
+    for (ev_idx, event) in events.iter().enumerate() {
+        match *event.payload {
+            TrackEventKind::Midi { channel, message } => {
+                let unit = ch_map.get_or_insert_for_ch(channel);
+                let state = channel_states.entry(channel.as_int()).or_insert_with(|| {
+                    // Here we can put code that runs once on each new channel.
 
-                        // Always insert drum voice for the drum channel, even if there is no
-                        // midi program change event that does it
-                        if channel == DRUM_CH {
-                            program_change(
-                                song,
-                                &mut used_programs,
-                                clock,
-                                channel,
-                                unit,
-                                DRUM_PRG,
-                            );
-                        } else {
-                            // Do the same, but use "piano" program for other channels
-                            program_change(song, &mut used_programs, clock, channel, unit, 0);
+                    // Always insert drum voice for the drum channel, even if there is no
+                    // midi program change event that does it
+                    if channel == DRUM_CH {
+                        program_change(
+                            song,
+                            &mut used_programs,
+                            event.tick,
+                            channel,
+                            unit,
+                            DRUM_PRG,
+                        );
+                    } else {
+                        // Do the same, but use "piano" program for other channels
+                        program_change(song, &mut used_programs, event.tick, channel, unit, 0);
+                    }
+                    ChannelState::default()
+                });
+                match message {
+                    MidiMessage::NoteOff { .. } => {
+                        // We calculate how long notes last in the `NoteOn` event, so we do nothing here
+                    }
+                    MidiMessage::NoteOn { key, vel } => {
+                        state.last_key = Some(key);
+                        push_key_event(song, unit, event.tick, state, key);
+                        // If velocity is zero, we don't want to emit an `On` event.
+                        if vel == 0 {
+                            //continue;
                         }
-                        ChannelState::default()
-                    });
-                    match message {
-                        MidiMessage::NoteOff { .. } => {
-                            // We calculate how long notes last in the `NoteOn` event, so we do nothing here
-                        }
-                        MidiMessage::NoteOn { key, vel } => {
-                            state.last_key = Some(key);
-                            push_key_event(song, unit, clock, state, key);
-                            // If velocity is zero, we don't want to emit an `On` event.
-                            if vel == 0 {
-                                //continue;
-                            }
-                            song.events.eves.push(Event {
-                                payload: EventPayload::Velocity(i16::from(vel.as_int())),
-                                unit,
-                                tick: clock,
-                            });
-                            // Find the next note off event for the duration
-                            let duration = 'block: {
-                                let mut clock2 = clock;
-                                for ev in track.iter().skip(ev_idx) {
-                                    clock2 += ev.delta.as_int();
-                                    if let TrackEventKind::Midi {
-                                        channel: _,
-                                        message,
-                                    } = ev.kind
-                                    {
-                                        match message {
-                                            MidiMessage::NoteOff { key: key2, .. }
-                                                if key2 == key =>
-                                            {
-                                                break 'block clock2 - clock;
-                                            }
-                                            // Tricky, but NoteOn with velocity of 0 also means note off, apparently.
-                                            MidiMessage::NoteOn { vel, key: key2 }
-                                                if key2 == key && vel == 0 =>
-                                            {
-                                                break 'block clock2 - clock;
-                                            }
-                                            _ => (),
+                        song.events.eves.push(Event {
+                            payload: EventPayload::Velocity(i16::from(vel.as_int())),
+                            unit,
+                            tick: event.tick,
+                        });
+                        // Find the next note off event for the duration
+                        let duration = 'block: {
+                            for ev_after in events.iter().skip(ev_idx) {
+                                if let TrackEventKind::Midi {
+                                    channel: ch2,
+                                    message,
+                                } = *ev_after.payload
+                                    && channel == ch2
+                                {
+                                    match message {
+                                        MidiMessage::NoteOff { key: key2, .. } if key2 == key => {
+                                            break 'block ev_after.tick - event.tick;
                                         }
+                                        // Tricky, but NoteOn with velocity of 0 also means note off, apparently.
+                                        MidiMessage::NoteOn { vel, key: key2 }
+                                            if key2 == key && vel == 0 =>
+                                        {
+                                            break 'block ev_after.tick - event.tick;
+                                        }
+                                        _ => (),
                                     }
-                                }
-                                panic!("Couldn't determine note duration");
-                            };
-                            song.events.eves.push(Event {
-                                payload: EventPayload::On { duration },
-                                unit,
-                                tick: clock,
-                            });
-                        }
-                        MidiMessage::ProgramChange { program } => {
-                            program_change(
-                                song,
-                                &mut used_programs,
-                                clock,
-                                channel,
-                                unit,
-                                program.as_int(),
-                            );
-                        }
-                        MidiMessage::PitchBend { bend } => {
-                            state.pitch_bend = bend.as_f64();
-                            if let Some(last) = state.last_key {
-                                push_key_event(song, unit, clock, state, last);
-                            }
-                        }
-                        MidiMessage::Controller { controller, value } => {
-                            match controller.as_int() {
-                                // 7: "Channel volume"
-                                // 11: "Expression" or secondary volume controller
-                                7 | 11 => {
-                                    song.events.eves.push(Event {
-                                        payload: EventPayload::Volume(i16::from(value.as_int())),
-                                        unit,
-                                        tick: clock,
-                                    });
-                                }
-                                6 => {
-                                    if state.rpn_lsb == 0 && state.rpn_msb == 0 {
-                                        log::info!("Pitch bend range msb: {value}");
-                                        state.pitch_bend_range_semitones = value.as_int();
-                                    } else {
-                                        log::warn!(
-                                            "Unhandled rpn {} {}",
-                                            state.rpn_lsb,
-                                            state.rpn_msb
-                                        );
-                                    }
-                                }
-                                38 => {
-                                    if state.rpn_lsb == 0 && state.rpn_msb == 0 {
-                                        log::info!("Pitch bend range lsb: {value}");
-                                    } else {
-                                        log::warn!(
-                                            "Unhandled rpn {} {}",
-                                            state.rpn_lsb,
-                                            state.rpn_msb
-                                        );
-                                    }
-                                }
-                                100 => {
-                                    state.rpn_lsb = value.as_int();
-                                }
-                                101 => {
-                                    state.rpn_msb = value.as_int();
-                                }
-                                _ => {
-                                    log::info!("c {controller} = {value}");
                                 }
                             }
-                        }
-                        _ => log::warn!("Unhandled mid msg: {message:?}"),
+                            panic!("Couldn't determine note duration");
+                        };
+                        song.events.eves.push(Event {
+                            payload: EventPayload::On { duration },
+                            unit,
+                            tick: event.tick,
+                        });
                     }
+                    MidiMessage::ProgramChange { program } => {
+                        program_change(
+                            song,
+                            &mut used_programs,
+                            event.tick,
+                            channel,
+                            unit,
+                            program.as_int(),
+                        );
+                    }
+                    MidiMessage::PitchBend { bend } => {
+                        state.pitch_bend = bend.as_f64();
+                        if let Some(last) = state.last_key {
+                            push_key_event(song, unit, event.tick, state, last);
+                        }
+                    }
+                    MidiMessage::Controller { controller, value } => {
+                        match controller.as_int() {
+                            // 7: "Channel volume"
+                            // 11: "Expression" or secondary volume controller
+                            7 | 11 => {
+                                song.events.eves.push(Event {
+                                    payload: EventPayload::Volume(i16::from(value.as_int())),
+                                    unit,
+                                    tick: event.tick,
+                                });
+                            }
+                            6 => {
+                                if state.rpn_lsb == 0 && state.rpn_msb == 0 {
+                                    log::info!("Pitch bend range msb: {value}");
+                                    state.pitch_bend_range_semitones = value.as_int();
+                                } else {
+                                    log::warn!("Unhandled rpn {} {}", state.rpn_lsb, state.rpn_msb);
+                                }
+                            }
+                            38 => {
+                                if state.rpn_lsb == 0 && state.rpn_msb == 0 {
+                                    log::info!("Pitch bend range lsb: {value}");
+                                } else {
+                                    log::warn!("Unhandled rpn {} {}", state.rpn_lsb, state.rpn_msb);
+                                }
+                            }
+                            100 => {
+                                state.rpn_lsb = value.as_int();
+                            }
+                            101 => {
+                                state.rpn_msb = value.as_int();
+                            }
+                            _ => {
+                                log::info!("c {controller} = {value}");
+                            }
+                        }
+                    }
+                    _ => log::warn!("Unhandled mid msg: {message:?}"),
                 }
-                TrackEventKind::Meta(meta_message) => match meta_message {
-                    MetaMessage::TrackName(name_bytes) => {
-                        log::info!("Track name: {:?}", std::str::from_utf8(name_bytes));
-                    }
-                    MetaMessage::EndOfTrack => {}
-                    MetaMessage::TimeSignature(num, denom, cpt, npq_32nd) => {
-                        log::info!("Time sig: {num} {denom} {cpt} {npq_32nd}");
-                    }
-                    _ => log::warn!("UNhandled meta: {meta_message:?}"),
-                },
-                _ => log::warn!("Unhandled event kind: {:?}", event.kind),
             }
+            TrackEventKind::Meta(meta_message) => match meta_message {
+                MetaMessage::TrackName(name_bytes) => {
+                    log::info!("Track name: {:?}", std::str::from_utf8(name_bytes));
+                }
+                MetaMessage::EndOfTrack => {}
+                MetaMessage::TimeSignature(num, denom, cpt, npq_32nd) => {
+                    log::info!("Time sig: {num} {denom} {cpt} {npq_32nd}");
+                }
+                _ => log::warn!("UNhandled meta: {meta_message:?}"),
+            },
+            _ => log::warn!("Unhandled event kind: {:?}", event.payload),
         }
     }
 
