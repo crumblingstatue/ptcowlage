@@ -175,7 +175,6 @@ pub fn write_midi_to_pxtone(
                             }
                         }
                         MidiMessage::Controller { controller, value } => {
-                            log::error!("Controller event for channel {channel}");
                             match controller.as_int() {
                                 // 7: "Channel volume"
                                 // 11: "Expression" or secondary volume controller
