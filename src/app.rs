@@ -277,7 +277,44 @@ impl App {
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
         use egui_file_dialog::DialogState;
 
-        self.file_dia.update(ctx);
+        match self.file_dia.user_data::<FileOp>() {
+            Some(
+                FileOp::ImportPtNoise
+                | FileOp::ImportPtVoice
+                | FileOp::ReplacePtNoiseSingle(_)
+                | FileOp::ReplacePtVoiceSingle(_),
+            ) => {
+                self.file_dia
+                    .update_with_right_panel_ui(ctx, &mut |ui, _dia| {
+                        let mut song = self.song.lock().unwrap();
+                        let re = ui.add(
+                            egui::TextEdit::singleline(&mut String::new())
+                                .hint_text("Click here to play"),
+                        );
+                        if re.has_focus() {
+                            ui::piano_freeplay_input(
+                                &mut song,
+                                ui,
+                                &mut self.ui_state.freeplay_piano,
+                                &mut self.ui_state.shared,
+                                // FIXME: We're lying here, lol
+                                false,
+                            );
+                        }
+                        ui::piano_freeplay_ui(
+                            &mut song,
+                            ui,
+                            &mut self.ui_state.freeplay_piano,
+                            &mut self.ui_state.shared,
+                            // FIXME: We're lying here, lol
+                            false,
+                        );
+                    });
+            }
+            _ => {
+                self.file_dia.update(ctx);
+            }
+        }
         let picked_path = self.file_dia.take_picked();
         let file_op = self.file_dia.user_data::<FileOp>().copied();
         if *self.file_dia.state() == DialogState::Cancelled {

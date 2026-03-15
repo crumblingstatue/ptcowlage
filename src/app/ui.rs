@@ -64,7 +64,7 @@ pub const fn piano_key_to_pxtone_key(key: i32) -> i32 {
     FACTOR * key
 }
 
-fn piano_freeplay_ui(
+pub fn piano_freeplay_ui(
     song: &mut SongState,
     ui: &mut egui::Ui,
     state: &mut FreeplayPianoState,
@@ -107,7 +107,7 @@ fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
     )
 }
 
-fn piano_freeplay_input(
+pub fn piano_freeplay_input(
     song: &mut SongState,
     ui: &mut egui::Ui,
     state: &mut FreeplayPianoState,
