@@ -101,38 +101,54 @@ pub fn ui(
 ) {
     let mut op = None;
     ui.horizontal_wrapped(|ui| {
-        ui.menu_button("✴ New...", |ui| {
-            if ui.button((img::SAXO.smol(), "Wave")).clicked() {
-                let mut voice = square_wave_voice();
-                voice.name = format!("Wave {}", song.ins.voices.len());
-                song.ins.voices.push(voice);
-                let idx = VoiceIdx(song.ins.voices.len() - 1);
-                ui_state.selected_idx = idx;
-                ui_state.soft_reset(&song.ins, &[], &song.song.master, &mut song.voice_test_unit);
-                reset_voice_for_units_with_voice_idx(song, idx);
-            }
-            if ui.button((img::DRUM.smol(), "Noise")).clicked() {
-                let mut voice = hat_close_voice();
-                voice.name = format!("Noise {}", song.ins.voices.len());
-                song.ins.voices.push(voice);
-                let idx = VoiceIdx(song.ins.voices.len() - 1);
-                ui_state.selected_idx = idx;
-                ui_state.soft_reset(&song.ins, &[], &song.song.master, &mut song.voice_test_unit);
-                reset_voice_for_units_with_voice_idx(song, idx);
-            }
-        });
-        ui.menu_button(" Import...", |ui| {
-            if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
-                app_cmd.push(Cmd::PromptImportAllPtcop);
-            }
-            if ui.button((img::SAXO.smol(), ".ptvoice")).clicked() {
-                app_cmd.push(Cmd::PromptImportPtVoice);
-            }
-            if ui.button((img::DRUM.smol(), ".ptnoise")).clicked() {
-                app_cmd.push(Cmd::PromptImportPtNoise);
-            }
-            if ui.button((img::FISH.smol(), ".ogg (vorbis)")).clicked() {
-                app_cmd.push(Cmd::PromptImportOggVorbis);
+        ui.menu_button("☰", |ui| {
+            ui.menu_button("✴ New", |ui| {
+                if ui.button((img::SAXO.smol(), "Wave")).clicked() {
+                    let mut voice = square_wave_voice();
+                    voice.name = format!("Wave {}", song.ins.voices.len());
+                    song.ins.voices.push(voice);
+                    let idx = VoiceIdx(song.ins.voices.len() - 1);
+                    ui_state.selected_idx = idx;
+                    ui_state.soft_reset(
+                        &song.ins,
+                        &[],
+                        &song.song.master,
+                        &mut song.voice_test_unit,
+                    );
+                    reset_voice_for_units_with_voice_idx(song, idx);
+                }
+                if ui.button((img::DRUM.smol(), "Noise")).clicked() {
+                    let mut voice = hat_close_voice();
+                    voice.name = format!("Noise {}", song.ins.voices.len());
+                    song.ins.voices.push(voice);
+                    let idx = VoiceIdx(song.ins.voices.len() - 1);
+                    ui_state.selected_idx = idx;
+                    ui_state.soft_reset(
+                        &song.ins,
+                        &[],
+                        &song.song.master,
+                        &mut song.voice_test_unit,
+                    );
+                    reset_voice_for_units_with_voice_idx(song, idx);
+                }
+            });
+            ui.menu_button(" Import", |ui| {
+                if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
+                    app_cmd.push(Cmd::PromptImportAllPtcop);
+                }
+                if ui.button((img::SAXO.smol(), ".ptvoice")).clicked() {
+                    app_cmd.push(Cmd::PromptImportPtVoice);
+                }
+                if ui.button((img::DRUM.smol(), ".ptnoise")).clicked() {
+                    app_cmd.push(Cmd::PromptImportPtNoise);
+                }
+                if ui.button((img::FISH.smol(), ".ogg (vorbis)")).clicked() {
+                    app_cmd.push(Cmd::PromptImportOggVorbis);
+                }
+            });
+            ui.separator();
+            if ui.button("✖ Clear all voices").clicked() {
+                song.ins.voices.clear();
             }
         });
         for (i, voice) in song.ins.voices.enumerated() {
