@@ -377,12 +377,12 @@ fn voice_ui(
         });
         match &voice.base.data {
             VoiceData::Noise(_) => {
-                if ui.button("Export .ptnoise").clicked() {
+                if ui.button("💾 Export .ptnoise").clicked() {
                     app_cmd.push(Cmd::PromptExportPtnoise { voice: idx });
                 }
             }
             VoiceData::Wave(_) => {
-                if ui.button("Export .ptvoice").clicked() {
+                if ui.button("💾 Export .ptvoice").clicked() {
                     app_cmd.push(Cmd::PromptExportPtvoice { voice: idx });
                 }
             }
