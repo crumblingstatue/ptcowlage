@@ -34,7 +34,7 @@ pub enum Cmd {
     },
     PromptImportPtVoice,
     PromptImportPtNoise,
-    PromptReplaceAllPtcop,
+    PromptImportAllPtcop,
     PromptSaveAs,
     PromptImportMidi,
     PromptImportPiyo,

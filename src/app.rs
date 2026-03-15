@@ -160,7 +160,7 @@ impl App {
             );
         }
         if let Some(ptcop_path) = args.voice_import {
-            import_voices(&ptcop_path, &mut song_state);
+            import_voices_from_ptcop(&ptcop_path, &mut song_state);
         }
         song_state.prepare(sample_rate);
         let song_state_handle = Arc::new(Mutex::new(song_state));
@@ -407,9 +407,9 @@ impl App {
                     self.modal.msg(format!("Error loading project:\n{e}"));
                 }
             }
-            FileOp::ReplaceVoicesPtcop => {
+            FileOp::ImportAllPtcop => {
                 let mut song = self.song.lock().unwrap();
-                import_voices(&path, &mut song);
+                import_voices_from_ptcop(&path, &mut song);
             }
             FileOp::ReplacePtVoiceSingle(voice_idx) => {
                 let data = std::fs::read(&path).unwrap();
@@ -731,11 +731,11 @@ impl eframe::App for App {
     }
 }
 
-fn import_voices(path: &Path, song: &mut SongState) {
+fn import_voices_from_ptcop(path: &Path, song: &mut SongState) {
     let data = std::fs::read(path).unwrap();
     let (_, _, ins) = ptcow::read_song(&data, 44_100).unwrap();
 
-    song.ins.voices = ins.voices;
+    song.ins.voices.extend(ins.voices.iter().cloned());
 }
 
 impl App {
@@ -842,8 +842,8 @@ impl App {
             Cmd::PromptImportOggVorbis => {
                 self.open_file_prompt(file_ops::FILT_OGG, FileOp::ImportOggVorbis, false);
             }
-            Cmd::PromptReplaceAllPtcop => {
-                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ReplaceVoicesPtcop, false);
+            Cmd::PromptImportAllPtcop => {
+                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ImportAllPtcop, false);
             }
             Cmd::PromptReplacePtVoiceSingle(voice_idx) => {
                 self.open_file_prompt(

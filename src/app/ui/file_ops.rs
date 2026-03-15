@@ -3,7 +3,7 @@ use ptcow::VoiceIdx;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FileOp {
     OpenProj,
-    ReplaceVoicesPtcop,
+    ImportAllPtcop,
     ImportMidi,
     SaveProjAs,
     ImportPiyoPiyo,

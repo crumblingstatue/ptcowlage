@@ -122,6 +122,9 @@ pub fn ui(
             }
         });
         ui.menu_button(" Import...", |ui| {
+            if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
+                app_cmd.push(Cmd::PromptImportAllPtcop);
+            }
             if ui.button((img::SAXO.smol(), ".ptvoice")).clicked() {
                 app_cmd.push(Cmd::PromptImportPtVoice);
             }
@@ -131,41 +134,6 @@ pub fn ui(
             if ui.button((img::FISH.smol(), ".ogg (vorbis)")).clicked() {
                 app_cmd.push(Cmd::PromptImportOggVorbis);
             }
-        });
-        ui.menu_button("🔁 Replace...", |ui| {
-            if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
-                app_cmd.push(Cmd::PromptReplaceAllPtcop);
-            }
-            if ui
-                .button((img::SAXO.smol(), "Current from .ptvoice"))
-                .clicked()
-            {
-                app_cmd.push(Cmd::PromptReplacePtVoiceSingle(ui_state.selected_idx));
-            }
-            if ui
-                .button((img::DRUM.smol(), "Current from .ptnoise"))
-                .clicked()
-            {
-                app_cmd.push(Cmd::PromptReplacePtNoiseSingle(ui_state.selected_idx));
-            }
-            ui.menu_button("✴ Current with new", |ui| {
-                if ui.button((img::SAXO.smol(), "Wave")).clicked() {
-                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        let sqr = square_wave_voice();
-                        voice.base.data = sqr.base.data;
-                        voice.base.unit = sqr.base.unit;
-                        reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
-                    }
-                }
-                if ui.button((img::DRUM.smol(), "Noise")).clicked() {
-                    if let Some(voice) = song.ins.voices.get_mut(ui_state.selected_idx) {
-                        let bass = hat_close_voice();
-                        voice.base.data = bass.base.data;
-                        voice.base.unit = bass.base.unit;
-                        reset_voice_for_units_with_voice_idx(song, ui_state.selected_idx);
-                    }
-                }
-            });
         });
         for (i, voice) in song.ins.voices.enumerated() {
             let img = voice_img(voice);
@@ -370,6 +338,27 @@ fn voice_ui(
                 voice: idx,
             });
         }
+        ui.menu_button("🔁 Replace", |ui| {
+            if ui.button((img::SAXO.smol(), "With .ptvoice")).clicked() {
+                app_cmd.push(Cmd::PromptReplacePtVoiceSingle(idx));
+            }
+            if ui.button((img::DRUM.smol(), "With .ptnoise")).clicked() {
+                app_cmd.push(Cmd::PromptReplacePtNoiseSingle(idx));
+            }
+            ui.menu_button("✴ With new", |ui| {
+                if ui.button((img::SAXO.smol(), "Wave")).clicked() {
+                    let sqr = square_wave_voice();
+                    voice.base.data = sqr.base.data;
+                    voice.base.unit = sqr.base.unit;
+                    app_cmd.push(Cmd::ResetVoiceForUnitsWithVoiceIdx { idx });
+                }
+                if ui.button((img::DRUM.smol(), "Noise")).clicked() {
+                    let bass = hat_close_voice();
+                    voice.base.data = bass.base.data;
+                    voice.base.unit = bass.base.unit;
+                }
+            });
+        });
         match &voice.base.data {
             VoiceData::Noise(_) => {
                 if ui.button("Export .ptnoise").clicked() {
