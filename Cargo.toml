@@ -11,7 +11,7 @@ eframe.features = ["default_fonts", "glow", "x11", "wayland", "persistence"]
 egui_extras.version = "0.33"
 egui_extras.features = ["image"]
 egui-toast = "0.19"
-ptcow.version = "0.5.0"
+ptcow.version = "0.6.0"
 tinyaudio = "2"
 anyhow = "1"
 bitflags.version = "2.11"
@@ -56,7 +56,3 @@ lto = "thin"
 # On wasm32, panic is just abort regardless of what we set here, so let's just abort everywhere
 # for consistent behavior.
 panic = "abort"
-
-[patch.crates-io]
-# TODO: New ptcow release
-ptcow.git = "https://github.com/crumblingstatue/ptcow.git"
