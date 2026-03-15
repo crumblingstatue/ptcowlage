@@ -228,6 +228,14 @@ pub fn write_midi_to_pxtone(
                                     log::warn!("Unhandled rpn {} {}", state.rpn_lsb, state.rpn_msb);
                                 }
                             }
+                            10 => {
+                                // Pan
+                                song.events.eves.push(Event {
+                                    payload: EventPayload::PanVol(value.as_int()),
+                                    unit,
+                                    tick: event.tick,
+                                });
+                            }
                             38 => {
                                 if state.rpn_lsb == 0 && state.rpn_msb == 0 {
                                     log::info!("Pitch bend range lsb: {value}");
@@ -242,7 +250,7 @@ pub fn write_midi_to_pxtone(
                                 state.rpn_msb = value.as_int();
                             }
                             _ => {
-                                log::info!("c {controller} = {value}");
+                                log::info!("[ch {channel}] ctrl {controller} = {value}");
                             }
                         }
                     }
