@@ -113,6 +113,9 @@ pub fn write_midi_to_pxtone(
                                 unit,
                                 DRUM_PRG,
                             );
+                        } else {
+                            // Do the same, but use "piano" program for other channels
+                            program_change(song, &mut used_programs, clock, channel, unit, 0);
                         }
                         ChannelState::default()
                     });
