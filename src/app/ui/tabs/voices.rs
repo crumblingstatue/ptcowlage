@@ -37,6 +37,12 @@ pub struct VoicesUiState {
     last_hovered_wave_idx: Option<usize>,
     file_dia_prev_sel: Option<PathBuf>,
     instance_tab: InstanceTab,
+    clipboard: Clipboard,
+}
+
+#[derive(Default)]
+struct Clipboard {
+    envelope: Option<EnvelopeSrc>,
 }
 
 #[derive(Default, PartialEq)]
@@ -900,7 +906,7 @@ fn voice_unit_ui(
             ui.add(egui::DragValue::new(&mut oggv.sps2));
         }
     }
-    slot_wave_extra_ui(ui, slot, out_rate, sel_slot);
+    slot_wave_extra_ui(ui, slot, out_rate, sel_slot, ui_state);
 }
 
 fn key_tune_flags_ui(
@@ -963,6 +969,7 @@ fn slot_wave_extra_ui(
     slot: &mut ptcow::VoiceSlot,
     out_rate: u16,
     sel_slot: SelectedSlot,
+    ui_state: &mut VoicesUiState,
 ) {
     let VoiceData::Wave(data) = &mut slot.data else {
         return;
@@ -974,6 +981,19 @@ fn slot_wave_extra_ui(
         .sum();
     ui.horizontal(|ui| {
         ui.strong(format!("Envelope ({} points)", data.envelope.points.len()));
+        if ui.button("Copy").clicked() {
+            ui_state.clipboard.envelope = Some(data.envelope.clone());
+        }
+        match &ui_state.clipboard.envelope {
+            Some(env) => {
+                if ui.button("Paste").clicked() {
+                    data.envelope = env.clone();
+                }
+            }
+            None => {
+                ui.add_enabled(false, egui::Button::new("Paste"));
+            }
+        }
         ui.label("fps");
         ui.add(egui::DragValue::new(&mut data.envelope.seconds_per_point).range(1..=999_999));
         if data.envelope.points.is_empty() {
