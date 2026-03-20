@@ -8,7 +8,7 @@ use {
                 Tab,
                 modal::Modal,
                 piano_freeplay_ui,
-                windows::{LogWindow, TitleAndCommentWindow},
+                windows::{LogWindow, TitleAndCommentWindow, Windows},
             },
         },
         audio_out::{OutParams, prepare_song},
@@ -79,6 +79,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 &mut bt_save,
                 app.open_file.is_some(),
                 &mut app.cmd,
+                &mut app.ui_state.windows,
                 #[cfg(not(target_arch = "wasm32"))]
                 &mut app.recently_opened,
             );
@@ -308,6 +309,7 @@ fn file_menu_ui(
     bt_save: &mut bool,
     can_save: bool,
     app_cmd: &mut CommandQueue,
+    windows: &mut Windows,
     #[cfg(not(target_arch = "wasm32"))]
     app_recently_opened: &mut recently_used_list::RecentlyUsedList<PathBuf>,
 ) {
@@ -381,6 +383,13 @@ fn file_menu_ui(
         app_cmd.push(Cmd::PromptImportOrg);
     }
     ui.separator();
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if ui.button("Preferences").clicked() {
+            windows.toggle::<crate::app::ui::windows::PreferencesWindow>();
+        }
+        ui.separator();
+    }
     #[cfg(not(target_arch = "wasm32"))]
     if ui.button("Export wav").clicked() {
         app_cmd.push(Cmd::PromptExportWav);

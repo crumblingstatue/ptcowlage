@@ -96,8 +96,8 @@ fn main() {
                 .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(1280., 720.)));
             cc.egui_ctx
                 .send_viewport_cmd(egui::ViewportCommand::Title("pxtone Cowlage".into()));
-            font_fallback::install_ja_fallback_font(&cc.egui_ctx);
-            let app = app::App::new(cc, args, OutParams::default(), &[]);
+            let mut app = app::App::new(cc, args, OutParams::default(), &[]);
+            font_fallback::install_ja_fallback_font(cc, &mut app.prefs);
             Ok(Box::new(app))
         }),
     )

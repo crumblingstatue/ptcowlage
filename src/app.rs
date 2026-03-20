@@ -70,6 +70,7 @@ impl SongLock {
 }
 
 pub struct App {
+    pub prefs: Preferences,
     song: SongStateHandle,
     #[cfg(not(target_arch = "wasm32"))]
     pub file_dia: egui_file_dialog::FileDialog,
@@ -87,6 +88,15 @@ pub struct App {
     song_lock: SongLock,
     #[cfg(target_arch = "wasm32")]
     web_cmd: crate::web_glue::WebCmdQueueHandle,
+}
+
+#[derive(Default)]
+pub struct Preferences {
+    pub jp_fallback_font_path: String,
+}
+
+impl Preferences {
+    pub const JP_FALLBACK: &str = "jp_fallback_font_path";
 }
 
 pub type BundledSongs = &'static [(&'static str, &'static [u8])];
@@ -165,6 +175,7 @@ impl App {
         song_state.prepare(sample_rate);
         let song_state_handle = Arc::new(Mutex::new(song_state));
         let mut this = Self {
+            prefs: Preferences::default(),
             song: song_state_handle.clone(),
             #[cfg(not(target_arch = "wasm32"))]
             file_dia: egui_file_dialog::FileDialog::new()
@@ -680,7 +691,7 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| ui::central_panel(self, ui));
         self.ui_state
             .windows
-            .update(ctx, &mut self.song.lock().unwrap());
+            .update(ctx, &mut self.song.lock().unwrap(), &mut self.prefs);
 
         #[cfg(not(target_arch = "wasm32"))]
         let (mut picked_path, mut file_op) = self.handle_file_dia_update(ctx);
@@ -761,6 +772,10 @@ impl eframe::App for App {
             eframe::set_value(storage, "recently-opened", &self.recently_opened);
         }
         storage.set_string("out-buf-size", self.out.buf_size.to_string());
+        storage.set_string(
+            Preferences::JP_FALLBACK,
+            self.prefs.jp_fallback_font_path.clone(),
+        );
     }
     fn persist_egui_memory(&self) -> bool {
         false

@@ -1,27 +1,14 @@
 use {
+    crate::app::Preferences,
     eframe::egui,
     std::{path::Path, sync::Arc},
 };
 
-fn ja_fallback_font_path(coll: &mut fontique::Collection) -> Option<Arc<Path>> {
-    let fam = coll
-        .fallback_families(fontique::FallbackKey::new(fontique::Script(*b"Kana"), None))
-        .next()?;
-    let fam = coll.family(fam)?;
-    let def_font = fam.default_font()?;
-    match &def_font.source().kind {
-        fontique::SourceKind::Memory(_blob) => None,
-        fontique::SourceKind::Path(path) => Some(path.clone()),
-    }
-}
-
-pub fn install_ja_fallback_font(ctx: &egui::Context) {
-    let mut coll = fontique::Collection::new(fontique::CollectionOptions {
-        shared: false,
-        system_fonts: true,
-    });
-    if let Some(path) = ja_fallback_font_path(&mut coll) {
-        install_fallback_font_from_path("ja_fallback", ctx, &path);
+pub fn install_ja_fallback_font(cc: &eframe::CreationContext, prefs: &mut Preferences) {
+    let storage = cc.storage.unwrap();
+    if let Some(path) = storage.get_string(Preferences::JP_FALLBACK) {
+        install_fallback_font_from_path("ja_fallback", &cc.egui_ctx, path.as_ref());
+        prefs.jp_fallback_font_path = path;
     }
 }
 
