@@ -1,8 +1,8 @@
 use arrayvec::ArrayVec;
 use ptcow::{
     DEFAULT_KEY, EnvPt, EnvelopeSrc, EveList, Event, EventPayload, NoiseData,
-    NoiseDesignOscillator, NoiseDesignUnit, NoiseType, OsciPt, Song, Unit, UnitIdx, Voice,
-    VoiceData, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints,
+    NoiseDesignOscillator, NoiseDesignUnit, NoiseType, OsciPt, Unit, UnitIdx, Voice, VoiceData,
+    VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints,
 };
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -10,11 +10,11 @@ use std::fmt::Write as _;
 use crate::audio_out::SongState;
 
 /// Migrate overlapping 'on' events from one unit to another
-pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song) -> bool {
+pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, events: &mut EveList) -> bool {
     let mut has_overlap = false;
-    let n_events = song.events.len();
+    let n_events = events.len();
     for i in 0..n_events {
-        let eve1 = &song.events[i];
+        let eve1 = &events[i];
         if eve1.unit != src_unit {
             continue;
         }
@@ -23,7 +23,7 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
         };
         let range1 = eve1.tick..eve1.tick + dur1;
         for j in i + 1..n_events {
-            let eve2 = &mut song.events[j];
+            let eve2 = &mut events[j];
             let eve2_tick = eve2.tick;
             let eve2_unit = eve2.unit;
             if eve2.unit != src_unit {
@@ -41,7 +41,7 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, song: &mut Song)
                 // and we migrate these as well
                 if j >= 3 {
                     for k in j - 3..j {
-                        if let Some(eve3) = song.events.get_mut(k)
+                        if let Some(eve3) = events.get_mut(k)
                             && eve3.tick == eve2_tick
                             && eve3.unit == eve2_unit
                             && let EventPayload::Key(_)

@@ -1198,7 +1198,7 @@ fn poly_migrate_single(
         app_modal.msg("Error: Cannot create more units than 50");
         return None;
     }
-    if !poly_migrate_units(migrate_from, migrate_to, &mut song.song) {
+    if !poly_migrate_units(migrate_from, migrate_to, &mut song.song.events) {
         return None;
     }
     // Duplicate certain types of events for the migrated-to unit
