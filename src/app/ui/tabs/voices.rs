@@ -563,6 +563,9 @@ pub fn voice_ui_inner(
                     slot.inst.num_samples,
                     slot.inst.sample_buf.len()
                 ));
+                if ui.button("Export .wav").clicked() {
+                    app_cmd.push(Cmd::PromptExportWavData(slot.inst.sample_buf.clone()));
+                }
             }
             InstanceTab::Envelope => {
                 ui.label(format!(

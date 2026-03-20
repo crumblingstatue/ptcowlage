@@ -326,7 +326,7 @@ impl App {
             }
         }
         let picked_path = self.file_dia.take_picked();
-        let file_op = self.file_dia.user_data::<FileOp>().copied();
+        let file_op = self.file_dia.user_data::<FileOp>().cloned();
         if *self.file_dia.state() == DialogState::Cancelled {
             // Reset voice test unit index after closing dialog (after preview)
             self.song.lock().unwrap().freeplay_assist_units[0].voice_idx =
@@ -560,6 +560,15 @@ impl App {
                     }
                     song_lock.can_unlock.store(true, Ordering::Relaxed);
                 });
+            }
+            FileOp::ExportWavData(data) => {
+                let f = std::fs::File::create(path).unwrap();
+                match crate::util::write_wav(f, ptcow::ChNum::Mono, bytemuck::cast_slice(&data)) {
+                    Ok(()) => (),
+                    Err(e) => {
+                        self.modal.msg(e);
+                    }
+                }
             }
             FileOp::ExportPtvoice { voice } => {
                 let song = self.song.lock().unwrap();
@@ -940,6 +949,9 @@ impl App {
             }
             Cmd::PromptExportWav => {
                 self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWav, true);
+            }
+            Cmd::PromptExportWavData(data) => {
+                self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWavData(data), true);
             }
             Cmd::PromptExportPtnoise { voice } => {
                 self.open_file_prompt(

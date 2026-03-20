@@ -63,6 +63,7 @@ pub enum Cmd {
     ResetVoiceForUnitsWithVoiceIdx {
         idx: VoiceIdx,
     },
+    PromptExportWavData(Vec<u8>),
 }
 
 #[derive(Default)]

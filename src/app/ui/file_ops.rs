@@ -1,6 +1,6 @@
 use ptcow::VoiceIdx;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum FileOp {
     OpenProj,
     ImportAllPtcop,
@@ -16,6 +16,7 @@ pub enum FileOp {
     ExportPtvoice { voice: VoiceIdx },
     ExportPtnoise { voice: VoiceIdx },
     ImportOggVorbis,
+    ExportWavData(Vec<u8>),
 }
 
 #[derive(Clone, Copy)]
