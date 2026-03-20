@@ -118,6 +118,7 @@ impl WebCmd {
             FileOp::ImportPiyoPiyo => Self::ImportPiyo { data },
             FileOp::ImportOrganya => Self::ImportOrganya { data },
             FileOp::ExportWav => todo!(),
+            FileOp::ExportWavData(_) => todo!(),
             FileOp::ImportPtNoise => Self::ImportPtNoise { data, name },
             FileOp::ImportPtVoice => Self::ImportPtVoice { data, name },
             FileOp::ImportOggVorbis => Self::ImportOggVorbis { data, name },

@@ -380,6 +380,17 @@ impl App {
                             }
                         }
                     }
+                    FileOp::ExportWavData(data) => {
+                        use ptcow::ChNum;
+
+                        let mut out = Vec::new();
+                        let _ = crate::util::write_wav(
+                            &mut out,
+                            ChNum::Mono,
+                            bytemuck::cast_slice(&data),
+                        );
+                        (out, "out.wav")
+                    }
                     _ => return,
                 };
                 crate::web_glue::save_file(&data, filename);
