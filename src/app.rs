@@ -206,8 +206,6 @@ impl App {
             web_cmd: Default::default(),
         };
         load_persistence(cc, &mut this);
-        // SongState comes with a default unit by... default, so let's toot that
-        this.ui_state.shared.active_unit = UnitIdx(0);
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
                 this.modal.msg(format!("Error loading project:\n{e}"));
@@ -975,8 +973,7 @@ impl App {
                 *song = SongState::new(self.out.rate);
                 song.prepare(self.out.rate);
                 self.open_file = None;
-                // Toot default unit that comes with clean state
-                self.ui_state.shared.active_unit = UnitIdx(0);
+                self.ui_state.shared.active_unit = SongState::VOICE_TEST_UNIT_IDX;
             }
             #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {
