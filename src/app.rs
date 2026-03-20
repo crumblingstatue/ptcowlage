@@ -329,7 +329,8 @@ impl App {
         let file_op = self.file_dia.user_data::<FileOp>().copied();
         if *self.file_dia.state() == DialogState::Cancelled {
             // Reset voice test unit index after closing dialog (after preview)
-            self.song.lock().unwrap().voice_test_unit.voice_idx = self.ui_state.voices.selected_idx;
+            self.song.lock().unwrap().freeplay_assist_units[0].voice_idx =
+                self.ui_state.voices.selected_idx;
         }
         (picked_path, file_op)
     }
@@ -408,7 +409,7 @@ impl App {
                     &song.ins,
                     &[],
                     &song.song.master,
-                    &mut song.voice_test_unit,
+                    &mut song.freeplay_assist_units[0],
                 );
             }
             Err(e) => self.modal.msg(e),
@@ -428,7 +429,7 @@ impl App {
                     &song.ins,
                     &[],
                     &song.song.master,
-                    &mut song.voice_test_unit,
+                    &mut song.freeplay_assist_units[0],
                 );
             }
             Err(e) => self.modal.msg(e),
@@ -469,7 +470,7 @@ impl App {
                             song.ins.voices.push(voice);
                         }
                         // Reset back test unit voice idx from preview, to the normal one
-                        song.voice_test_unit.voice_idx = voice_idx;
+                        song.freeplay_assist_units[0].voice_idx = voice_idx;
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
@@ -488,7 +489,7 @@ impl App {
                             song.ins.voices.push(voice);
                         }
                         // Reset back test unit voice idx from preview, to the normal one
-                        song.voice_test_unit.voice_idx = voice_idx;
+                        song.freeplay_assist_units[0].voice_idx = voice_idx;
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
@@ -684,6 +685,21 @@ impl eframe::App for App {
             }
             return;
         }
+        // Clean up unused extra freeplay units
+        {
+            let mut song = self.song.lock().unwrap();
+            let mut idx = 0;
+            song.freeplay_assist_units.retain(|u| {
+                let mut retain = true;
+                if idx != 0 {
+                    if u.tones[0].life_count == 0 {
+                        retain = false;
+                    }
+                }
+                idx += 1;
+                retain
+            });
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| ui::top_panel::top_panel(self, ui));
         if self.ui_state.show_left_panel() {
             egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));
@@ -852,7 +868,7 @@ impl App {
                     &song.ins,
                     std::slice::from_ref(&song.preview_voice),
                     &song.song.master,
-                    &mut song.voice_test_unit,
+                    &mut song.freeplay_assist_units[0],
                 );
             }
             Cmd::OverwriteEvent { idx, payload } => {
@@ -963,7 +979,7 @@ impl App {
                     .herd
                     .units
                     .get_mut(unit)
-                    .unwrap_or(&mut song.voice_test_unit);
+                    .unwrap_or(&mut song.freeplay_assist_units[0]);
                 unit.reset_voice(
                     &song.ins,
                     voice,

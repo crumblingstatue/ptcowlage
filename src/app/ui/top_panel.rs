@@ -224,7 +224,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                         &song.ins,
                         std::slice::from_ref(&song.preview_voice),
                         &song.song.master,
-                        &mut song.voice_test_unit,
+                        &mut song.freeplay_assist_units[0],
                     );
                     app.ui_state.shared.active_unit = SongState::VOICE_TEST_UNIT_IDX;
                 }

@@ -119,7 +119,7 @@ pub fn ui(
                         &song.ins,
                         &[],
                         &song.song.master,
-                        &mut song.voice_test_unit,
+                        &mut song.freeplay_assist_units[0],
                     );
                     reset_voice_for_units_with_voice_idx(song, idx);
                 }
@@ -133,7 +133,7 @@ pub fn ui(
                         &song.ins,
                         &[],
                         &song.song.master,
-                        &mut song.voice_test_unit,
+                        &mut song.freeplay_assist_units[0],
                     );
                     reset_voice_for_units_with_voice_idx(song, idx);
                 }
@@ -173,7 +173,7 @@ pub fn ui(
                     &song.ins,
                     std::slice::from_ref(&song.preview_voice),
                     &song.song.master,
-                    &mut song.voice_test_unit,
+                    &mut song.freeplay_assist_units[0],
                 );
             }
             if re.drag_started() {
@@ -213,7 +213,7 @@ pub fn ui(
             ui_state,
             shared,
             &mut song.herd,
-            &mut song.voice_test_unit,
+            &mut song.freeplay_assist_units[0],
             app_cmd,
         );
     }
@@ -292,15 +292,15 @@ fn voice_import_preview(
             eprintln!("Error loading voice: {e}");
         }
     }
-    song.voice_test_unit.reset_voice(
+    let unit = &mut song.freeplay_assist_units[0];
+    unit.reset_voice(
         &song.ins,
         PREVIEW_VOICE_IDX,
         song.song.master.timing,
         std::slice::from_ref(&song.preview_voice),
     );
-    song.voice_test_unit
-        .set_key(shared.freeplay.last_played_key);
-    song.voice_test_unit.on(
+    unit.set_key(shared.freeplay.last_played_key);
+    unit.on(
         SongState::VOICE_TEST_UNIT_IDX,
         &song.ins,
         &[],

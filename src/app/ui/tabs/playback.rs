@@ -71,12 +71,12 @@ fn playback_cows_ui(
     app_modal: &mut Modal,
 ) {
     let mut cmd = None;
-    for (i, unit) in song
-        .herd
-        .units
-        .enumerated_mut()
-        .chain(std::iter::once((UnitIdx(255), &mut song.voice_test_unit)))
-    {
+    for (i, unit) in song.herd.units.enumerated_mut().chain(
+        song.freeplay_assist_units
+            .iter_mut()
+            .enumerate()
+            .map(|(i, u)| (UnitIdx(SongState::EXTRA_UNITS_START_IDX.0 + i as u8), u)),
+    ) {
         ui.horizontal(|ui| {
             ui.set_height(32.0);
             ui.scope(|ui| {

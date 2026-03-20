@@ -11,6 +11,7 @@ use {
                 unit_color, unit_voice_img,
             },
         },
+        audio_out::SongState,
         egui_ext::ImageExt,
         util::HashSetExt as _,
     },
@@ -70,18 +71,20 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
                 );
             }
             ui.separator();
-            unit_ui(
-                &mut app.ui_state,
-                ui,
-                &mut song.ins,
-                std::slice::from_ref(&song.preview_voice),
-                &mut cmd,
-                n_units,
-                UnitIdx(255),
-                &mut song.voice_test_unit,
-                &mut app.cmd,
-                &song.song.events,
-            );
+            for (i, extra) in song.freeplay_assist_units.iter_mut().enumerate() {
+                unit_ui(
+                    &mut app.ui_state,
+                    ui,
+                    &mut song.ins,
+                    std::slice::from_ref(&song.preview_voice),
+                    &mut cmd,
+                    n_units,
+                    UnitIdx(SongState::EXTRA_UNITS_START_IDX.0 + i as u8),
+                    extra,
+                    &mut app.cmd,
+                    &song.song.events,
+                );
+            }
         });
     handle_units_command(cmd, song, &mut app.modal, &mut app.ui_state.shared);
     ui.checkbox(&mut app.ui_state.left.select_mode, "Select mode");

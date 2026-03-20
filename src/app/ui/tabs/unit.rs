@@ -30,7 +30,7 @@ pub fn ui(
                 .herd
                 .units
                 .get_mut(shared.active_unit)
-                .unwrap_or(&mut song.voice_test_unit);
+                .unwrap_or(&mut song.freeplay_assist_units[0]);
             unit_ui(
                 ui,
                 shared.active_unit,

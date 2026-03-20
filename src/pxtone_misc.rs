@@ -207,7 +207,7 @@ pub fn reset_voice_for_units_with_voice_idx(song: &mut SongState, idx: VoiceIdx)
         .herd
         .units
         .iter_mut()
-        .chain(std::iter::once(&mut song.voice_test_unit))
+        .chain(&mut song.freeplay_assist_units)
     {
         if unit.voice_idx == idx {
             unit.reset_voice(

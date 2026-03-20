@@ -52,13 +52,18 @@ pub struct SongState {
     pub ins: MooInstructions,
     pub pause: bool,
     pub master_vol: f32,
-    pub voice_test_unit: Unit,
+    /// The first unit is always the one used for testing voices
+    ///
+    /// The rest is used for additional polyphony units
+    pub freeplay_assist_units: Vec<Unit>,
     /// Used for previewing voices in file dialog selection
     pub preview_voice: Voice,
 }
 
 impl SongState {
-    pub const VOICE_TEST_UNIT_IDX: UnitIdx = UnitIdx(255);
+    pub const EXTRA_UNITS_START_IDX: UnitIdx = UnitIdx(50);
+    // The first extra unit is always the voice test unit
+    pub const VOICE_TEST_UNIT_IDX: UnitIdx = Self::EXTRA_UNITS_START_IDX;
 
     pub fn new(sample_rate: SampleRate) -> Self {
         let mut this = Self {
@@ -67,11 +72,11 @@ impl SongState {
             ins: MooInstructions::new(sample_rate),
             pause: true,
             master_vol: 1.0,
-            voice_test_unit: Unit {
+            freeplay_assist_units: vec![Unit {
                 name: "Voice test".into(),
                 volume: 100,
                 ..Default::default()
-            },
+            }],
             preview_voice: Voice::from_data(ptcow::VoiceData::Wave(pxtone_misc::square_wave())),
         };
         // Set the end meas for new songs to make sure there is nice big area to play around with
@@ -80,8 +85,12 @@ impl SongState {
         let mut voice = Voice::from_data(ptcow::VoiceData::Noise(noise_data));
         voice.name = "Moo".into();
         this.ins.voices.push(voice);
-        this.voice_test_unit
-            .reset_voice(&this.ins, VoiceIdx(0), this.song.master.timing, &[]);
+        this.freeplay_assist_units[0].reset_voice(
+            &this.ins,
+            VoiceIdx(0),
+            this.song.master.timing,
+            &[],
+        );
         this
     }
     pub fn prepare(&mut self, sample_rate: SampleRate) {
@@ -135,7 +144,7 @@ pub fn spawn_ptcow_audio_thread(
             &song.song,
             out_buf_mut_ref,
             !song.pause,
-            std::slice::from_mut(&mut song.voice_test_unit),
+            &mut song.freeplay_assist_units,
             std::slice::from_ref(&song.preview_voice),
         );
         drop(song_g);

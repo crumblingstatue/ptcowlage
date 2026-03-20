@@ -46,6 +46,8 @@ pub struct FreeplayState {
     record: bool,
     velocity: i16,
     last_played_key: ptcow::Key,
+    // Whether to perform automatic polyphony (create extra poly units)
+    poly: bool,
 }
 
 impl Default for FreeplayState {
@@ -57,6 +59,7 @@ impl Default for FreeplayState {
             record: false,
             velocity: 100,
             last_played_key: ptcow::DEFAULT_KEY,
+            poly: false,
         }
     }
 }
@@ -100,6 +103,7 @@ pub fn piano_freeplay_ui(
         ui.checkbox(&mut state.record, egui::RichText::new("⏺ Record").color(c))
             .on_hover_text("Record freeplay (ctrl+space)");
     }
+    ui.checkbox(&mut shared.freeplay.poly, "poly");
 }
 
 fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
@@ -189,17 +193,29 @@ fn piano_freeplay_play_note(
     song: &mut SongState,
     state: &mut FreeplayState,
     piano_key: i32,
-    unit_no: UnitIdx,
+    mut unit_no: UnitIdx,
 ) {
     let tick = ptcow::current_tick(&song.herd, &song.ins);
     // Set key
     let key = piano_key_to_pxtone_key(piano_key);
-    // Fall back to the "voice test unit" if the index is out of bounds
-    let unit = song
-        .herd
-        .units
-        .get_mut(unit_no)
-        .unwrap_or(&mut song.voice_test_unit);
+    // First, determine which unit we want to freeplay.
+    // If the unit index is < 50, it's a herd unit, otherwise it's the voice test unit
+    let extra_units_len = song.freeplay_assist_units.len() as u8;
+    let mut unit = if unit_no.0 < SongState::EXTRA_UNITS_START_IDX.0 {
+        &mut song.herd.units[unit_no]
+    } else {
+        &mut song.freeplay_assist_units[0]
+    };
+    // Next, we check if the unit is already playing.
+    // If yes, we create a polyphony unit
+    let playing = unit.tones.iter().any(|t| t.life_count != 0);
+    if playing && state.poly {
+        let mut unit_clone = unit.clone();
+        unit_no = UnitIdx(SongState::EXTRA_UNITS_START_IDX.0 + extra_units_len);
+        unit_clone.name = format!("Poly {}", unit_no.0);
+        song.freeplay_assist_units.push(unit_clone);
+        unit = song.freeplay_assist_units.last_mut().unwrap();
+    }
     // Don't try to record if the unit number doesn't point inside the herd
     let record = state.record && unit_no.0 < 50;
     unit.set_key(key);

@@ -962,10 +962,12 @@ fn piano_ui(
                 pnt.rect_filled(key_rect, 3.0, bg_color);
                 // Display highlight for up to 4 simultaneously playing units
                 let mut playing_colors = ArrayVec::<_, 4>::new();
-                for (i, unit) in song.herd.units.enumerated().chain(std::iter::once((
-                    SongState::VOICE_TEST_UNIT_IDX,
-                    &song.voice_test_unit,
-                ))) {
+                for (i, unit) in song.herd.units.enumerated().chain(
+                    song.freeplay_assist_units
+                        .iter()
+                        .enumerate()
+                        .map(|(i, u)| (UnitIdx(SongState::EXTRA_UNITS_START_IDX.0 + i as u8), u)),
+                ) {
                     if unit.key_now / 256 == i32::from(semitone) && !unit.mute && unit_alive(unit) {
                         if playing_colors.is_full() {
                             break;
