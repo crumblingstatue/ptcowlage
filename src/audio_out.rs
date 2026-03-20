@@ -131,18 +131,18 @@ pub fn spawn_ptcow_audio_thread(
         channels_count: 2,
         channel_sample_count: out_params.buf_size / 2,
     };
-    let mut out_buf_s16: Vec<i16> = vec![0; out_params.buf_size];
+    let mut rendered_s32: Vec<i32> = vec![0; out_params.buf_size];
     tinyaudio::run_output_device(params, move |out| {
         // Critical section (should be kept as small as possible)
         let mut song_g = song.lock().unwrap();
         let song: &mut SongState = &mut song_g;
         let master_vol = song.master_vol;
-        let out_buf_mut_ref = &mut out_buf_s16;
+        let rendered_s32_ref = &mut rendered_s32;
         // INVARIANT: We assume `moo` never panics. Panicking is a bug.
         song.herd.moo(
             &song.ins,
             &song.song,
-            out_buf_mut_ref,
+            rendered_s32_ref,
             !song.pause,
             &mut song.freeplay_assist_units,
             std::slice::from_ref(&song.preview_voice),
@@ -151,13 +151,24 @@ pub fn spawn_ptcow_audio_thread(
         // End critical section
 
         // Convert to output format and apply master volume, then write to out buffer
-        for (src, dst) in zip(&out_buf_s16, &mut *out) {
-            *dst = s16_to_f32(*src) * master_vol;
+        for (src, dst) in zip(&rendered_s32, &mut *out) {
+            *dst = s32_to_f32(*src) * master_vol;
+        }
+        // Hard limiter to avoid audio clipping (e.g. when too many units are playing)
+        let mut max = 0.0;
+        for smp in &mut *out {
+            max = f32::max(max, smp.abs());
+        }
+        if max > 1.0 {
+            let scale = 1.0 / max;
+            for smp in &mut *out {
+                *smp *= scale;
+            }
         }
     })
     .unwrap()
 }
 
-fn s16_to_f32(src: i16) -> f32 {
-    f32::from(src) / 32768.0
+fn s32_to_f32(src: i32) -> f32 {
+    src as f32 / 32768.
 }

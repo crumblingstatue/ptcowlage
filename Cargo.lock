@@ -2264,8 +2264,7 @@ checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
 [[package]]
 name = "ptcow"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6aab14aaa1ef0129e97e6d3c3fbb60251eafa80dab851bb8616cc98b6c16c3f"
+source = "git+https://github.com/crumblingstatue/ptcow.git#33a07627fa086af8e7bb104e4d0433d34aba9d78"
 dependencies = [
  "arrayvec",
  "bitflags 2.11.0",
