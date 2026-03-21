@@ -1060,7 +1060,10 @@ fn piano_roll_config_popup_button(ui: &mut egui::Ui, state: &mut PianoRollState)
             ui.style_mut().spacing.slider_width = 240.0;
             egui::Grid::new("roll_cfg_grid").show(ui, |ui| {
                 ui.label("Clock div");
-                ui.add(egui::Slider::new(&mut state.tick_div, 0.1..=100.0));
+                ui.add(
+                    egui::Slider::new(&mut state.tick_div, 0.1..=100.0)
+                        .clamping(egui::SliderClamping::Never),
+                );
                 ui.end_row();
                 ui.label("Num of rows");
                 ui.add(egui::Slider::new(&mut state.n_rows, 8..=128));
