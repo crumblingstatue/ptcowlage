@@ -104,6 +104,13 @@ pub fn piano_freeplay_ui(
             .on_hover_text("Record freeplay (ctrl+space)");
     }
     ui.checkbox(&mut shared.freeplay.poly, "poly");
+    if ui
+        .button("‼")
+        .on_hover_text("Panic (stop all units)")
+        .clicked()
+    {
+        song.panic();
+    }
 }
 
 fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {

@@ -104,6 +104,29 @@ impl SongState {
             &self.song.master,
         );
     }
+    /// Stop all audio playback
+    pub(crate) fn panic(&mut self) {
+        // Stop all units
+        for unit in self
+            .herd
+            .units
+            .iter_mut()
+            .chain(&mut self.freeplay_assist_units)
+        {
+            for tone in &mut unit.tones {
+                tone.life_count = 0;
+                self.pause = true;
+            }
+        }
+        // Stop delay effects
+        for delay in &mut self.herd.delays {
+            delay.rebuild(
+                self.song.master.timing.beats_per_meas,
+                self.song.master.timing.bpm,
+                self.ins.out_sample_rate,
+            );
+        }
+    }
 }
 
 pub fn prepare_song(song: &mut SongState, loop_: bool) {
