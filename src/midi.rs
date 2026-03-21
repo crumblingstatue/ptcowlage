@@ -171,7 +171,8 @@ pub fn write_midi_to_pxtone(
                                     }
                                 }
                             }
-                            panic!("Couldn't determine note duration");
+                            // Fall back to the last event's tick to determine note duration
+                            events.last().unwrap().tick - event.tick
                         };
                         song.events.eves.push(Event {
                             payload: EventPayload::On { duration },
