@@ -261,6 +261,10 @@ fn table_body_ui(
                             *ev_list_cmd = Some(EventListCmd::Swap(idx, idx + 1));
                         }
                     });
+                    ui.horizontal(|ui| {
+                        ui.label("Tick");
+                        ui.add(egui::DragValue::new(&mut ev.tick));
+                    });
                     ui.separator();
                     if ui.button("Delete").clicked() {
                         *ev_list_cmd = Some(EventListCmd::Remove { idx });
