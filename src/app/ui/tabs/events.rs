@@ -15,7 +15,7 @@ use {
     eframe::egui::{self, AtomExt},
     egui_extras::{Column, TableBody},
     egui_toast::ToastKind,
-    ptcow::{Event, EventPayload, GroupIdx, PanTime, UnitIdx, Voice, VoiceIdx},
+    ptcow::{DEFAULT_KEY, Event, EventPayload, GroupIdx, PanTime, UnitIdx, Voice, VoiceIdx},
 };
 
 pub struct RawEventsUiState {
@@ -49,6 +49,7 @@ impl Default for RawEventsUiState {
 enum EventListCmd {
     Remove { idx: usize },
     Insert { idx: usize, event: Event },
+    InsertAfter { idx: usize, event: Event },
     Swap(usize, usize),
     TruncateAfter(usize),
     Cut { idx: usize },
@@ -196,6 +197,9 @@ pub fn ui(
             EventListCmd::Insert { idx, event } => {
                 song.song.events.insert(idx, event);
             }
+            EventListCmd::InsertAfter { idx, event } => {
+                song.song.events.insert(idx + 1, event);
+            }
             EventListCmd::Swap(a, b) => {
                 song.song.events.swap(a, b);
             }
@@ -264,30 +268,41 @@ fn table_body_ui(
                     if ui.button("Cut").clicked() {
                         *ev_list_cmd = Some(EventListCmd::Cut { idx });
                     }
+                    ui.menu_button("Change into", |ui| {
+                        if let Some(payload) = event_payload_select_ui(ui) {
+                            ev.payload = payload;
+                        }
+                    });
                     ui.menu_button("Insert before", |ui| {
-                        let mut payload = None;
-                        if ui.button("Volume").clicked() {
-                            payload = Some(EventPayload::Volume(127));
-                        }
-                        if ui.button("Voice").clicked() {
-                            payload = Some(EventPayload::SetVoice(VoiceIdx(0)));
-                        }
-                        if ui.button("Group").clicked() {
-                            payload = Some(EventPayload::SetGroup(GroupIdx(0)));
-                        }
                         if let Some(event) = ui_state.cut_event {
                             if ui.button("Paste cut event").clicked() {
                                 *ev_list_cmd = Some(EventListCmd::Insert { idx, event });
                                 ui_state.cut_event = None;
                             }
                         }
-                        if let Some(payload) = payload {
+                        if let Some(payload) = event_payload_select_ui(ui) {
                             let event = Event {
                                 payload,
                                 unit: ev.unit,
                                 tick: ev.tick,
                             };
                             *ev_list_cmd = Some(EventListCmd::Insert { idx, event });
+                        }
+                    });
+                    ui.menu_button("Insert after", |ui| {
+                        if let Some(event) = ui_state.cut_event {
+                            if ui.button("Paste cut event").clicked() {
+                                *ev_list_cmd = Some(EventListCmd::Insert { idx, event });
+                                ui_state.cut_event = None;
+                            }
+                        }
+                        if let Some(payload) = event_payload_select_ui(ui) {
+                            let event = Event {
+                                payload,
+                                unit: ev.unit,
+                                tick: ev.tick,
+                            };
+                            *ev_list_cmd = Some(EventListCmd::InsertAfter { idx, event });
                         }
                     });
                     if ui.button("Clone (C)").clicked() {
@@ -390,6 +405,62 @@ fn table_body_ui(
             );
         });
     });
+}
+
+fn event_payload_select_ui(ui: &mut egui::Ui) -> Option<EventPayload> {
+    let mut payload = None;
+    if ui.button("Null").clicked() {
+        payload = Some(EventPayload::Null);
+    }
+    if ui.button("On").clicked() {
+        payload = Some(EventPayload::On { duration: 1000 });
+    }
+    if ui.button("Key").clicked() {
+        payload = Some(EventPayload::Key(DEFAULT_KEY));
+    }
+    if ui.button("PanVol").clicked() {
+        payload = Some(EventPayload::PanVol(64));
+    }
+    if ui.button("Velocity").clicked() {
+        payload = Some(EventPayload::Velocity(100));
+    }
+    if ui.button("Volume").clicked() {
+        payload = Some(EventPayload::Volume(100));
+    }
+    if ui.button("Portament").clicked() {
+        payload = Some(EventPayload::Portament { duration: 100 });
+    }
+    if ui.button("BeatClock").clicked() {
+        payload = Some(EventPayload::BeatClock);
+    }
+    if ui.button("BeatTempo").clicked() {
+        payload = Some(EventPayload::BeatTempo);
+    }
+    if ui.button("BeatNum").clicked() {
+        payload = Some(EventPayload::BeatNum);
+    }
+    if ui.button("Repeat").clicked() {
+        payload = Some(EventPayload::Repeat);
+    }
+    if ui.button("Last").clicked() {
+        payload = Some(EventPayload::Last);
+    }
+    if ui.button("SetVoice").clicked() {
+        payload = Some(EventPayload::SetVoice(VoiceIdx(0)));
+    }
+    if ui.button("SetGroup").clicked() {
+        payload = Some(EventPayload::SetGroup(GroupIdx(0)));
+    }
+    if ui.button("Tuning").clicked() {
+        payload = Some(EventPayload::Tuning(1.0));
+    }
+    if ui.button("PanTime").clicked() {
+        payload = Some(EventPayload::PanTime(PanTime(64)));
+    }
+    if ui.button("PtcowDebug").clicked() {
+        payload = Some(EventPayload::PtcowDebug(0));
+    }
+    payload
 }
 
 fn payload_coumn_ui(
