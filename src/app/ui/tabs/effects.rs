@@ -4,7 +4,7 @@ use {
         audio_out::SongState,
     },
     eframe::egui,
-    ptcow::{Delay, DelayUnit, GroupIdx, Overdrive, SampleRate, Song},
+    ptcow::{Delay, DelayUnit, GroupIdx, Overdrive, Song},
 };
 
 #[derive(Default)]
@@ -22,7 +22,6 @@ enum Tab {
 pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
-    out_rate: SampleRate,
     ui_state: &mut EffectsUiState,
     shared: &mut SharedUiState,
 ) {
@@ -53,7 +52,7 @@ pub fn ui(
             delay.rebuild(
                 song.song.master.timing.beats_per_meas,
                 song.song.master.timing.bpm,
-                out_rate,
+                song.ins.out_sample_rate,
             );
             song.herd.delays.push(delay);
         }
@@ -84,7 +83,7 @@ pub fn ui(
                         delay_ui(
                             ui,
                             &song.song,
-                            out_rate,
+                            song.ins.out_sample_rate,
                             i,
                             dela,
                             &mut msg,

@@ -387,7 +387,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             ui,
             &mut song,
             &mut app.ui_state.raw_events,
-            app.out.rate,
             &mut app.cmd,
             &mut app.modal,
             &mut app.ui_state.shared,
@@ -397,7 +396,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             &mut song,
             &mut app.ui_state.voices,
             &mut app.ui_state.shared,
-            app.out.rate,
             &mut app.cmd,
             #[cfg(not(target_arch = "wasm32"))]
             &mut app.file_dia,
@@ -412,7 +410,6 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
         Tab::Effects => tabs::effects::ui(
             ui,
             &mut song,
-            app.out.rate,
             &mut app.ui_state.effects,
             &mut app.ui_state.shared,
         ),

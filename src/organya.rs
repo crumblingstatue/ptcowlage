@@ -1,8 +1,8 @@
 use std::num::NonZeroU32;
 
 use ptcow::{
-    Event, EventPayload, Herd, MooInstructions, PcmData, SampleRate, Song, Unit, UnitIdx, Voice,
-    VoiceFlags, VoiceUnit,
+    Event, EventPayload, Herd, MooInstructions, PcmData, Song, Unit, UnitIdx, Voice, VoiceFlags,
+    VoiceUnit,
 };
 
 fn org_tempo_to_bpm(tempo: u16, steps_per_beat: u8) -> f32 {
@@ -11,13 +11,7 @@ fn org_tempo_to_bpm(tempo: u16, steps_per_beat: u8) -> f32 {
 const DRUM_DATA: &[u8] = include_bytes!("../res/org-drums.pcm");
 const WAVE_DATA: &[u8] = include_bytes!("../res/org-wave.pcm");
 
-pub fn import(
-    org: &organyacat::Song,
-    herd: &mut Herd,
-    song: &mut Song,
-    ins: &mut MooInstructions,
-    out_sample_rate: SampleRate,
-) {
+pub fn import(org: &organyacat::Song, herd: &mut Herd, song: &mut Song, ins: &mut MooInstructions) {
     song.master.timing.beats_per_meas = org.beats_per_measure;
     song.master.timing.bpm = org_tempo_to_bpm(org.tempo_ms, org.steps_per_beat);
     song.master.timing.ticks_per_beat = u16::from(org.steps_per_beat) * 120;
@@ -88,13 +82,7 @@ pub fn import(
         unit_counter += 1;
     }
     out_ev.sort_by_key(|ev| ev.tick);
-    ptcow::rebuild_tones(
-        ins,
-        out_sample_rate,
-        &mut herd.delays,
-        &mut herd.overdrives,
-        &song.master,
-    );
+    ptcow::rebuild_tones(ins, &mut herd.delays, &mut herd.overdrives, &song.master);
 }
 
 fn wave_voice(ch: &organyacat::Channel) -> Voice {

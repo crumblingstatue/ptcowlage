@@ -2283,7 +2283,7 @@ checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
 [[package]]
 name = "ptcow"
 version = "0.6.0"
-source = "git+https://github.com/crumblingstatue/ptcow.git#33a07627fa086af8e7bb104e4d0433d34aba9d78"
+source = "git+https://github.com/crumblingstatue/ptcow.git#7a86ad69bf183ba3fd4edf452db2393a28b6d828"
 dependencies = [
  "arrayvec",
  "bitflags 2.11.0",

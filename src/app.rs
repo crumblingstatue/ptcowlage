@@ -154,7 +154,6 @@ impl App {
                 &mut song_state.herd,
                 &mut song_state.song,
                 &mut song_state.ins,
-                sample_rate,
             );
         }
         if let Some(path) = args.org_import {
@@ -166,13 +165,12 @@ impl App {
                 &mut song_state.herd,
                 &mut song_state.song,
                 &mut song_state.ins,
-                sample_rate,
             );
         }
         if let Some(ptcop_path) = args.voice_import {
             import_voices_from_ptcop(&ptcop_path, &mut song_state);
         }
-        song_state.prepare(sample_rate);
+        song_state.prepare();
         let song_state_handle = Arc::new(Mutex::new(song_state));
         let mut this = Self {
             prefs: Preferences::default(),
@@ -251,21 +249,15 @@ impl App {
                 self.modal.msg(e);
             }
         }
-        post_load_prep(song, self.out.rate, &mut self.ui_state.shared.active_unit);
+        post_load_prep(song, &mut self.ui_state.shared.active_unit);
     }
 
     fn import_piyopiyo_from_bytes(&mut self, data: &[u8]) {
         let piyo = piyopiyo::Song::load(data).unwrap();
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
-        crate::piyopiyo::import(
-            &piyo,
-            &mut song.herd,
-            &mut song.song,
-            &mut song.ins,
-            self.out.rate,
-        );
-        post_load_prep(song, self.out.rate, &mut self.ui_state.shared.active_unit);
+        crate::piyopiyo::import(&piyo, &mut song.herd, &mut song.song, &mut song.ins);
+        post_load_prep(song, &mut self.ui_state.shared.active_unit);
     }
 
     fn import_organya_from_bytes(&mut self, data: &[u8]) {
@@ -273,14 +265,8 @@ impl App {
         org.read(data).unwrap();
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
-        crate::organya::import(
-            &org,
-            &mut song.herd,
-            &mut song.song,
-            &mut song.ins,
-            self.out.rate,
-        );
-        post_load_prep(song, self.out.rate, &mut self.ui_state.shared.active_unit);
+        crate::organya::import(&org, &mut song.herd, &mut song.song, &mut song.ins);
+        post_load_prep(song, &mut self.ui_state.shared.active_unit);
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
@@ -688,7 +674,6 @@ impl eframe::App for App {
                 self.cmd.push(Cmd::ReplaceAudioThread);
                 post_load_prep(
                     &mut self.song.lock().unwrap(),
-                    self.out.rate,
                     &mut self.ui_state.shared.active_unit,
                 );
                 self.song_lock.my.locked = false;
@@ -841,11 +826,7 @@ impl App {
         song_ref.song = song;
         song_ref.herd = herd;
         song_ref.ins = ins;
-        post_load_prep(
-            song_ref,
-            self.out.rate,
-            &mut self.ui_state.shared.active_unit,
-        );
+        post_load_prep(song_ref, &mut self.ui_state.shared.active_unit);
         Ok(())
     }
 
@@ -982,7 +963,7 @@ impl App {
             Cmd::ClearProject => {
                 let mut song = self.song.lock().unwrap();
                 *song = SongState::new(self.out.rate);
-                song.prepare(self.out.rate);
+                song.prepare();
                 self.open_file = None;
                 self.ui_state.shared.active_unit = SongState::VOICE_TEST_UNIT_IDX;
             }
@@ -1143,12 +1124,11 @@ impl App {
     }
 }
 
-fn post_load_prep(song_ref: &mut SongState, out_rate: SampleRate, freeplay_toot: &mut UnitIdx) {
+fn post_load_prep(song_ref: &mut SongState, freeplay_toot: &mut UnitIdx) {
     // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
     crate::audio_out::prepare_song(song_ref, true);
     ptcow::rebuild_tones(
         &mut song_ref.ins,
-        out_rate,
         &mut song_ref.herd.delays,
         &mut song_ref.herd.overdrives,
         &song_ref.song.master,

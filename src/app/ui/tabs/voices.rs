@@ -101,7 +101,6 @@ pub fn ui(
     song: &mut SongState,
     ui_state: &mut VoicesUiState,
     shared: &mut SharedUiState,
-    out_rate: SampleRate,
     app_cmd: &mut CommandQueue,
     #[cfg(not(target_arch = "wasm32"))] app_file_dia: &mut egui_file_dialog::FileDialog,
 ) {
@@ -209,7 +208,7 @@ pub fn ui(
             voice,
             ui_state.selected_idx,
             &mut op,
-            out_rate,
+            song.ins.out_sample_rate,
             ui_state,
             shared,
             &mut song.herd,
@@ -259,10 +258,22 @@ pub fn ui(
             if let Some(op) = app_file_dia.user_data::<FileOp>() {
                 match op {
                     FileOp::ImportPtVoice | FileOp::ReplacePtVoiceSingle(_) => {
-                        voice_import_preview(song, out_rate, en, just_load_ptvoice, shared);
+                        voice_import_preview(
+                            song,
+                            song.ins.out_sample_rate,
+                            en,
+                            just_load_ptvoice,
+                            shared,
+                        );
                     }
                     FileOp::ImportPtNoise | FileOp::ReplacePtNoiseSingle(_) => {
-                        voice_import_preview(song, out_rate, en, just_load_ptnoise, shared);
+                        voice_import_preview(
+                            song,
+                            song.ins.out_sample_rate,
+                            en,
+                            just_load_ptnoise,
+                            shared,
+                        );
                     }
                     _ => {}
                 }

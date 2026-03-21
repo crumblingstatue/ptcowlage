@@ -150,11 +150,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                     }
                 }
                 // Doesn't seem to sound right until we restart the song
-                crate::app::post_load_prep(
-                    song,
-                    app.out.rate,
-                    &mut app.ui_state.shared.active_unit,
-                );
+                crate::app::post_load_prep(song, &mut app.ui_state.shared.active_unit);
             }
             ui.separator();
             if ui.button("Title and comment").clicked() {
@@ -498,7 +494,6 @@ fn timing_popup_ui(
         prepare_song(song, true);
         ptcow::rebuild_tones(
             &mut song.ins,
-            app_out.rate,
             &mut song.herd.delays,
             &mut song.herd.overdrives,
             &song.song.master,

@@ -93,12 +93,11 @@ impl SongState {
         );
         this
     }
-    pub fn prepare(&mut self, sample_rate: SampleRate) {
+    pub fn prepare(&mut self) {
         // We want to be prepared to moo before we spawn the audio thread, so we can toot and stuff.
         crate::audio_out::prepare_song(self, true);
         ptcow::rebuild_tones(
             &mut self.ins,
-            sample_rate,
             &mut self.herd.delays,
             &mut self.herd.overdrives,
             &self.song.master,

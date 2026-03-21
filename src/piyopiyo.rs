@@ -1,7 +1,7 @@
 use piyopiyo::{DRUM_SAMPLES, piano_keys};
 use ptcow::{
-    EnvPt, EnvelopeSrc, Event, EventPayload, Herd, MooInstructions, OsciPt, PcmData, SampleRate,
-    Song, Unit, UnitIdx, Voice, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints,
+    EnvPt, EnvelopeSrc, Event, EventPayload, Herd, MooInstructions, OsciPt, PcmData, Song, Unit,
+    UnitIdx, Voice, VoiceFlags, VoiceIdx, VoiceUnit, WaveData, WaveDataPoints,
 };
 use rustc_hash::FxHashMap;
 
@@ -23,13 +23,7 @@ fn piyo_pan_to_pxtone_pan(piyo: i16) -> u8 {
         .unwrap()
 }
 
-pub fn import(
-    piyo: &piyopiyo::Song,
-    herd: &mut Herd,
-    song: &mut Song,
-    ins: &mut MooInstructions,
-    out_sample_rate: SampleRate,
-) {
+pub fn import(piyo: &piyopiyo::Song, herd: &mut Herd, song: &mut Song, ins: &mut MooInstructions) {
     song.events.clear();
     // We assume this default timing is good for all PiyoPiyo songs, which might not be true(?)
     song.master.timing.ticks_per_beat = 480;
@@ -206,11 +200,5 @@ pub fn import(
     song.master.loop_points.last = None;
     song.recalculate_length();
     song.events.sort();
-    ptcow::rebuild_tones(
-        ins,
-        out_sample_rate,
-        &mut herd.delays,
-        &mut herd.overdrives,
-        &song.master,
-    );
+    ptcow::rebuild_tones(ins, &mut herd.delays, &mut herd.overdrives, &song.master);
 }

@@ -15,7 +15,7 @@ use {
     eframe::egui::{self, AtomExt},
     egui_extras::{Column, TableBody},
     egui_toast::ToastKind,
-    ptcow::{Event, EventPayload, GroupIdx, PanTime, SampleRate, UnitIdx, Voice, VoiceIdx},
+    ptcow::{Event, EventPayload, GroupIdx, PanTime, UnitIdx, Voice, VoiceIdx},
 };
 
 pub struct RawEventsUiState {
@@ -70,7 +70,6 @@ pub fn ui(
     ui: &mut egui::Ui,
     song: &mut SongState,
     ui_state: &mut RawEventsUiState,
-    out_rate: SampleRate,
     app_cmd: &mut CommandQueue,
     app_modal: &mut Modal,
     shared: &mut SharedUiState,
@@ -135,7 +134,6 @@ pub fn ui(
                 &unit_names,
                 app_cmd,
                 &mut unit_cmd,
-                out_rate,
             );
         });
     if let Some(evt_discr) = ui_state.filter.event
@@ -206,7 +204,6 @@ fn table_body_ui(
     unit_names: &[String],
     app_cmd: &mut CommandQueue,
     unit_cmd: &mut Option<UnitsCmd>,
-    out_rate: SampleRate,
 ) {
     let k_c = body.ui_mut().input(|inp| inp.key_pressed(egui::Key::C));
     body.ui_mut().style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
@@ -376,7 +373,6 @@ fn table_body_ui(
                 ev,
                 ui_state,
                 app_cmd,
-                out_rate,
                 &mut song.herd,
                 &mut song.ins,
                 std::slice::from_ref(&song.preview_voice),
@@ -390,7 +386,6 @@ fn payload_coumn_ui(
     ev: &mut ptcow::Event,
     ui_state: &mut RawEventsUiState,
     app_cmd: &mut CommandQueue,
-    out_rate: SampleRate,
     herd: &mut ptcow::Herd,
     ins: &mut ptcow::MooInstructions,
     extra_voices: &[Voice],
@@ -503,7 +498,7 @@ fn payload_coumn_ui(
                 ui.label("Pan time");
                 let changed = ui.add(crate::app::ui::unit::pan_time_slider(val)).changed();
                 if changed && ui_state.preview_unit_changes {
-                    herd.units[ev.unit].pan_time_offs = val.to_lr_offsets(out_rate);
+                    herd.units[ev.unit].pan_time_offs = val.to_lr_offsets(ins.out_sample_rate);
                 }
             });
         }
