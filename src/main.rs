@@ -38,6 +38,10 @@ mod util;
 mod web_glue;
 
 #[cfg(not(target_arch = "wasm32"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(clap::Parser)]
 struct CliArgs {
     #[arg(long)]

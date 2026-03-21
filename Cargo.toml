@@ -41,6 +41,9 @@ egui-file-dialog = "0.12"
 clap.version = "4.5"
 clap.features = ["derive"]
 recently_used_list = "0.1.0"
+# mimalloc seems to give substantially better epaint performance for the piano roll
+mimalloc.version = "0.1"
+mimalloc.features = ["v3"]
 
 [profile.dev]
 debug = "line-tables-only"
