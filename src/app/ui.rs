@@ -201,6 +201,10 @@ fn piano_freeplay_play_note(
     // First, determine which unit we want to freeplay.
     // If the unit index is < 50, it's a herd unit, otherwise it's the voice test unit
     let extra_units_len = song.freeplay_assist_units.len() as u8;
+    // Cap extra units at 200 to avoid unit index overflow, etc.
+    if extra_units_len > 200 {
+        return;
+    }
     let mut unit = if unit_no.0 < SongState::EXTRA_UNITS_START_IDX.0 {
         match song.herd.units.get_mut(unit_no) {
             Some(unit) => unit,
