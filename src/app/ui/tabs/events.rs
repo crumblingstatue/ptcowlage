@@ -163,7 +163,7 @@ pub fn ui(
                     5 => EventPayload::Volume(0),
                     6 => EventPayload::Portament { duration: 0 },
                     7 => EventPayload::BeatClock,
-                    8 => EventPayload::BeatTempo,
+                    8 => EventPayload::BeatTempo(0.),
                     9 => EventPayload::BeatNum,
                     10 => EventPayload::Repeat,
                     11 => EventPayload::Last,
@@ -438,7 +438,7 @@ fn event_payload_select_ui(ui: &mut egui::Ui) -> Option<EventPayload> {
         payload = Some(EventPayload::BeatClock);
     }
     if ui.button("BeatTempo").clicked() {
-        payload = Some(EventPayload::BeatTempo);
+        payload = Some(EventPayload::BeatTempo(240.0));
     }
     if ui.button("BeatNum").clicked() {
         payload = Some(EventPayload::BeatNum);
@@ -522,8 +522,8 @@ fn payload_coumn_ui(
         EventPayload::BeatClock => {
             ui.label("BeatClock");
         }
-        EventPayload::BeatTempo => {
-            ui.label("BeatTempo");
+        EventPayload::BeatTempo(tempo) => {
+            ui.add(egui::DragValue::new(tempo));
         }
         EventPayload::BeatNum => {
             ui.label("BeatNum");

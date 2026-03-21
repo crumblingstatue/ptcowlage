@@ -105,7 +105,7 @@ pub fn export_wav(
     song.herd.moo_end = false;
     while song
         .herd
-        .moo(&song.ins, &song.song, &mut buf, true, &mut [], &[])
+        .moo(&mut song.ins, &mut song.song, &mut buf, true, &mut [], &[])
     {
         if cancel.load(Ordering::Relaxed) {
             return Err(std::io::Error::other("Cancelled"));

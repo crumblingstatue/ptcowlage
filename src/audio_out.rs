@@ -162,8 +162,8 @@ pub fn spawn_ptcow_audio_thread(
         let rendered_s32_ref = &mut rendered_s32;
         // INVARIANT: We assume `moo` never panics. Panicking is a bug.
         song.herd.moo(
-            &song.ins,
-            &song.song,
+            &mut song.ins,
+            &mut song.song,
             rendered_s32_ref,
             !song.pause,
             &mut song.freeplay_assist_units,

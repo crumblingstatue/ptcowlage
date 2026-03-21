@@ -39,20 +39,6 @@ fn midi_tracks_to_event_stream<'a>(smf: &'a midly::Smf<'a>) -> Vec<MidiEv<'a>> {
     events
 }
 
-/// Assume first tempo is "default" tempo.
-///
-/// We can't really handle songs with changing tempos.
-fn guess_tempo(events: &[MidiEv]) -> Option<u32> {
-    for ev in events {
-        if let TrackEventKind::Meta(msg) = *ev.payload
-            && let MetaMessage::Tempo(u24) = msg
-        {
-            return Some(u24.as_int());
-        }
-    }
-    None
-}
-
 const DRUM_CH: u8 = 9;
 // "Special" drum program to map to a drum instrument
 const DRUM_PRG: u8 = 255;
@@ -117,7 +103,7 @@ pub fn write_midi_to_pxtone(
         midly::Timing::Timecode(_fps, _) => todo!(),
     };
     let events = midi_tracks_to_event_stream(&smf);
-    song.master.timing.bpm = guess_tempo(&events).map_or(120.0, ms_per_beat_to_bpm);
+    song.master.timing.bpm = 120.0;
     song.events.eves.clear();
     song.master.timing.ticks_per_beat = ticks_per_beat;
     let mut ch_map = ChannelMapping::default();
@@ -264,6 +250,13 @@ pub fn write_midi_to_pxtone(
                 MetaMessage::EndOfTrack => {}
                 MetaMessage::TimeSignature(num, denom, cpt, npq_32nd) => {
                     log::info!("Time sig: {num} {denom} {cpt} {npq_32nd}");
+                }
+                MetaMessage::Tempo(us_per_beat) => {
+                    song.events.eves.push(Event {
+                        payload: EventPayload::BeatTempo(ms_per_beat_to_bpm(us_per_beat.as_int())),
+                        unit: UnitIdx(0),
+                        tick: event.tick,
+                    });
                 }
                 _ => log::warn!("UNhandled meta: {meta_message:?}"),
             },
