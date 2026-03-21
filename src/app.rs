@@ -369,13 +369,13 @@ impl App {
                     FileOp::ExportWavData(data) => {
                         use ptcow::ChNum;
 
-                        let mut out = Vec::new();
+                        let mut out = std::io::Cursor::new(Vec::new());
                         let _ = crate::util::write_wav(
                             &mut out,
                             ChNum::Mono,
                             bytemuck::cast_slice(&data),
                         );
-                        (out, "out.wav")
+                        (out.into_inner(), "out.wav")
                     }
                     _ => return,
                 };

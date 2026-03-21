@@ -1,8 +1,9 @@
 use {
     crate::audio_out::{SongState, prepare_song},
+    hound::WavSpec,
     ptcow::ChNum,
     std::{
-        io::Write,
+        io::{Seek, Write},
         sync::atomic::{AtomicBool, AtomicU32, Ordering},
     },
 };
@@ -51,42 +52,23 @@ where
     indices
 }
 
-pub fn write_wav<W: Write>(mut w: W, n_ch: ChNum, samples: &[i16]) -> std::io::Result<()> {
+pub fn write_wav<W: Write + Seek>(w: W, n_ch: ChNum, samples: &[i16]) -> anyhow::Result<()> {
     let sample_rate = 44_100;
     let bits_per_sample: u16 = 16;
     let num_channels: u16 = n_ch as u16;
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "No way we are writing >4GB sample data"
-    )]
-    let num_samples: u32 = samples.len() as u32;
-
-    let byte_rate = sample_rate * u32::from(num_channels) * u32::from(bits_per_sample) / 8;
-    let block_align = num_channels * bits_per_sample / 8;
-    let data_size = num_samples * u32::from(block_align);
-    let chunk_size = 36 + data_size;
-
-    // RIFF header
-    w.write_all(b"RIFF")?;
-    w.write_all(&chunk_size.to_le_bytes())?;
-    w.write_all(b"WAVE")?;
-
-    // fmt chunk
-    w.write_all(b"fmt ")?;
-    w.write_all(&(16u32).to_le_bytes())?; // PCM
-    w.write_all(&(1u16).to_le_bytes())?; // Audio format = PCM
-    w.write_all(&num_channels.to_le_bytes())?;
-    w.write_all(&sample_rate.to_le_bytes())?;
-    w.write_all(&byte_rate.to_le_bytes())?;
-    w.write_all(&block_align.to_le_bytes())?;
-    w.write_all(&bits_per_sample.to_le_bytes())?;
-
-    // data chunk
-    w.write_all(b"data")?;
-    w.write_all(&data_size.to_le_bytes())?;
-
-    // Audio samples
-    w.write_all(bytemuck::cast_slice(samples))?;
+    let mut writer = hound::WavWriter::new(
+        w,
+        WavSpec {
+            channels: num_channels,
+            sample_rate,
+            bits_per_sample,
+            sample_format: hound::SampleFormat::Int,
+        },
+    )?;
+    for samp in samples {
+        writer.write_sample(*samp)?;
+    }
+    writer.finalize()?;
 
     Ok(())
 }
@@ -95,10 +77,10 @@ pub fn export_wav(
     song: &mut SongState,
     progress: &AtomicU32,
     cancel: &AtomicBool,
-) -> std::io::Result<Vec<u8>> {
+) -> anyhow::Result<Vec<u8>> {
     let mut samp_data = Vec::new();
     let mut buf = [0; 8192];
-    let mut wav_out = Vec::new();
+    let mut wav_out = std::io::Cursor::new(Vec::new());
     // Prepare non-looping moo
     prepare_song(song, false);
     // Make sure we can moo
@@ -108,14 +90,14 @@ pub fn export_wav(
         .moo(&mut song.ins, &mut song.song, &mut buf, true, &mut [], &[])
     {
         if cancel.load(Ordering::Relaxed) {
-            return Err(std::io::Error::other("Cancelled"));
+            anyhow::bail!("Cancelled");
         }
         samp_data.extend_from_slice(&buf);
         let progress_ratio = song.herd.smp_count as f32 / song.herd.smp_end as f32;
         progress.store(progress_ratio.to_bits(), Ordering::Relaxed);
     }
     write_wav(&mut wav_out, ChNum::Stereo, &samp_data)?;
-    Ok(wav_out)
+    Ok(wav_out.into_inner())
 }
 
 pub trait HashSetExt<T> {

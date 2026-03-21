@@ -21,6 +21,8 @@ midly = "0.5.3"
 piyopiyo = "0.4.0"
 # For Organya conversion
 organyacat = "0.2.0"
+# For .wav import/export
+hound = "3.5.1"
 arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
