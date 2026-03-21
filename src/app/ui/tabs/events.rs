@@ -77,6 +77,17 @@ pub fn ui(
     top_ui(ui, song, ui_state, app_cmd);
 
     ui.separator();
+    if song.song.events.is_empty() {
+        ui.label("No events");
+        if ui.button("Add event").clicked() {
+            song.song.events.push(Event {
+                payload: EventPayload::Null,
+                unit: UnitIdx(0),
+                tick: 0,
+            });
+        }
+        return;
+    }
     // Work around overlapping borrows of units
     let unit_names: Vec<String> = song
         .herd
@@ -253,7 +264,7 @@ fn table_body_ui(
                     if ui.button("Cut").clicked() {
                         *ev_list_cmd = Some(EventListCmd::Cut { idx });
                     }
-                    ui.menu_button("Insert", |ui| {
+                    ui.menu_button("Insert before", |ui| {
                         let mut payload = None;
                         if ui.button("Volume").clicked() {
                             payload = Some(EventPayload::Volume(127));
