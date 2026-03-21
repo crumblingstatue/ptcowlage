@@ -39,17 +39,26 @@ pub fn poly_migrate_units(src_unit: UnitIdx, dst_unit: UnitIdx, events: &mut Eve
                 }
                 // We assume that preceding events set the key and velocity before the on event,
                 // and we migrate these as well
-                if j >= 3 {
-                    for k in j - 3..j {
-                        if let Some(eve3) = events.get_mut(k)
-                            && eve3.tick == eve2_tick
-                            && eve3.unit == eve2_unit
-                            && let EventPayload::Key(_)
-                            | EventPayload::Velocity(_)
-                            | EventPayload::Volume(_) = eve3.payload
-                        {
-                            eve3.unit = dst_unit;
-                        }
+                for countback in 0.. {
+                    let Some(idx) = j.checked_sub(countback) else {
+                        break;
+                    };
+                    let Some(eve3) = events.get_mut(idx) else {
+                        break;
+                    };
+                    // We only go back until a previous `On` event on the same tick
+                    if eve3.tick != eve2_tick {
+                        break;
+                    }
+                    if eve3.unit == eve2_unit && matches!(eve3.payload, EventPayload::On { .. }) {
+                        break;
+                    }
+                    if eve3.unit == eve2_unit
+                        && let EventPayload::Key(_)
+                        | EventPayload::Velocity(_)
+                        | EventPayload::Volume(_) = eve3.payload
+                    {
+                        eve3.unit = dst_unit;
                     }
                 }
             }
