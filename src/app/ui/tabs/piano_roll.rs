@@ -576,6 +576,19 @@ fn draw_piano_roll_items(
                     egui::Stroke::new(1.0, invert_color(clr)),
                 );
             }
+            EventPayload::BeatTempo(tempo) => {
+                pnt.line_segment(
+                    [egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)],
+                    egui::Stroke::new(2.0, egui::Color32::YELLOW),
+                );
+                pnt.text(
+                    egui::pos2(x, cr.top() + 16.0),
+                    egui::Align2::LEFT_TOP,
+                    format!("{tempo:.0} bpm"),
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::YELLOW,
+                );
+            }
             _ => {}
         }
         // The interact rectangles are at the pos where they are drawn on the screen,
