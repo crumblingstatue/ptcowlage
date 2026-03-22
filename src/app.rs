@@ -24,7 +24,9 @@ use {
     anyhow::Context,
     eframe::egui,
     egui_toast::{Toast, ToastKind, ToastOptions},
-    ptcow::{Event, EventPayload, NoiseTable, SampleRate, UnitIdx, VoiceIdx},
+    ptcow::{
+        Bps, ChNum, Event, EventPayload, NoiseTable, PcmData, SampleRate, UnitIdx, Voice, VoiceIdx,
+    },
     std::{
         path::{Path, PathBuf},
         sync::{
@@ -492,6 +494,25 @@ impl App {
                     }
                 }
             }
+            FileOp::ReplaceWavSingle(voice_idx) => {
+                let data = std::fs::read(&path).unwrap();
+                match load_and_recalc_voice(&data, &path, just_load_wav, self.out.rate) {
+                    Ok(voice) => {
+                        let mut song = self.song.lock().unwrap();
+                        if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx) {
+                            *voice_of_idx = voice;
+                        } else {
+                            song.ins.voices.push(voice);
+                        }
+                        // Reset back test unit voice idx from preview, to the normal one
+                        song.freeplay_assist_units[0].voice_idx = voice_idx;
+                        reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
+                    }
+                    Err(e) => {
+                        self.modal.msg(e);
+                    }
+                }
+            }
             FileOp::ImportPtVoice => {
                 let data = std::fs::read(&path).unwrap();
                 self.import_ptvoice(&data, &path);
@@ -626,6 +647,35 @@ fn just_load_ptvoice(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
 fn just_load_ptnoise(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
     let noise = ptcow::NoiseData::from_ptnoise(data)?;
     let mut voice = ptcow::Voice::from_data(ptcow::VoiceData::Noise(noise));
+    if let Some(os_str) = path.file_stem() {
+        voice.name = os_str.to_string_lossy().into_owned();
+    }
+    Ok(voice)
+}
+
+fn just_load_wav(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
+    let wav = hound::WavReader::new(data)?;
+    let spec = wav.spec();
+    let ch = match spec.channels {
+        1 => ChNum::Mono,
+        2 => ChNum::Stereo,
+        _ => anyhow::bail!("Unsupported ch num: {}", spec.channels),
+    };
+    let bps = match spec.bits_per_sample {
+        8 => Bps::B8,
+        16 => Bps::B16,
+        _ => anyhow::bail!("Unsupported bps: {}", spec.bits_per_sample),
+    };
+    let data: Result<Vec<i16>, _> = wav.into_samples().collect();
+    let data = data?;
+    let pcm_data = PcmData {
+        ch,
+        sps: spec.sample_rate,
+        bps,
+        num_samples: data.len() as u32,
+        smp: bytemuck::pod_collect_to_vec(&data),
+    };
+    let mut voice = Voice::from_data(ptcow::VoiceData::Pcm(pcm_data));
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
     }
@@ -922,6 +972,13 @@ impl App {
                 self.open_file_prompt(
                     file_ops::FILT_PTNOISE,
                     FileOp::ReplacePtNoiseSingle(voice_idx),
+                    false,
+                );
+            }
+            Cmd::PromptReplaceWavSingle(voice_idx) => {
+                self.open_file_prompt(
+                    file_ops::FILT_WAV,
+                    FileOp::ReplaceWavSingle(voice_idx),
                     false,
                 );
             }

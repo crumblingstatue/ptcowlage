@@ -11,6 +11,7 @@ pub enum FileOp {
     ExportWav,
     ReplacePtVoiceSingle(VoiceIdx),
     ReplacePtNoiseSingle(VoiceIdx),
+    ReplaceWavSingle(VoiceIdx),
     ImportPtNoise,
     ImportPtVoice,
     ExportPtvoice { voice: VoiceIdx },

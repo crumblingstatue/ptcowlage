@@ -10,14 +10,15 @@ use {
         },
         audio_out::SongState,
         pxtone_misc::{
-            hat_close_voice, reset_voice_for_units_with_voice_idx, square_wave, square_wave_voice,
+            KEY_NAMES, hat_close_voice, reset_voice_for_units_with_voice_idx, square_wave,
+            square_wave_voice,
         },
     },
     arrayvec::ArrayVec,
     bitflags::Flags as _,
     eframe::egui::{self, AtomExt, collapsing_header::CollapsingState},
     ptcow::{
-        Bps, ChNum, EnvPt, EnvelopeSrc, Master, MooInstructions, NoiseDesignOscillator,
+        Bps, ChNum, EnvPt, EnvelopeSrc, Key, Master, MooInstructions, NoiseDesignOscillator,
         NoiseDesignUnit, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData,
         VoiceFlags, VoiceIdx, WaveData, WaveDataPoints, noise_to_pcm,
     },
@@ -380,6 +381,9 @@ fn voice_ui(
             }
             if ui.button((img::DRUM.smol(), "With .ptnoise")).clicked() {
                 app_cmd.push(Cmd::PromptReplacePtNoiseSingle(idx));
+            }
+            if ui.button((img::MIC.smol(), "With .wav")).clicked() {
+                app_cmd.push(Cmd::PromptReplaceWavSingle(idx));
             }
             ui.menu_button("✴ With new", |ui| {
                 if ui.button((img::SAXO.smol(), "Wave")).clicked() {
@@ -923,6 +927,65 @@ fn voice_unit_ui(
     slot_wave_extra_ui(ui, slot, out_rate, sel_slot, ui_state);
 }
 
+fn basickey_offset_info(key: Key) -> (&'static str, i8) {
+    let semi = key / 256;
+    let a4_semitone = ptcow::DEFAULT_BASICKEY / 256;
+    let a4_offs = semi - a4_semitone;
+    let semi_off = a4_offs % 12;
+    let a_name_idx = 9;
+    let key_idx = a_name_idx + semi_off;
+    let mut oct_off = a4_offs / 12;
+    if a4_offs % 12 > 2 {
+        oct_off += 1;
+    }
+    if a4_offs % 12 < -9 {
+        oct_off -= 1;
+    }
+    let octave = 4 + oct_off;
+    let mut key_idx_actual = key_idx % 12;
+    if key_idx_actual < 0 {
+        key_idx_actual += 12;
+    }
+    let key_idx_actual = key_idx_actual as usize;
+    let key_name = KEY_NAMES[key_idx_actual];
+    (key_name, octave.try_into().unwrap())
+}
+
+#[test]
+fn test_basickey_offset_info() {
+    const fn semi(k: Key) -> Key {
+        k * 256
+    }
+    const fn oct(k: Key) -> Key {
+        semi(k) * 12
+    }
+    let base = ptcow::DEFAULT_BASICKEY;
+    assert_eq!(basickey_offset_info(base - semi(10)), ("B", 3));
+    assert_eq!(basickey_offset_info(base - semi(9)), ("C", 4));
+    assert_eq!(basickey_offset_info(base - semi(8)), ("C#", 4));
+    assert_eq!(basickey_offset_info(base - semi(7)), ("D", 4));
+    assert_eq!(basickey_offset_info(base - semi(6)), ("D#", 4));
+    assert_eq!(basickey_offset_info(base - semi(5)), ("E", 4));
+    assert_eq!(basickey_offset_info(base - semi(4)), ("F", 4));
+    assert_eq!(basickey_offset_info(base - semi(3)), ("F#", 4));
+    assert_eq!(basickey_offset_info(base - semi(2)), ("G", 4));
+    assert_eq!(basickey_offset_info(base - semi(1)), ("G#", 4));
+    assert_eq!(basickey_offset_info(base), ("A", 4));
+    assert_eq!(basickey_offset_info(base + semi(1)), ("A#", 4));
+    assert_eq!(basickey_offset_info(base + semi(2)), ("B", 4));
+    assert_eq!(basickey_offset_info(base + semi(3)), ("C", 5));
+    // Octave offsets
+    assert_eq!(basickey_offset_info(base - oct(4)), ("A", 0));
+    assert_eq!(basickey_offset_info(base - oct(3)), ("A", 1));
+    assert_eq!(basickey_offset_info(base - oct(2)), ("A", 2));
+    assert_eq!(basickey_offset_info(base - oct(1)), ("A", 3));
+    assert_eq!(basickey_offset_info(base + oct(0)), ("A", 4));
+    assert_eq!(basickey_offset_info(base + oct(1)), ("A", 5));
+    assert_eq!(basickey_offset_info(base + oct(2)), ("A", 6));
+    assert_eq!(basickey_offset_info(base + oct(3)), ("A", 7));
+    assert_eq!(basickey_offset_info(base + oct(4)), ("A", 8));
+}
+
 fn key_tune_flags_ui(
     ui: &mut egui::Ui,
     slot: &mut ptcow::VoiceSlot,
@@ -938,10 +1001,20 @@ fn key_tune_flags_ui(
                 egui::DragValue::new(&mut slot.unit.basic_key),
             )
             .changed();
-        let semi = slot.unit.basic_key / 256;
-        let a4_semitone = ptcow::DEFAULT_BASICKEY / 256;
-        let a4_offs = a4_semitone - semi;
-        ui.label(format!("A4 offset: {a4_offs}"));
+        let (name, octave) = basickey_offset_info(slot.unit.basic_key);
+        if ui.button("⬅").clicked() {
+            slot.unit.basic_key -= 256;
+            changed = true;
+        }
+        if ui.button("⚪").clicked() {
+            slot.unit.basic_key = ptcow::DEFAULT_BASICKEY;
+            changed = true;
+        }
+        if ui.button("➡").clicked() {
+            slot.unit.basic_key += 256;
+            changed = true;
+        }
+        ui.strong(format!("{name}{octave}"));
         ui.label("Tune");
         changed |= ui
             .add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.0001))

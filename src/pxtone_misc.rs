@@ -334,13 +334,13 @@ impl KeyInfo {
         Self::from_semitone(lowest_semitone + key)
     }
     pub fn notation(&self) -> &'static str {
-        let names = [
-            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-        ];
-
-        names[self.c_scale_idx as usize]
+        KEY_NAMES[self.c_scale_idx as usize]
     }
 }
+
+pub const KEY_NAMES: [&str; 12] = [
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+];
 
 #[test]
 fn test_key_info() {

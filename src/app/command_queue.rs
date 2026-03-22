@@ -43,6 +43,7 @@ pub enum Cmd {
     PromptOpenPtcop,
     PromptReplacePtVoiceSingle(VoiceIdx),
     PromptReplacePtNoiseSingle(VoiceIdx),
+    PromptReplaceWavSingle(VoiceIdx),
     ClearProject,
     #[cfg(not(target_arch = "wasm32"))]
     OpenPtcopFromPath {
