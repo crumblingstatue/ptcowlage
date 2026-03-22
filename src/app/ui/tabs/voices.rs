@@ -931,13 +931,17 @@ fn key_tune_flags_ui(
 ) {
     ui.horizontal(|ui| {
         let mut changed = false;
-        ui.label("Key");
+        ui.label("Base key");
         changed |= ui
             .add_enabled(
                 !slot.unit.flags.contains(VoiceFlags::BEAT_FIT),
                 egui::DragValue::new(&mut slot.unit.basic_key),
             )
             .changed();
+        let semi = slot.unit.basic_key / 256;
+        let a4_semitone = ptcow::DEFAULT_BASICKEY / 256;
+        let a4_offs = a4_semitone - semi;
+        ui.label(format!("A4 offset: {a4_offs}"));
         ui.label("Tune");
         changed |= ui
             .add(egui::DragValue::new(&mut slot.unit.tuning).speed(0.0001))
