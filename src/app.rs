@@ -184,6 +184,7 @@ impl App {
                 .add_save_extension(FILT_WAV.name, FILT_WAV.ext)
                 .add_save_extension(FILT_PTVOICE.name, FILT_PTVOICE.ext)
                 .add_save_extension(FILT_PTNOISE.name, FILT_PTNOISE.ext)
+                .add_file_filter_extensions(FILT_WAV.name, vec![FILT_WAV.ext])
                 .add_file_filter_extensions(FILT_MIDI.name, vec![FILT_MIDI.ext])
                 .add_file_filter_extensions(FILT_PIYOPIYO.name, vec![FILT_PIYOPIYO.ext])
                 .add_file_filter_extensions(FILT_ORGANYA.name, vec![FILT_ORGANYA.ext])
