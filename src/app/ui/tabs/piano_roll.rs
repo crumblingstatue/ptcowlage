@@ -6,6 +6,7 @@ use {
         },
         audio_out::SongState,
         herd_ext::HerdExt,
+        pxtone_misc::KeyInfo,
     },
     arrayvec::ArrayVec,
     eframe::egui::{self, PopupAnchor, scroll_area::ScrollBarVisibility},
@@ -301,7 +302,7 @@ fn roll_ui_inner(
     }
 
     // Alt hover tooltip
-    alt_hover_tooltip_ui(song, state, ui, mod_alt, hovered_events);
+    alt_hover_tooltip_ui(song, ui, mod_alt, hovered_events);
     // Events left click window
     events_popup_window_ui(song, state, ui, cmd);
 
@@ -629,7 +630,7 @@ fn draw_piano_roll_rows(
     mouse_screen_pos: Option<egui::Pos2>,
 ) {
     for key in 0..state.n_rows {
-        let info = key_info(state.lowest_semitone, key);
+        let info = KeyInfo::from_piano_key(state.lowest_semitone, key);
         let y = f32::from(key) * state.row_size;
         let y = rect.max.y - y;
         let sharp = [
@@ -662,7 +663,6 @@ fn draw_piano_roll_rows(
 
 fn alt_hover_tooltip_ui(
     song: &mut SongState,
-    state: &mut PianoRollState,
     ui: &mut egui::Ui,
     mod_alt: bool,
     hovered_events: Vec<usize>,
@@ -684,10 +684,10 @@ fn alt_hover_tooltip_ui(
                         format!("On event for {duration} ticks")
                     }
                     EventPayload::Key(key) => {
-                        format!(
-                            "Key: {key}\n{:#?}",
-                            key_info(state.lowest_semitone, (key / 256) as u8)
-                        )
+                        let info = KeyInfo::from_semitone((key / 256) as u8);
+                        let n = info.notation();
+                        let o = info.octave;
+                        format!("Key: {key} ({n} {o})")
                     }
                     _ => {
                         continue;
@@ -946,7 +946,7 @@ fn piano_ui(
             pnt.rect_filled(rect, 0.0, white_color);
             // Draw keys
             for key in 0..state.n_rows {
-                let key_info = key_info(state.lowest_semitone, key);
+                let key_info = KeyInfo::from_piano_key(state.lowest_semitone, key);
                 let y = f32::from(key) * state.row_size;
                 let y = rect.max.y - y;
                 let sharp = key_info.notation().contains('#');
@@ -1034,35 +1034,6 @@ fn rect_nth_column(rect: egui::Rect, n: usize, total: usize) -> egui::Rect {
     let right = rect.min.x + rect.width() * (n + 1) as f32 / total as f32;
 
     egui::Rect::from_min_max(egui::pos2(left, rect.min.y), egui::pos2(right, rect.max.y))
-}
-
-#[derive(Debug)]
-struct KeyInfo {
-    semitone: u8,
-    c_scale_idx: u16,
-    octave: i16,
-}
-
-impl KeyInfo {
-    fn notation(&self) -> &'static str {
-        let names = [
-            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-        ];
-
-        names[self.c_scale_idx as usize]
-    }
-}
-
-fn key_info(lowest_semitone: u8, key: u8) -> KeyInfo {
-    let semitone = lowest_semitone + key;
-    let name_offset = 9;
-    let c_scale_idx = (u16::from(semitone) + name_offset) % 12;
-    let octave = ((i16::from(semitone) + name_offset as i16) / 12) - 4;
-    KeyInfo {
-        semitone,
-        c_scale_idx,
-        octave,
-    }
 }
 
 fn unit_alive(unit: &Unit) -> bool {

@@ -311,3 +311,33 @@ pub fn reset_loop_points(song: &mut SongState) {
         );
     }
 }
+
+#[derive(Debug)]
+pub struct KeyInfo {
+    pub semitone: u8,
+    pub c_scale_idx: u16,
+    pub octave: i16,
+}
+
+impl KeyInfo {
+    pub fn from_semitone(semitone: u8) -> Self {
+        let name_offset = 9;
+        let c_scale_idx = (u16::from(semitone) + name_offset) % 12;
+        let octave = ((i16::from(semitone) + name_offset as i16) / 12) - 4;
+        Self {
+            semitone,
+            c_scale_idx,
+            octave,
+        }
+    }
+    pub fn from_piano_key(lowest_semitone: u8, key: u8) -> Self {
+        Self::from_semitone(lowest_semitone + key)
+    }
+    pub fn notation(&self) -> &'static str {
+        let names = [
+            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+        ];
+
+        names[self.c_scale_idx as usize]
+    }
+}
