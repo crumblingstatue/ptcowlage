@@ -1128,6 +1128,23 @@ impl App {
                     }
                 }
             }
+            WebCmd::ReplaceWavSingle {
+                data,
+                name,
+                voice_idx,
+            } => match load_and_recalc_voice(&data, name.as_ref(), just_load_wav, self.out.rate) {
+                Ok(voice) => {
+                    let mut song = self.song.lock().unwrap();
+                    if let Some(voice_of_idx) = song.ins.voices.get_mut(voice_idx) {
+                        *voice_of_idx = voice;
+                    } else {
+                        song.ins.voices.push(voice);
+                    }
+                }
+                Err(e) => {
+                    self.modal.msg(e);
+                }
+            },
         }
     }
     fn reload_current_file(&mut self) {

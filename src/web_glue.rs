@@ -106,6 +106,11 @@ pub enum WebCmd {
         name: String,
         voice_idx: VoiceIdx,
     },
+    ReplaceWavSingle {
+        data: Vec<u8>,
+        name: String,
+        voice_idx: VoiceIdx,
+    },
 }
 
 impl WebCmd {
@@ -128,6 +133,11 @@ impl WebCmd {
                 voice_idx,
             },
             FileOp::ReplacePtNoiseSingle(voice_idx) => Self::ReplacePtNoiseSingle {
+                data,
+                name,
+                voice_idx,
+            },
+            FileOp::ReplaceWavSingle(voice_idx) => Self::ReplaceWavSingle {
                 data,
                 name,
                 voice_idx,
