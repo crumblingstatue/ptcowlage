@@ -341,3 +341,10 @@ impl KeyInfo {
         names[self.c_scale_idx as usize]
     }
 }
+
+#[test]
+fn test_key_info() {
+    let info = KeyInfo::from_semitone((DEFAULT_KEY / 256) as u8);
+    assert_eq!(info.notation(), "A");
+    assert_eq!(info.octave, 4);
+}
