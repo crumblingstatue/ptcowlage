@@ -606,16 +606,16 @@ impl App {
 fn load_and_recalc_voice(
     data: &[u8],
     path: &Path,
-    loadfn: fn(&[u8], &Path) -> ptcow::ReadResult<ptcow::Voice>,
+    loadfn: fn(&[u8], &Path) -> anyhow::Result<ptcow::Voice>,
     out_rate: SampleRate,
-) -> ptcow::ReadResult<ptcow::Voice> {
+) -> anyhow::Result<ptcow::Voice> {
     let mut voice = loadfn(data, path)?;
     let noise_tbl = NoiseTable::generate();
     voice.recalculate(&noise_tbl, out_rate);
     Ok(voice)
 }
 
-fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn just_load_ptvoice(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
     let mut voice = ptcow::Voice::from_ptvoice(data)?;
     if let Some(os_str) = path.file_stem() {
         voice.name = os_str.to_string_lossy().into_owned();
@@ -623,7 +623,7 @@ fn just_load_ptvoice(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
     Ok(voice)
 }
 
-fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn just_load_ptnoise(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
     let noise = ptcow::NoiseData::from_ptnoise(data)?;
     let mut voice = ptcow::Voice::from_data(ptcow::VoiceData::Noise(noise));
     if let Some(os_str) = path.file_stem() {
@@ -636,7 +636,7 @@ fn just_load_ptnoise(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice
     clippy::unnecessary_wraps,
     reason = "Needs this signature due to fn pointer"
 )]
-fn just_load_ogg(data: &[u8], path: &Path) -> ptcow::ReadResult<ptcow::Voice> {
+fn just_load_ogg(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
     let oggv = ptcow::OggVData {
         raw_bytes: data.to_vec(),
         ch: 1,

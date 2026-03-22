@@ -289,7 +289,7 @@ fn voice_import_preview(
     song: &mut SongState,
     out_rate: u16,
     en: &egui_file_dialog::DirectoryEntry,
-    load_fun: fn(&[u8], path: &std::path::Path) -> ptcow::ReadResult<ptcow::Voice>,
+    load_fun: fn(&[u8], path: &std::path::Path) -> anyhow::Result<ptcow::Voice>,
     shared: &mut SharedUiState,
 ) {
     let data = std::fs::read(en.as_path()).unwrap();
