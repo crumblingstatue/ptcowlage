@@ -946,19 +946,10 @@ fn piano_ui(
             pnt.rect_filled(rect, 0.0, white_color);
             // Draw keys
             for key in 0..state.n_rows {
-                let KeyInfo {
-                    semitone,
-                    c_scale_idx,
-                    octave,
-                } = key_info(state.lowest_semitone, key);
+                let key_info = key_info(state.lowest_semitone, key);
                 let y = f32::from(key) * state.row_size;
                 let y = rect.max.y - y;
-                let names = [
-                    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-                ];
-
-                let notation = names[c_scale_idx as usize];
-                let sharp = notation.contains('#');
+                let sharp = key_info.notation().contains('#');
                 let bg_color = if sharp { black_color } else { white_color };
                 let text_color = if sharp { white_color } else { black_color };
                 // Draw sharp keys shorter, and have a little shortening for white keys
@@ -981,7 +972,10 @@ fn piano_ui(
                         .enumerate()
                         .map(|(i, u)| (UnitIdx(SongState::EXTRA_UNITS_START_IDX.0 + i as u8), u)),
                 ) {
-                    if unit.key_now / 256 == i32::from(semitone) && !unit.mute && unit_alive(unit) {
+                    if unit.key_now / 256 == i32::from(key_info.semitone)
+                        && !unit.mute
+                        && unit_alive(unit)
+                    {
                         if playing_colors.is_full() {
                             break;
                         }
@@ -1005,7 +999,7 @@ fn piano_ui(
                 pnt.text(
                     egui::pos2(rect.min.x + 2.0, y),
                     egui::Align2::LEFT_TOP,
-                    format!("{notation} {octave}"),
+                    format!("{} {}", key_info.notation(), key_info.octave),
                     egui::FontId::proportional(font_size),
                     text_color,
                 );
@@ -1047,6 +1041,16 @@ struct KeyInfo {
     semitone: u8,
     c_scale_idx: u16,
     octave: i16,
+}
+
+impl KeyInfo {
+    fn notation(&self) -> &'static str {
+        let names = [
+            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+        ];
+
+        names[self.c_scale_idx as usize]
+    }
 }
 
 fn key_info(lowest_semitone: u8, key: u8) -> KeyInfo {
