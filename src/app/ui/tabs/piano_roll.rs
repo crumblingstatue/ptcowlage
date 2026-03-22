@@ -40,6 +40,7 @@ pub struct PianoRollState {
     just_placed_note: Option<PlacedNote>,
     /// Snap placed notes to quarter beat granularity
     snap_to_quarter_beat: bool,
+    draw_tempo_lines: bool,
 }
 
 struct PlacedNote {
@@ -83,6 +84,7 @@ impl Default for PianoRollState {
             selected_event_indices: BTreeSet::default(),
             just_placed_note: None,
             snap_to_quarter_beat: true,
+            draw_tempo_lines: true,
         }
     }
 }
@@ -577,7 +579,10 @@ fn draw_piano_roll_items(
                     egui::Stroke::new(1.0, invert_color(clr)),
                 );
             }
-            EventPayload::BeatTempo(tempo) => {
+            EventPayload::BeatTempo(tempo) => 'blk: {
+                if !state.draw_tempo_lines {
+                    break 'blk;
+                }
                 pnt.line_segment(
                     [egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)],
                     egui::Stroke::new(2.0, egui::Color32::YELLOW),
@@ -1064,7 +1069,8 @@ fn piano_roll_config_popup_button(ui: &mut egui::Ui, state: &mut PianoRollState)
             });
             ui.separator();
             ui.horizontal(|ui| {
-                ui.checkbox(&mut state.draw_meas_lines, "Draw meas lines");
+                ui.checkbox(&mut state.draw_meas_lines, "Meas lines");
+                ui.checkbox(&mut state.draw_tempo_lines, "Tempo lines");
                 ui.checkbox(&mut state.snap_to_quarter_beat, "Snap to quarter beat")
                     .on_hover_text("Snap placed notes to quarter beats");
             });
