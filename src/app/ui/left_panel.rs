@@ -116,6 +116,26 @@ pub fn ui(app: &mut App, ui: &mut egui::Ui) {
     if ui.button("Unhide all").clicked() {
         app.ui_state.piano_roll.hidden_units.clear();
     }
+    // For each highlighted unit
+    if !app.ui_state.shared.highlight_set.is_empty() {
+        // Solo
+        if ui.input(|inp| inp.key_pressed(egui::Key::S)) {
+            for (i, unit) in song.herd.units.enumerated_mut() {
+                unit.mute = true;
+                if app.ui_state.shared.highlight_set.contains(&i) {
+                    unit.mute = false;
+                }
+            }
+        }
+        // Toggle mute
+        if ui.input(|inp| inp.key_pressed(egui::Key::M)) {
+            for (i, unit) in song.herd.units.enumerated_mut() {
+                if app.ui_state.shared.highlight_set.contains(&i) {
+                    unit.mute ^= true;
+                }
+            }
+        }
+    }
     app.ui_state.shared.highlight_set.clear();
 }
 
