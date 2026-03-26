@@ -5,12 +5,12 @@ edition = "2024"
 rust-version = "1.92"
 
 [dependencies]
-eframe.version = "0.33"
+eframe.version = "0.34"
 eframe.default-features = false
 eframe.features = ["default_fonts", "glow", "x11", "wayland", "persistence"]
-egui_extras.version = "0.33"
+egui_extras.version = "0.34"
 egui_extras.features = ["image"]
-egui-toast = "0.19"
+egui-toast = "0.20"
 ptcow.version = "0.6.0"
 tinyaudio = "2"
 anyhow = "1"
@@ -27,7 +27,7 @@ arrayvec = "0.7"
 bytemuck = "1.24"
 rustc-hash = "2.1.1"
 log = "0.4.29"
-egui_logger = "0.9.3"
+egui_logger.git = "https://github.com/crumblingstatue/egui_logger.git"
 
 # Web-only dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -39,7 +39,8 @@ web-sys = "0.3.70"
 
 # Desktop-only dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-egui-file-dialog = "0.12"
+egui-file-dialog.git = "https://github.com/crumblingstatue/egui-file-dialog.git"
+egui-file-dialog.branch = "egui-034"
 clap.version = "4.6"
 clap.features = ["derive"]
 recently_used_list = "0.1.0"

@@ -77,7 +77,7 @@ pub fn piano_freeplay_ui(
     show_record_ckbox: bool,
 ) {
     // Avoid tooting when we're inside a text edit, etc.
-    if !ui.ctx().wants_keyboard_input() {
+    if !ui.egui_wants_keyboard_input() {
         piano_freeplay_input(song, ui, shared, file_dia_open);
     }
     ui.label("🎹").on_hover_text("Piano freeplay UI");
@@ -355,7 +355,7 @@ pub fn central_panel(app: &mut super::App, ui: &mut egui::Ui) {
             // Toggle pause
             let should_toggle_pause = !egui::Popup::is_any_open(ui.ctx())
                 && !file_dia_open
-                && !ui.ctx().wants_keyboard_input();
+                && !ui.egui_wants_keyboard_input();
 
             if should_toggle_pause {
                 song.pause ^= true;

@@ -702,10 +702,10 @@ fn just_load_ogg(data: &[u8], path: &Path) -> anyhow::Result<ptcow::Voice> {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint();
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        ui.request_repaint();
         if self.song_lock.my.locked {
-            egui::Modal::new("song_lock".into()).show(ctx, |ui| {
+            egui::Modal::new("song_lock".into()).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(self.song_lock.my.reason);
                     ui.spinner();
@@ -754,21 +754,21 @@ impl eframe::App for App {
                 retain
             });
         }
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| ui::top_panel::top_panel(self, ui));
+        egui::Panel::top("top_panel").show_inside(ui, |ui| ui::top_panel::top_panel(self, ui));
         if self.ui_state.show_left_panel() {
-            egui::SidePanel::left("left_panel").show(ctx, |ui| ui::left_panel::ui(self, ui));
+            egui::Panel::left("left_panel").show_inside(ui, |ui| ui::left_panel::ui(self, ui));
         }
-        egui::CentralPanel::default().show(ctx, |ui| ui::central_panel(self, ui));
+        egui::CentralPanel::default().show_inside(ui, |ui| ui::central_panel(self, ui));
         self.ui_state
             .windows
-            .update(ctx, &mut self.song.lock().unwrap(), &mut self.prefs);
+            .update(ui, &mut self.song.lock().unwrap(), &mut self.prefs);
 
         #[cfg(not(target_arch = "wasm32"))]
-        let (mut picked_path, mut file_op) = self.handle_file_dia_update(ctx);
+        let (mut picked_path, mut file_op) = self.handle_file_dia_update(ui);
         #[cfg(target_arch = "wasm32")]
         let (mut picked_path, mut file_op) = (None, None);
 
-        ctx.input(|inp| {
+        ui.input(|inp| {
             for dropfile in &inp.raw.dropped_files {
                 if let Some(path) = &dropfile.path {
                     picked_path = Some(path.clone());
@@ -813,8 +813,8 @@ impl eframe::App for App {
         {
             self.desktop_handle_file_op(path, op);
         }
-        self.modal.update(ctx, &self.song);
-        self.ui_state.shared.toasts.show(ctx);
+        self.modal.update(ui, &self.song);
+        self.ui_state.shared.toasts.show(ui);
         // Do queue commands
         while let Some(cmd) = self.cmd.pop() {
             self.do_cmd(cmd);
