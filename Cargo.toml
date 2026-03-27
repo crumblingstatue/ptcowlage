@@ -39,8 +39,7 @@ web-sys = "0.3.70"
 
 # Desktop-only dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-egui-file-dialog.git = "https://github.com/crumblingstatue/egui-file-dialog.git"
-egui-file-dialog.branch = "egui-034"
+egui-file-dialog = "0.13"
 clap.version = "4.6"
 clap.features = ["derive"]
 recently_used_list = "0.1.0"
