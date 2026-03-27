@@ -103,6 +103,7 @@ pub fn write_midi_to_pxtone(
         midly::Timing::Timecode(_fps, _) => todo!(),
     };
     let events = midi_tracks_to_event_stream(&smf);
+    // Default midi tempo is 120 bpm
     song.master.timing.bpm = 120.0;
     song.events.eves.clear();
     song.master.timing.ticks_per_beat = ticks_per_beat;
