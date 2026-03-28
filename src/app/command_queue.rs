@@ -88,7 +88,7 @@ impl Cmd {
 
                 // # Safety
                 // These variants are trivially copiable
-                std::ptr::from_ref(cmd).read()
+                std::ptr::read(cmd)
             }),
             _ => None,
         }
