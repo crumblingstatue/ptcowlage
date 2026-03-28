@@ -55,11 +55,16 @@ pub fn ui(
         .show(ui, |ui| {
             playback_cows_ui(ui, song, shared, app_cmd, app_modal);
         });
-    ui.label("Cows are interactive. m: mute, s: solo");
 
+    ui.separator();
     ui.horizontal(|ui| {
+        ui.strong(format!(
+            "{} + {} units",
+            song.herd.units.len(),
+            song.freeplay_assist_units.len()
+        ));
         unit_mute_unmute_all_ui(ui, &mut song.herd.units);
-        ui.separator();
+        ui.small("Cows are interactive. m: mute, s: solo");
     });
 }
 
