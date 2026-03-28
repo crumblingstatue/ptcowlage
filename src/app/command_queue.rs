@@ -67,13 +67,43 @@ pub enum Cmd {
     PromptExportWavData(Vec<u8>),
 }
 
+impl Cmd {
+    /// Returns a copy of this command if it's repeatable, `None` otherwise
+    fn repeatable(&self) -> Option<Self> {
+        match self {
+            cmd @ (Cmd::ReloadCurrentFile
+            | Cmd::SaveCurrentFile
+            | Cmd::PromptImportPtVoice
+            | Cmd::PromptImportPtNoise
+            | Cmd::PromptImportAllPtcop
+            | Cmd::PromptSaveAs
+            | Cmd::PromptImportMidi
+            | Cmd::PromptImportPiyo
+            | Cmd::PromptImportOrg
+            | Cmd::PromptExportWav
+            | Cmd::PromptOpenPtcop
+            | Cmd::PromptReplacePtNoiseSingle(_)
+            | Cmd::PromptReplacePtVoiceSingle(_)) => Some(unsafe {
+                // Avoid having to separately match each copiable variant by using a little unsafe
+
+                // # Safety
+                // These variants are trivially copiable
+                std::ptr::from_ref(cmd).read()
+            }),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct CommandQueue {
     queue: VecDeque<Cmd>,
+    last: Option<Cmd>,
 }
 
 impl CommandQueue {
     pub fn push(&mut self, cmd: Cmd) {
+        self.last = cmd.repeatable();
         self.queue.push_back(cmd);
     }
     pub fn pop(&mut self) -> Option<Cmd> {
@@ -91,5 +121,12 @@ impl CommandQueue {
     }
     pub fn tab(&mut self, tab: crate::app::ui::Tab) {
         self.push(Cmd::SetActiveTab(tab));
+    }
+
+    pub(crate) fn repeat_last(&mut self) {
+        if let Some(cmd) = &self.last {
+            // We already know it's repeatable because it was added via `repeatable()`
+            self.push(cmd.repeatable().unwrap());
+        }
     }
 }

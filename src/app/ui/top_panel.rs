@@ -29,6 +29,8 @@ const OPEN_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::C
 const SAVE_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::S);
 const RELOAD_SHORTCUT: KeyboardShortcut =
     KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::R);
+const REPEAT_LAST_SHORTCUT: KeyboardShortcut =
+    KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::L);
 
 fn used_voices(eves: &EveList) -> HashSet<VoiceIdx> {
     let mut used = HashSet::new();
@@ -46,6 +48,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         sc_open,
         sc_save,
         sc_reload,
+        sc_repeat_last,
         k_f4,
         k_f5,
         k_f6,
@@ -59,6 +62,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             inp.consume_shortcut(&OPEN_SHORTCUT),
             inp.consume_shortcut(&SAVE_SHORTCUT),
             inp.consume_shortcut(&RELOAD_SHORTCUT),
+            inp.consume_shortcut(&REPEAT_LAST_SHORTCUT),
             inp.key_pressed(egui::Key::F4),
             inp.key_pressed(egui::Key::F5),
             inp.key_pressed(egui::Key::F6),
@@ -155,6 +159,16 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             ui.separator();
             if ui.button("Title and comment").clicked() {
                 app.ui_state.windows.toggle::<TitleAndCommentWindow>();
+            }
+            ui.separator();
+            if ui
+                .add(
+                    egui::Button::new("Repeat last command")
+                        .shortcut_text(ui.format_shortcut(&REPEAT_LAST_SHORTCUT)),
+                )
+                .clicked()
+            {
+                app.cmd.repeat_last();
             }
         });
         let button = MenuButton::new("Timing").config(
@@ -288,6 +302,10 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
         app.cmd.push(Cmd::SaveCurrentFile);
     }
 
+    if sc_repeat_last {
+        app.cmd.repeat_last();
+    }
+
     if app.pt_audio_dev.is_none() {
         ui.horizontal(|ui| {
             ui.colored_label(egui::Color32::RED, "⚠ Audio thread is not running.");
@@ -310,13 +328,13 @@ fn file_menu_ui(
     app_recently_opened: &mut recently_used_list::RecentlyUsedList<PathBuf>,
 ) {
     if ui
-        .add(egui::Button::new("New").shortcut_text(ui.ctx().format_shortcut(&NEW_SHORTCUT)))
+        .add(egui::Button::new("New").shortcut_text(ui.format_shortcut(&NEW_SHORTCUT)))
         .clicked()
     {
         app_cmd.push(Cmd::ClearProject);
     }
     *bt_open = ui
-        .add(egui::Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&OPEN_SHORTCUT)))
+        .add(egui::Button::new("Open").shortcut_text(ui.format_shortcut(&OPEN_SHORTCUT)))
         .clicked();
     if cfg!(not(target_arch = "wasm32")) {
         #[cfg(not(target_arch = "wasm32"))]
@@ -353,15 +371,12 @@ fn file_menu_ui(
             });
         }
         *bt_reload = ui
-            .add(
-                egui::Button::new("Reload")
-                    .shortcut_text(ui.ctx().format_shortcut(&RELOAD_SHORTCUT)),
-            )
+            .add(egui::Button::new("Reload").shortcut_text(ui.format_shortcut(&RELOAD_SHORTCUT)))
             .clicked();
         *bt_save = ui
             .add_enabled(
                 can_save,
-                egui::Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&SAVE_SHORTCUT)),
+                egui::Button::new("Save").shortcut_text(ui.format_shortcut(&SAVE_SHORTCUT)),
             )
             .clicked();
     }
