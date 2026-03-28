@@ -206,6 +206,7 @@ impl App {
             #[cfg(target_arch = "wasm32")]
             web_cmd: Default::default(),
         };
+        this.file_dia.config_mut().retain_selected_entry = true;
         load_persistence(cc, &mut this);
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {

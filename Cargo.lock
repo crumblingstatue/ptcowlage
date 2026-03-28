@@ -761,8 +761,7 @@ dependencies = [
 [[package]]
 name = "egui-file-dialog"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b530b58f428bcffb58281ad1c3a59ee559ffd2354aa54d5bf1a2ef418fdcebb3"
+source = "git+https://github.com/crumblingstatue/egui-file-dialog.git?branch=retain-selected-entry#30a73f35e9ea632f3641b7f9641983042d7a5fb5"
 dependencies = [
  "directories",
  "dunce",
