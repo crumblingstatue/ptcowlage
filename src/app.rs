@@ -1237,6 +1237,13 @@ fn post_load_prep(song_ref: &mut SongState, freeplay_toot: &mut UnitIdx) {
         &mut song_ref.herd.overdrives,
         &song_ref.song.master,
     );
+    // Also make sure to properly reset voices so things don't sound off-key
+    song_ref
+        .herd
+        .tune_cow_voices(&song_ref.ins, song_ref.song.master.timing, &[]);
+    for unit in &mut song_ref.freeplay_assist_units {
+        unit.reset_voice(&song_ref.ins, VoiceIdx(0), song_ref.song.master.timing, &[]);
+    }
     let has_units = !song_ref.herd.units.is_empty();
     if has_units {
         // Set initial voices, etc.
