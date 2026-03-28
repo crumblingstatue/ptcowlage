@@ -4,7 +4,7 @@ use {
             SongState, auto_migrate_all,
             command_queue::{Cmd, CommandQueue},
             ui::{
-                Tab,
+                Tab, UiState,
                 modal::Modal,
                 piano_freeplay_ui,
                 windows::{LogWindow, TitleAndCommentWindow, Windows},
@@ -88,76 +88,11 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             );
         });
         ui.menu_button("View", |ui| {
-            egui::gui_zoom::zoom_menu_buttons(ui);
-            ui.separator();
-            if ui.button("Fullscreen").clicked() {
-                #[cfg(not(target_arch = "wasm32"))]
-                ui.ctx()
-                    .send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
-                #[cfg(target_arch = "wasm32")]
-                crate::web_glue::request_fullscreen();
-            }
-            if ui.button("Exit fullscreen").clicked() {
-                #[cfg(not(target_arch = "wasm32"))]
-                ui.ctx()
-                    .send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
-                #[cfg(target_arch = "wasm32")]
-                crate::web_glue::exit_fullscreen();
-            }
+            view_menu_ui(ui);
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
-            ui.menu_button("Clear events", |ui| {
-                if ui.button("Key and on events").clicked() {
-                    song.song.events.retain(|eve| {
-                        !matches!(eve.payload, EventPayload::Key(_) | EventPayload::On { .. })
-                    });
-                }
-                if ui.button("All events").clicked() {
-                    song.song.events.clear();
-                }
-            });
-            if ui.button("Remove unused voices").clicked() {
-                let used_voices = used_voices(&song.song.events);
-                let mut idx = VoiceIdx(0);
-                let mut new_idx = VoiceIdx(0);
-                let mut index_map = HashMap::new();
-                song.ins.voices.retain(|_| {
-                    let retain = used_voices.contains(&idx);
-                    if retain {
-                        index_map.insert(idx, new_idx);
-                        new_idx.0 += 1;
-                    }
-                    idx.0 += 1;
-                    retain
-                });
-                for eve in song.song.events.iter_mut() {
-                    if let EventPayload::SetVoice(idx) = &mut eve.payload {
-                        *idx = index_map[idx];
-                    }
-                }
-                for unit in song.herd.units.iter_mut() {
-                    unit.voice_idx = index_map[&unit.voice_idx];
-                }
-            }
-            ui.separator();
-            if ui.button("Auto migrate overlapping events").clicked() {
-                auto_migrate_all(&mut app.modal, &mut app.ui_state, song);
-            }
-            ui.separator();
-            if ui.button("Title and comment").clicked() {
-                app.ui_state.windows.toggle::<TitleAndCommentWindow>();
-            }
-            ui.separator();
-            if ui
-                .add(
-                    egui::Button::new("Repeat last command")
-                        .shortcut_text(ui.format_shortcut(&REPEAT_LAST_SHORTCUT)),
-                )
-                .clicked()
-            {
-                app.cmd.repeat_last();
-            }
+            song_menu_ui(ui, song, &mut app.modal, &mut app.ui_state, &mut app.cmd);
         });
         let button = MenuButton::new("Timing").config(
             MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
@@ -301,6 +236,85 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
                 app.cmd.push(Cmd::ReplaceAudioThread);
             }
         });
+    }
+}
+
+fn view_menu_ui(ui: &mut egui::Ui) {
+    egui::gui_zoom::zoom_menu_buttons(ui);
+    ui.separator();
+    if ui.button("Fullscreen").clicked() {
+        #[cfg(not(target_arch = "wasm32"))]
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+        #[cfg(target_arch = "wasm32")]
+        crate::web_glue::request_fullscreen();
+    }
+    if ui.button("Exit fullscreen").clicked() {
+        #[cfg(not(target_arch = "wasm32"))]
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+        #[cfg(target_arch = "wasm32")]
+        crate::web_glue::exit_fullscreen();
+    }
+}
+
+fn song_menu_ui(
+    ui: &mut egui::Ui,
+    song: &mut SongState,
+    app_modal: &mut Modal,
+    app_ui_state: &mut UiState,
+    app_cmd: &mut CommandQueue,
+) {
+    ui.menu_button("Clear events", |ui| {
+        if ui.button("Key and on events").clicked() {
+            song.song.events.retain(|eve| {
+                !matches!(eve.payload, EventPayload::Key(_) | EventPayload::On { .. })
+            });
+        }
+        if ui.button("All events").clicked() {
+            song.song.events.clear();
+        }
+    });
+    if ui.button("Remove unused voices").clicked() {
+        let used_voices = used_voices(&song.song.events);
+        let mut idx = VoiceIdx(0);
+        let mut new_idx = VoiceIdx(0);
+        let mut index_map = HashMap::new();
+        song.ins.voices.retain(|_| {
+            let retain = used_voices.contains(&idx);
+            if retain {
+                index_map.insert(idx, new_idx);
+                new_idx.0 += 1;
+            }
+            idx.0 += 1;
+            retain
+        });
+        for eve in song.song.events.iter_mut() {
+            if let EventPayload::SetVoice(idx) = &mut eve.payload {
+                *idx = index_map[idx];
+            }
+        }
+        for unit in song.herd.units.iter_mut() {
+            unit.voice_idx = index_map[&unit.voice_idx];
+        }
+    }
+    ui.separator();
+    if ui.button("Auto migrate overlapping events").clicked() {
+        auto_migrate_all(app_modal, app_ui_state, song);
+    }
+    ui.separator();
+    if ui.button("Title and comment").clicked() {
+        app_ui_state.windows.toggle::<TitleAndCommentWindow>();
+    }
+    ui.separator();
+    if ui
+        .add(
+            egui::Button::new("Repeat last command")
+                .shortcut_text(ui.format_shortcut(&REPEAT_LAST_SHORTCUT)),
+        )
+        .clicked()
+    {
+        app_cmd.repeat_last();
     }
 }
 
