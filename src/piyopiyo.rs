@@ -5,6 +5,8 @@ use ptcow::{
 };
 use rustc_hash::FxHashMap;
 
+use crate::pxtone_misc::BASIC_KEY_A2;
+
 fn piyo_pan_to_pxtone_pan(piyo: i16) -> u8 {
     // These are the fixed values that the PiyoPiyo pan value can be
     let piyo_px_mapping = [
@@ -46,6 +48,7 @@ pub fn import(piyo: &piyopiyo::Song, herd: &mut Herd, song: &mut Song, ins: &mut
         };
         let unit = VoiceUnit {
             flags: VoiceFlags::WAVE_LOOP,
+            basic_key: BASIC_KEY_A2,
             ..VoiceUnit::default()
         };
         // Seems like envelope values need to be scaled a bit to be more accurate
@@ -92,7 +95,7 @@ pub fn import(piyo: &piyopiyo::Song, herd: &mut Herd, song: &mut Song, ins: &mut
                             break;
                         }
                     }
-                    let base_key = 75 * 256;
+                    let base_key = 51 * 256;
                     let octave_shift = i32::from(tr.octave) * (12 * 256);
                     let ev_key = base_key + octave_shift + i32::from(key) * 256;
                     let pan = if let Some(pan) = ev.pan() {

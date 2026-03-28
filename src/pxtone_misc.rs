@@ -250,13 +250,14 @@ pub fn square_wave() -> WaveData {
 pub fn square_wave_voice() -> Voice {
     let unit = VoiceUnit {
         flags: VoiceFlags::WAVE_LOOP,
-        // 11520 seems to be the most commonly used key for wave voices, and it sounds better
-        basic_key: 11520,
+        basic_key: BASIC_KEY_A2,
         ..VoiceUnit::default()
     };
     let data = VoiceData::Wave(square_wave());
     Voice::from_unit_and_data(unit, data)
 }
+
+pub const BASIC_KEY_A2: ptcow::Key = 11_520;
 
 pub fn hat_close() -> NoiseData {
     NoiseData {
