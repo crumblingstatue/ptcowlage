@@ -88,6 +88,11 @@ impl Window for PreferencesWindow {
                 self.file_dia.pick_file();
             }
         });
+        ui.separator();
+        ui.checkbox(
+            &mut prefs.midi_auto_poly_migrate,
+            "Auto poly-migrate on midi import",
+        );
         self.file_dia.update(ui.ctx());
         if let Some(path) = self.file_dia.take_picked() {
             match path.to_str() {

@@ -40,6 +40,21 @@ use {
 pub mod command_queue;
 pub mod ui;
 
+fn auto_migrate_all(app_modal: &mut Modal, app_ui_state: &mut ui::UiState, song: &mut SongState) {
+    let orig_n_units: u8 = song.herd.units.len();
+    for mut migrate_from in (0..orig_n_units).map(UnitIdx) {
+        // Skip muted units
+        if song.herd.units[migrate_from].mute {
+            continue;
+        }
+        while let Some(out) = poly_migrate_single(app_modal, song, migrate_from) {
+            migrate_from = out;
+        }
+    }
+    // Doesn't seem to sound right until we restart the song
+    crate::app::post_load_prep(song, &mut app_ui_state.shared.active_unit);
+}
+
 #[derive(Default)]
 pub struct SongLockMy {
     locked: bool,
@@ -95,6 +110,7 @@ pub struct App {
 #[derive(Default)]
 pub struct Preferences {
     pub jp_fallback_font_path: String,
+    pub midi_auto_poly_migrate: bool,
 }
 
 impl Preferences {
@@ -256,6 +272,9 @@ impl App {
             Err(e) => {
                 self.modal.msg(e);
             }
+        }
+        if self.prefs.midi_auto_poly_migrate {
+            auto_migrate_all(&mut self.modal, &mut self.ui_state, song);
         }
         post_load_prep(song, &mut self.ui_state.shared.active_unit);
     }

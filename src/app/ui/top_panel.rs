@@ -1,9 +1,8 @@
 use {
     crate::{
         app::{
-            SongState,
+            SongState, auto_migrate_all,
             command_queue::{Cmd, CommandQueue},
-            poly_migrate_single,
             ui::{
                 Tab,
                 modal::Modal,
@@ -17,7 +16,7 @@ use {
         self, KeyboardShortcut,
         containers::menu::{MenuButton, MenuConfig},
     },
-    ptcow::{EveList, EventPayload, MooPlan, UnitIdx, VoiceIdx, timing::NonZeroMeas},
+    ptcow::{EveList, EventPayload, MooPlan, VoiceIdx, timing::NonZeroMeas},
     std::{
         collections::{HashMap, HashSet},
         path::PathBuf,
@@ -143,18 +142,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             }
             ui.separator();
             if ui.button("Auto migrate overlapping events").clicked() {
-                let orig_n_units: u8 = song.herd.units.len();
-                for mut migrate_from in (0..orig_n_units).map(UnitIdx) {
-                    // Skip muted units
-                    if song.herd.units[migrate_from].mute {
-                        continue;
-                    }
-                    while let Some(out) = poly_migrate_single(&mut app.modal, song, migrate_from) {
-                        migrate_from = out;
-                    }
-                }
-                // Doesn't seem to sound right until we restart the song
-                crate::app::post_load_prep(song, &mut app.ui_state.shared.active_unit);
+                auto_migrate_all(&mut app.modal, &mut app.ui_state, song);
             }
             ui.separator();
             if ui.button("Title and comment").clicked() {
