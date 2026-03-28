@@ -512,7 +512,7 @@ impl App {
                 }
             }
             FileOp::ReplaceWavSingle(voice_idx) => {
-                let data = std::fs::read(&path).unwrap();
+                let data = std::fs::read(&path)?;
                 match load_and_recalc_voice(&data, &path, just_load_wav, self.out.rate) {
                     Ok(voice) => {
                         let mut song = self.song.lock().unwrap();
