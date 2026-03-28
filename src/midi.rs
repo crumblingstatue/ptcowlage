@@ -86,10 +86,6 @@ impl ChannelMapping {
 type UsedPrograms = FxHashMap<u8, VoiceIdx>;
 
 /// Write midi song to pxtone
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "Needs this signature due to fn pointer"
-)]
 pub fn write_midi_to_pxtone(
     mid_data: &[u8],
     herd: &mut Herd,
@@ -97,7 +93,7 @@ pub fn write_midi_to_pxtone(
     ins: &mut MooInstructions,
 ) -> anyhow::Result<()> {
     let mut used_programs: UsedPrograms = FxHashMap::default();
-    let smf = midly::Smf::parse(mid_data).unwrap();
+    let smf = midly::Smf::parse(mid_data)?;
     let ticks_per_beat = match smf.header.timing {
         midly::Timing::Metrical(u15) => u15.as_int(),
         midly::Timing::Timecode(_fps, _) => todo!(),

@@ -257,43 +257,35 @@ impl App {
         this
     }
 
-    fn import_midi_from_bytes(&mut self, mid_data: &[u8]) {
+    fn import_midi_from_bytes(&mut self, mid_data: &[u8]) -> anyhow::Result<()> {
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
-        match crate::midi::write_midi_to_pxtone(
-            mid_data,
-            &mut song.herd,
-            &mut song.song,
-            &mut song.ins,
-        ) {
-            Ok(()) => {
-                song.song.recalculate_length();
-            }
-            Err(e) => {
-                self.modal.err(e);
-            }
-        }
+        crate::midi::write_midi_to_pxtone(mid_data, &mut song.herd, &mut song.song, &mut song.ins)?;
+        song.song.recalculate_length();
         if self.prefs.midi_auto_poly_migrate {
             auto_migrate_all(&mut self.modal, &mut self.ui_state, song);
         }
         post_load_prep(song, &mut self.ui_state.shared.active_unit);
+        Ok(())
     }
 
-    fn import_piyopiyo_from_bytes(&mut self, data: &[u8]) {
-        let piyo = piyopiyo::Song::load(data).unwrap();
+    fn import_piyopiyo_from_bytes(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let piyo = piyopiyo::Song::load(data)?;
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
         crate::piyopiyo::import(&piyo, &mut song.herd, &mut song.song, &mut song.ins);
         post_load_prep(song, &mut self.ui_state.shared.active_unit);
+        Ok(())
     }
 
-    fn import_organya_from_bytes(&mut self, data: &[u8]) {
+    fn import_organya_from_bytes(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut org = organyacat::Song::default();
-        org.read(data).unwrap();
+        org.read(data)?;
         let mut song = self.song.lock().unwrap();
         let song = &mut *song;
         crate::organya::import(&org, &mut song.herd, &mut song.song, &mut song.ins);
         post_load_prep(song, &mut self.ui_state.shared.active_unit);
+        Ok(())
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_file_dia_update(&mut self, ctx: &egui::Context) -> (Option<PathBuf>, Option<FileOp>) {
@@ -470,7 +462,7 @@ impl App {
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn desktop_handle_file_op(&mut self, path: PathBuf, op: FileOp) {
+    fn desktop_handle_file_op(&mut self, path: PathBuf, op: FileOp) -> anyhow::Result<()> {
         match op {
             FileOp::OpenProj => {
                 if let Err(e) = self.load_song_from_path(path) {
@@ -539,34 +531,34 @@ impl App {
                 }
             }
             FileOp::ImportPtVoice => {
-                let data = std::fs::read(&path).unwrap();
+                let data = std::fs::read(&path)?;
                 self.import_ptvoice(&data, &path);
             }
             FileOp::ImportPtNoise => {
-                let data = std::fs::read(&path).unwrap();
+                let data = std::fs::read(&path)?;
                 self.import_ptnoise(&data, &path);
             }
             FileOp::ImportOggVorbis => {
-                let data = std::fs::read(&path).unwrap();
+                let data = std::fs::read(&path)?;
                 self.import_ogg_vorbis(&data, &path);
             }
             FileOp::ImportMidi => {
-                let mid_data = std::fs::read(&path).unwrap();
-                self.import_midi_from_bytes(&mid_data);
+                let mid_data = std::fs::read(&path)?;
+                self.import_midi_from_bytes(&mid_data)?;
             }
             FileOp::ImportPiyoPiyo => {
-                let data = std::fs::read(&path).unwrap();
-                self.import_piyopiyo_from_bytes(&data);
+                let data = std::fs::read(&path)?;
+                self.import_piyopiyo_from_bytes(&data)?;
             }
             FileOp::ImportOrganya => {
-                let data = std::fs::read(&path).unwrap();
-                self.import_organya_from_bytes(&data);
+                let data = std::fs::read(&path)?;
+                self.import_organya_from_bytes(&data)?;
             }
             FileOp::SaveProjAs => {
                 let song = self.song.lock().unwrap();
                 match ptcow::serialize_project(&song.song, &song.herd, &song.ins) {
                     Ok(bytes) => {
-                        std::fs::write(&path, bytes).unwrap();
+                        std::fs::write(&path, bytes)?;
                         self.recently_opened.use_(path.clone());
                         self.open_file = Some(path);
                     }
@@ -633,8 +625,7 @@ impl App {
                 let song = self.song.lock().unwrap();
                 let voice = &song.ins.voices[voice];
                 let VoiceData::Noise(noise) = &voice.base.data else {
-                    self.modal.err("Voice not a noise");
-                    return;
+                    anyhow::bail!("Voice not a noise");
                 };
                 if let Err(e) = std::fs::write(&path, noise.to_ptnoise()) {
                     self.modal.err(e);
@@ -646,6 +637,36 @@ impl App {
                 );
             }
         }
+        Ok(())
+    }
+
+    fn handle_dropped_file(
+        &mut self,
+        dropfile: &egui::DroppedFile,
+        bytes: &Arc<[u8]>,
+    ) -> anyhow::Result<()> {
+        if let Some((name, ext)) = dropfile.name.split_once('.') {
+            match ext {
+                "ptcop" | "pttune" => {
+                    // Web version loads dropped files directly as bytes
+                    if let Err(e) = self.load_song_from_bytes(bytes) {
+                        self.modal.err(format!("Error loading project:\n{e}"));
+                    }
+                }
+                "mid" => {
+                    self.import_midi_from_bytes(bytes)?;
+                }
+                "pmd" => {
+                    self.import_piyopiyo_from_bytes(bytes)?;
+                }
+                "org" => {
+                    self.import_organya_from_bytes(bytes)?;
+                }
+                _ => {}
+            }
+            self.open_file = Some(format!("{name}.{ext}").into());
+        }
+        Ok(())
     }
 }
 
@@ -806,26 +827,8 @@ impl eframe::App for App {
                         };
                     }
                 } else if let Some(bytes) = &dropfile.bytes {
-                    if let Some((name, ext)) = dropfile.name.split_once('.') {
-                        match ext {
-                            "ptcop" | "pttune" => {
-                                // Web version loads dropped files directly as bytes
-                                if let Err(e) = self.load_song_from_bytes(bytes) {
-                                    self.modal.err(format!("Error loading project:\n{e}"));
-                                }
-                            }
-                            "mid" => {
-                                self.import_midi_from_bytes(bytes);
-                            }
-                            "pmd" => {
-                                self.import_piyopiyo_from_bytes(bytes);
-                            }
-                            "org" => {
-                                self.import_organya_from_bytes(bytes);
-                            }
-                            _ => {}
-                        }
-                        self.open_file = Some(format!("{name}.{ext}").into());
+                    if let Err(e) = self.handle_dropped_file(dropfile, bytes) {
+                        self.modal.err(e);
                     }
                 }
             }
@@ -835,7 +838,9 @@ impl eframe::App for App {
         if let Some(path) = picked_path
             && let Some(op) = file_op
         {
-            self.desktop_handle_file_op(path, op);
+            if let Err(e) = self.desktop_handle_file_op(path, op) {
+                self.modal.err(e);
+            }
         }
         self.modal.update(ui, &self.song);
         self.ui_state.shared.toasts.show(ui);
