@@ -324,7 +324,8 @@ fn replace_voices(ins: &mut MooInstructions, used_programs: UsedPrograms) {
             voice.name = "drum".into();
             ins.voices.push(voice);
         } else {
-            let mut voice = square_wave_voice();
+            let mut voice =
+                ptcow::Voice::from_ptvoice(include_bytes!("../res/soft-saw.ptvoice")).unwrap();
             let nam = PROGRAM_NAMES[prg as usize];
             voice.name = format!("[{prg}] {nam}");
             ins.voices.push(voice);
