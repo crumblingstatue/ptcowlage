@@ -160,7 +160,7 @@ impl App {
                     song_state.song.recalculate_length();
                 }
                 Err(e) => {
-                    modal.msg(e);
+                    modal.err(e);
                 }
             }
         }
@@ -230,20 +230,20 @@ impl App {
         load_persistence(cc, &mut this);
         if let Some(path) = args.open {
             if let Err(e) = this.load_song_from_path(path) {
-                this.modal.msg(format!("Error loading project:\n{e}"));
+                this.modal.err(format!("Error loading project:\n{e}"));
             }
         } else if args.recent {
             // Try to open most recent file
             #[cfg(not(target_arch = "wasm32"))]
             if let Some(path) = this.recently_opened.most_recent() {
                 if let Err(e) = this.load_song_from_path(path.clone()) {
-                    this.modal.msg(format!("Error loading project:\n{e}"));
+                    this.modal.err(format!("Error loading project:\n{e}"));
                 }
             }
         } else if let Some(song) = bundled_songs.first() {
             // Load a bundled song if no song was requested to open
             if let Err(e) = this.load_song_from_bytes(song.1) {
-                this.modal.msg(format!("Error loading project:\n{e}"));
+                this.modal.err(format!("Error loading project:\n{e}"));
             } else {
                 this.open_file = Some(song.0.into());
             }
@@ -270,7 +270,7 @@ impl App {
                 song.song.recalculate_length();
             }
             Err(e) => {
-                self.modal.msg(e);
+                self.modal.err(e);
             }
         }
         if self.prefs.midi_auto_poly_migrate {
@@ -434,7 +434,7 @@ impl App {
                     &mut song.freeplay_assist_units[0],
                 );
             }
-            Err(e) => self.modal.msg(e),
+            Err(e) => self.modal.err(e),
         }
     }
 
@@ -454,7 +454,7 @@ impl App {
                     &mut song.freeplay_assist_units[0],
                 );
             }
-            Err(e) => self.modal.msg(e),
+            Err(e) => self.modal.err(e),
         }
     }
     fn import_ogg_vorbis(&mut self, data: &[u8], path: &Path) {
@@ -474,7 +474,7 @@ impl App {
         match op {
             FileOp::OpenProj => {
                 if let Err(e) = self.load_song_from_path(path) {
-                    self.modal.msg(format!("Error loading project:\n{e}"));
+                    self.modal.err(format!("Error loading project:\n{e}"));
                 }
             }
             FileOp::ImportAllPtcop => {
@@ -496,7 +496,7 @@ impl App {
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.modal.err(e);
                     }
                 }
             }
@@ -515,7 +515,7 @@ impl App {
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.modal.err(e);
                     }
                 }
             }
@@ -534,7 +534,7 @@ impl App {
                         reset_voice_for_units_with_voice_idx(&mut song, voice_idx);
                     }
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.modal.err(e);
                     }
                 }
             }
@@ -571,7 +571,7 @@ impl App {
                         self.open_file = Some(path);
                     }
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.modal.err(e);
                     }
                 }
                 drop(song);
@@ -607,7 +607,7 @@ impl App {
                 match crate::util::write_wav(f, ptcow::ChNum::Mono, bytemuck::cast_slice(&data)) {
                     Ok(()) => (),
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.modal.err(e);
                     }
                 }
             }
@@ -616,10 +616,10 @@ impl App {
                 match song.ins.voices[voice].to_ptvoice() {
                     Ok(data) => {
                         if let Err(e) = std::fs::write(&path, data) {
-                            self.modal.msg(e);
+                            self.modal.err(e);
                         }
                     }
-                    Err(e) => self.modal.msg(e),
+                    Err(e) => self.modal.err(e),
                 }
                 self.cmd.toast(
                     ToastKind::Success,
@@ -633,11 +633,11 @@ impl App {
                 let song = self.song.lock().unwrap();
                 let voice = &song.ins.voices[voice];
                 let VoiceData::Noise(noise) = &voice.base.data else {
-                    self.modal.msg("Voice not a noise");
+                    self.modal.err("Voice not a noise");
                     return;
                 };
                 if let Err(e) = std::fs::write(&path, noise.to_ptnoise()) {
-                    self.modal.msg(e);
+                    self.modal.err(e);
                 }
                 self.cmd.toast(
                     ToastKind::Success,
@@ -811,7 +811,7 @@ impl eframe::App for App {
                             "ptcop" | "pttune" => {
                                 // Web version loads dropped files directly as bytes
                                 if let Err(e) = self.load_song_from_bytes(bytes) {
-                                    self.modal.msg(format!("Error loading project:\n{e}"));
+                                    self.modal.err(format!("Error loading project:\n{e}"));
                                 }
                             }
                             "mid" => {
@@ -1052,7 +1052,7 @@ impl App {
             #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {
                 if let Err(e) = self.load_song_from_path(path) {
-                    self.modal.msg(format!("Error loading project:\n{e}"));
+                    self.modal.err(format!("Error loading project:\n{e}"));
                 }
             }
             Cmd::ResetUnitVoice { unit, voice } => {
@@ -1200,7 +1200,7 @@ impl App {
                     );
                 }
                 Err(e) => {
-                    self.modal.msg(format_args!("Error saving: {e}"));
+                    self.modal.err(format_args!("Error saving: {e}"));
                 }
             }
         }
@@ -1274,7 +1274,7 @@ fn poly_migrate_single(
 ) -> Option<UnitIdx> {
     let migrate_to = UnitIdx(song.herd.units.len());
     if migrate_to.0 >= 50 {
-        app_modal.msg("Error: Cannot create more units than 50");
+        app_modal.err("Error: Cannot create more units than 50");
         return None;
     }
     if !poly_migrate_units(migrate_from, migrate_to, &mut song.song.events) {

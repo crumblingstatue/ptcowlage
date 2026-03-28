@@ -9,8 +9,8 @@ pub struct Modal {
 }
 
 impl Modal {
-    pub fn msg(&mut self, msg: impl std::fmt::Display) {
-        self.payload = Some(Payload::Msg(msg.to_string()));
+    pub fn err(&mut self, msg: impl std::fmt::Display) {
+        self.payload = Some(Payload::ErrMsg(msg.to_string()));
     }
     pub fn seek_to_sample(&mut self, t: ptcow::SampleT) {
         self.payload = Some(Payload::SeekToSamplePrompt(t));
@@ -31,11 +31,21 @@ impl Modal {
         if let Some(payload) = &mut self.payload {
             let mut close = false;
             egui::Modal::new("modal_popup".into()).show(ctx, |ui| match payload {
-                Payload::Msg(msg) => {
-                    ui.label(&*msg);
-                    if ui.button("Close").clicked() {
-                        close = true;
-                    }
+                Payload::ErrMsg(msg) => {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new("！")
+                                .color(egui::Color32::RED)
+                                .strong()
+                                .size(48.0),
+                        );
+                        ui.strong(&*msg);
+                    });
+                    ui.vertical_centered(|ui| {
+                        if ui.button("Close").clicked() {
+                            close = true;
+                        }
+                    });
                 }
                 Payload::SeekToSamplePrompt(samp) => {
                     ui.heading("Seek to sample");
@@ -87,7 +97,7 @@ fn voice_slot(
 }
 
 enum Payload {
-    Msg(String),
+    ErrMsg(String),
     SeekToSamplePrompt(ptcow::SampleT),
     ReplaceWaveDataSlot {
         voice_idx: ptcow::VoiceIdx,
