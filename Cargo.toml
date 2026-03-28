@@ -62,5 +62,4 @@ panic = "abort"
 [patch.crates-io]
 # TODO: Release new ptcow version
 ptcow.git = "https://github.com/crumblingstatue/ptcow.git"
-egui-file-dialog.git = "https://github.com/crumblingstatue/egui-file-dialog.git"
-egui-file-dialog.branch = "retain-selected-entry"
+egui-file-dialog.git = "https://github.com/jannistpl/egui-file-dialog.git"
