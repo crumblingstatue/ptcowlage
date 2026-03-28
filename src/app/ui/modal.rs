@@ -19,9 +19,9 @@ impl Modal {
         &mut self,
         voice_idx: ptcow::VoiceIdx,
         slot: SelectedSlot,
-        with: ptcow::WaveData,
+        with: ptcow::WaveDataPoints,
     ) {
-        self.payload = Some(Payload::ReplaceWaveDataSlot {
+        self.payload = Some(Payload::ReplaceWaveDataPtsSlot {
             voice_idx,
             slot,
             with,
@@ -58,7 +58,7 @@ impl Modal {
                         close = true;
                     }
                 }
-                Payload::ReplaceWaveDataSlot {
+                Payload::ReplaceWaveDataPtsSlot {
                     voice_idx,
                     slot,
                     with,
@@ -67,8 +67,15 @@ impl Modal {
                     ui.label("Replace existing data?");
                     ui.horizontal(|ui| {
                         if ui.button("Yes").clicked() {
-                            voice_slot(&mut song.lock().unwrap().ins.voices, *voice_idx, *slot)
-                                .data = ptcow::VoiceData::Wave(with.clone());
+                            if let ptcow::VoiceData::Wave(wave_data) = &mut voice_slot(
+                                &mut song.lock().unwrap().ins.voices,
+                                *voice_idx,
+                                *slot,
+                            )
+                            .data
+                            {
+                                wave_data.points = with.clone();
+                            }
                             close = true;
                         }
                         if ui.button("No").clicked() {
@@ -99,9 +106,9 @@ fn voice_slot(
 enum Payload {
     ErrMsg(String),
     SeekToSamplePrompt(ptcow::SampleT),
-    ReplaceWaveDataSlot {
+    ReplaceWaveDataPtsSlot {
         voice_idx: ptcow::VoiceIdx,
         slot: SelectedSlot,
-        with: ptcow::WaveData,
+        with: ptcow::WaveDataPoints,
     },
 }

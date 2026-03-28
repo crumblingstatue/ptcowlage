@@ -20,7 +20,7 @@ use {
     ptcow::{
         Bps, ChNum, EnvPt, EnvelopeSrc, Key, Master, MooInstructions, NoiseDesignOscillator,
         NoiseDesignUnit, NoiseTable, NoiseType, OsciArgs, OsciPt, SampleRate, Voice, VoiceData,
-        VoiceFlags, VoiceIdx, WaveData, WaveDataPoints, noise_to_pcm,
+        VoiceFlags, VoiceIdx, WaveDataPoints, noise_to_pcm,
     },
     std::path::PathBuf,
 };
@@ -804,7 +804,7 @@ fn voice_unit_ui(
                     .clicked()
                 {
                     app_cmd.modal(move |m| {
-                        m.replace_wave_data_slot(voice_idx, sel_slot, square_wave());
+                        m.replace_wave_data_slot(voice_idx, sel_slot, square_wave().points);
                     });
                 }
                 if ui
@@ -818,13 +818,8 @@ fn voice_unit_ui(
                         m.replace_wave_data_slot(
                             voice_idx,
                             sel_slot,
-                            WaveData {
-                                points: WaveDataPoints::Overtone {
-                                    points: vec![OsciPt { x: 1, y: 16 }],
-                                },
-                                envelope: EnvelopeSrc::default(),
-                                volume: 127,
-                                pan: 64,
+                            WaveDataPoints::Overtone {
+                                points: vec![OsciPt { x: 1, y: 16 }],
                             },
                         );
                     });
