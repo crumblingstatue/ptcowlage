@@ -1,7 +1,7 @@
 use {
     crate::app::ui::modal::Modal,
     egui_toast::ToastKind,
-    ptcow::{EventPayload, VoiceIdx},
+    ptcow::{ChNum, EventPayload, SourceSampleRate, VoiceIdx},
     std::collections::VecDeque,
 };
 
@@ -64,7 +64,11 @@ pub enum Cmd {
     ResetVoiceForUnitsWithVoiceIdx {
         idx: VoiceIdx,
     },
-    PromptExportWavData(Vec<u8>),
+    PromptExportWavData {
+        data: Vec<u8>,
+        ch_num: ChNum,
+        sample_rate: SourceSampleRate,
+    },
 }
 
 impl Cmd {

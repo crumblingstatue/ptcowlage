@@ -1,7 +1,7 @@
 use {
     crate::audio_out::{SongState, prepare_song},
     hound::WavSpec,
-    ptcow::ChNum,
+    ptcow::{ChNum, SourceSampleRate},
     std::{
         io::{Seek, Write},
         sync::atomic::{AtomicBool, AtomicU32, Ordering},
@@ -52,8 +52,12 @@ where
     indices
 }
 
-pub fn write_wav<W: Write + Seek>(w: W, n_ch: ChNum, samples: &[i16]) -> anyhow::Result<()> {
-    let sample_rate = 44_100;
+pub fn write_wav<W: Write + Seek>(
+    w: W,
+    n_ch: ChNum,
+    samples: &[i16],
+    sample_rate: SourceSampleRate,
+) -> anyhow::Result<()> {
     let bits_per_sample: u16 = 16;
     let num_channels: u16 = n_ch as u16;
     let mut writer = hound::WavWriter::new(
@@ -96,7 +100,12 @@ pub fn export_wav(
         let progress_ratio = song.herd.smp_count as f32 / song.herd.smp_end as f32;
         progress.store(progress_ratio.to_bits(), Ordering::Relaxed);
     }
-    write_wav(&mut wav_out, ChNum::Stereo, &samp_data)?;
+    write_wav(
+        &mut wav_out,
+        ChNum::Stereo,
+        &samp_data,
+        song.ins.out_sample_rate.into(),
+    )?;
     Ok(wav_out.into_inner())
 }
 

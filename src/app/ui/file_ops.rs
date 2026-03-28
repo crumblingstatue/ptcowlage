@@ -1,4 +1,4 @@
-use ptcow::VoiceIdx;
+use ptcow::{ChNum, SourceSampleRate, VoiceIdx};
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum FileOp {
@@ -14,10 +14,18 @@ pub enum FileOp {
     ReplaceWavSingle(VoiceIdx),
     ImportPtNoise,
     ImportPtVoice,
-    ExportPtvoice { voice: VoiceIdx },
-    ExportPtnoise { voice: VoiceIdx },
+    ExportPtvoice {
+        voice: VoiceIdx,
+    },
+    ExportPtnoise {
+        voice: VoiceIdx,
+    },
     ImportOggVorbis,
-    ExportWavData(Vec<u8>),
+    ExportWavData {
+        data: Vec<u8>,
+        ch_num: ChNum,
+        sample_rate: SourceSampleRate,
+    },
 }
 
 #[derive(Clone, Copy)]

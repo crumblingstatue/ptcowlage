@@ -594,9 +594,13 @@ impl App {
                     song_lock.can_unlock.store(true, Ordering::Relaxed);
                 });
             }
-            FileOp::ExportWavData(data) => {
+            FileOp::ExportWavData {
+                ch_num,
+                data,
+                sample_rate,
+            } => {
                 let f = std::fs::File::create(path).unwrap();
-                match crate::util::write_wav(f, ptcow::ChNum::Mono, bytemuck::cast_slice(&data)) {
+                match crate::util::write_wav(f, ch_num, bytemuck::cast_slice(&data), sample_rate) {
                     Ok(()) => (),
                     Err(e) => {
                         self.modal.err(e);
@@ -1027,8 +1031,20 @@ impl App {
             Cmd::PromptExportWav => {
                 self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWav, true);
             }
-            Cmd::PromptExportWavData(data) => {
-                self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWavData(data), true);
+            Cmd::PromptExportWavData {
+                data,
+                ch_num,
+                sample_rate,
+            } => {
+                self.open_file_prompt(
+                    file_ops::FILT_WAV,
+                    FileOp::ExportWavData {
+                        data,
+                        ch_num,
+                        sample_rate,
+                    },
+                    true,
+                );
             }
             Cmd::PromptExportPtnoise { voice } => {
                 self.open_file_prompt(

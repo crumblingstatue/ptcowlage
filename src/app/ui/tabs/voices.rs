@@ -579,7 +579,11 @@ pub fn voice_ui_inner(
                     slot.inst.sample_buf.len()
                 ));
                 if ui.button("Export .wav").clicked() {
-                    app_cmd.push(Cmd::PromptExportWavData(slot.inst.sample_buf.clone()));
+                    app_cmd.push(Cmd::PromptExportWavData {
+                        data: slot.inst.sample_buf.clone(),
+                        ch_num: ChNum::Stereo,
+                        sample_rate: ptcow::NATIVE_SAMPLE_RATE.into(),
+                    });
                 }
             }
             InstanceTab::Envelope => {
