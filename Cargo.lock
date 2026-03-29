@@ -761,7 +761,7 @@ dependencies = [
 [[package]]
 name = "egui-file-dialog"
 version = "0.13.0"
-source = "git+https://github.com/jannistpl/egui-file-dialog.git#240a38f0dea0a3d15f9f7b0ea97cefae70cf26e3"
+source = "git+https://github.com/jannistpl/egui-file-dialog.git#df3749e6e70654b2ada8d517c141a41e283eefe5"
 dependencies = [
  "directories",
  "dunce",
@@ -855,8 +855,9 @@ dependencies = [
 
 [[package]]
 name = "egui_logger"
-version = "0.9.3"
-source = "git+https://github.com/crumblingstatue/egui_logger.git#b8ab77da65dd76dc3c70c647da84573100f77e56"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd4df7fd4bd80a879c6c9796f943989d4fcd178dc22af5cbfe8369d21cb4a80e"
 dependencies = [
  "chrono",
  "egui",
@@ -4039,18 +4040,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.47"
+version = "0.8.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efbb2a062be311f2ba113ce66f697a4dc589f85e78a4aea276200804cea0ed87"
+checksum = "eed437bf9d6692032087e337407a86f04cd8d6a16a37199ed57949d415bd68e9"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.47"
+version = "0.8.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e8bc7269b54418e7aeeef514aa68f8690b8c0489a06b0136e5f57c4c5ccab89"
+checksum = "70e3cd084b1788766f53af483dd21f93881ff30d7320490ec3ef7526d203bad4"
 dependencies = [
  "proc-macro2",
  "quote",

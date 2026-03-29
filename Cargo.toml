@@ -25,9 +25,9 @@ organyacat = "0.2.0"
 hound = "3.5.1"
 arrayvec = "0.7"
 bytemuck = "1.24"
-rustc-hash = "2.1.1"
+rustc-hash = "2.1.2"
 log = "0.4.29"
-egui_logger.git = "https://github.com/crumblingstatue/egui_logger.git"
+egui_logger = "0.10"
 
 # Web-only dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
