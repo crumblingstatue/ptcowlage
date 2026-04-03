@@ -380,12 +380,16 @@ impl App {
                         match song.ins.voices[voice].to_ptvoice() {
                             Ok(data) => (data, "out.ptvoice"),
                             Err(e) => {
-                                self.modal.msg(e);
+                                self.cmd.toast(ToastKind::Error, format!("{e}"), 5.0);
                                 return;
                             }
                         }
                     }
-                    FileOp::ExportWavData(data) => {
+                    FileOp::ExportWavData {
+                        data,
+                        ch_num,
+                        sample_rate,
+                    } => {
                         use ptcow::ChNum;
 
                         let mut out = std::io::Cursor::new(Vec::new());
@@ -393,6 +397,7 @@ impl App {
                             &mut out,
                             ChNum::Mono,
                             bytemuck::cast_slice(&data),
+                            sample_rate,
                         );
                         (out.into_inner(), "out.wav")
                     }
@@ -1109,7 +1114,7 @@ impl App {
         match cmd {
             WebCmd::OpenFile { data, name } => {
                 if let Err(e) = self.load_song_from_bytes(&data) {
-                    self.modal.msg(e);
+                    self.cmd.toast(ToastKind::Error, format!("{e}"), 5.0);
                 }
                 self.open_file = Some(name.into());
             }
@@ -1152,7 +1157,7 @@ impl App {
                         }
                     }
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.cmd.toast(ToastKind::Error, format!("{e}"), 5.0);
                     }
                 }
             }
@@ -1172,7 +1177,7 @@ impl App {
                         }
                     }
                     Err(e) => {
-                        self.modal.msg(e);
+                        self.cmd.toast(ToastKind::Error, format!("{e}"), 5.0);
                     }
                 }
             }
@@ -1190,7 +1195,7 @@ impl App {
                     }
                 }
                 Err(e) => {
-                    self.modal.msg(e);
+                    self.cmd.toast(ToastKind::Error, format!("{e}"), 5.0);
                 }
             },
         }

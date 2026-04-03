@@ -788,9 +788,8 @@ dependencies = [
 [[package]]
 name = "egui-style-editor"
 version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/egui-style-editor.git#7aaffc3a9e7ae38a5133d22e6f59febcd5bec988"
+source = "git+https://github.com/crumblingstatue/egui-style-editor.git#9d9e77676d91d1842290d43937913c16a2ad1ea8"
 dependencies = [
- "arboard",
  "base64",
  "egui",
  "postcard",
