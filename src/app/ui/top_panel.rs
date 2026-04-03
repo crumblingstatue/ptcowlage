@@ -88,7 +88,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
             );
         });
         ui.menu_button("View", |ui| {
-            view_menu_ui(ui);
+            view_menu_ui(ui, &mut app.ui_state);
         });
         let song: &mut SongState = &mut song_g;
         ui.menu_button("Song", |ui| {
@@ -239,7 +239,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     }
 }
 
-fn view_menu_ui(ui: &mut egui::Ui) {
+fn view_menu_ui(ui: &mut egui::Ui, app_ui_state: &mut UiState) {
     egui::gui_zoom::zoom_menu_buttons(ui);
     ui.separator();
     if ui.button("Fullscreen").clicked() {
@@ -256,6 +256,11 @@ fn view_menu_ui(ui: &mut egui::Ui) {
         #[cfg(target_arch = "wasm32")]
         crate::web_glue::exit_fullscreen();
     }
+    ui.separator();
+    ui.checkbox(
+        &mut app_ui_state.show_style_ed,
+        "Style editor (experimental)",
+    );
 }
 
 fn song_menu_ui(

@@ -23,6 +23,7 @@ use {
         },
     },
     eframe::egui,
+    egui_style_editor::StyleEditor,
     egui_toast::Toasts,
     ptcow::{Event, EventPayload, GroupIdx, UnitIdx, Voice, VoiceData, VoiceIdx, WaveDataPoints},
     rustc_hash::FxHashSet,
@@ -291,6 +292,8 @@ pub struct UiState {
     pub shared: SharedUiState,
     pub windows: Windows,
     pub left: LeftPanelState,
+    pub style_ed: StyleEditor,
+    pub show_style_ed: bool,
 }
 
 /// Ui state shared among different uis
