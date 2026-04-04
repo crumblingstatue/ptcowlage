@@ -293,7 +293,6 @@ pub struct UiState {
     pub windows: Windows,
     pub left: LeftPanelState,
     pub style_ed: StyleEditor,
-    pub show_style_ed: bool,
 }
 
 /// Ui state shared among different uis

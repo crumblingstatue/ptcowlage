@@ -868,9 +868,7 @@ impl eframe::App for App {
                 }
             }
         }
-        if self.ui_state.show_style_ed {
-            self.ui_state.style_ed.show_window(ui, &mut []);
-        }
+        self.ui_state.style_ed.show_window(ui, &mut []);
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         #[cfg(not(target_arch = "wasm32"))]

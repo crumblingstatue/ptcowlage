@@ -258,7 +258,7 @@ fn view_menu_ui(ui: &mut egui::Ui, app_ui_state: &mut UiState) {
     }
     ui.separator();
     ui.checkbox(
-        &mut app_ui_state.show_style_ed,
+        &mut app_ui_state.style_ed.open,
         "Style editor (experimental)",
     );
 }

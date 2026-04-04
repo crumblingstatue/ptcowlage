@@ -788,7 +788,7 @@ dependencies = [
 [[package]]
 name = "egui-style-editor"
 version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/egui-style-editor.git#9d9e77676d91d1842290d43937913c16a2ad1ea8"
+source = "git+https://github.com/crumblingstatue/egui-style-editor.git#aa31cf6df93ff52e1a345261c3e901433c412ce4"
 dependencies = [
  "base64",
  "egui",
