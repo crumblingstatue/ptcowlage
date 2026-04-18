@@ -999,11 +999,12 @@ impl App {
                 self.open_file = None;
                 self.ui_state.shared.active_unit = SongState::VOICE_TEST_UNIT_IDX;
             }
-            #[cfg(not(target_arch = "wasm32"))]
             Cmd::OpenPtcopFromPath { path } => {
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Err(e) = self.load_song_from_path(path) {
                     self.modal.err(format!("Error loading project:\n{e}"));
                 }
+                // for wasm32, this isn't an actual used command, just avoiding cfg hell
             }
             Cmd::ResetUnitVoice { unit, voice } => {
                 let mut song = self.song.lock().unwrap();

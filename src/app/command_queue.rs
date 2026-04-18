@@ -33,7 +33,6 @@ pub enum Cmd {
         duration: f64,
     },
     ClearProject,
-    #[cfg(not(target_arch = "wasm32"))]
     OpenPtcopFromPath {
         path: std::path::PathBuf,
     },
