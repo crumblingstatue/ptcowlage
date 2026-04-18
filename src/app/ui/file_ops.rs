@@ -95,28 +95,33 @@ impl FileOp {
 #[derive(Clone, Copy)]
 pub struct FileFilt {
     pub name: &'static str,
-    pub ext: &'static str,
+    pub exts: &'static [&'static str],
 }
 impl FileFilt {
     #[cfg(target_arch = "wasm32")]
     pub(crate) fn web_filter(&self) -> String {
-        [".", self.ext].concat()
+        use std::fmt::Write as _;
+        let mut out = String::new();
+        for ext in self.exts {
+            write!(&mut out, ".{ext},");
+        }
+        out
     }
 }
 
 macro_rules! file_filts {
-    ($($const_name:ident, $name:literal, $ext:literal;)*) => {
+    ($($const_name:ident, $name:literal, $($ext:literal$(,)?)+;)*) => {
         $(
             pub const $const_name: FileFilt = FileFilt {
                 name: $name,
-                ext: $ext,
+                exts: &[$($ext,)+]
             };
         )+
     };
 }
 
 file_filts! {
-    FILT_PTCOP, "PxTone collage", "ptcop";
+    FILT_PTCOP, "PxTone song", "ptcop", "pttune";
     FILT_MIDI, "Midi file", "mid";
     FILT_PIYOPIYO, "PiyoPiyo file", "pmd";
     FILT_ORGANYA, "Organya file", "org";

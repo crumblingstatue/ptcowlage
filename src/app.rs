@@ -192,18 +192,18 @@ impl App {
             song: song_state_handle.clone(),
             #[cfg(not(target_arch = "wasm32"))]
             file_dia: egui_file_dialog::FileDialog::new()
-                .add_file_filter_extensions(FILT_PTCOP.name, vec![FILT_PTCOP.ext])
-                .add_save_extension(FILT_PTCOP.name, FILT_PTCOP.ext)
-                .add_save_extension(FILT_WAV.name, FILT_WAV.ext)
-                .add_save_extension(FILT_PTVOICE.name, FILT_PTVOICE.ext)
-                .add_save_extension(FILT_PTNOISE.name, FILT_PTNOISE.ext)
-                .add_file_filter_extensions(FILT_WAV.name, vec![FILT_WAV.ext])
-                .add_file_filter_extensions(FILT_MIDI.name, vec![FILT_MIDI.ext])
-                .add_file_filter_extensions(FILT_PIYOPIYO.name, vec![FILT_PIYOPIYO.ext])
-                .add_file_filter_extensions(FILT_ORGANYA.name, vec![FILT_ORGANYA.ext])
-                .add_file_filter_extensions(FILT_SF2.name, vec![FILT_SF2.ext])
-                .add_file_filter_extensions(FILT_PTVOICE.name, vec![FILT_PTVOICE.ext])
-                .add_file_filter_extensions(FILT_PTNOISE.name, vec![FILT_PTNOISE.ext]),
+                .add_file_filter_extensions(FILT_PTCOP.name, FILT_PTCOP.exts.into())
+                .add_file_filter_extensions(FILT_WAV.name, FILT_WAV.exts.into())
+                .add_file_filter_extensions(FILT_MIDI.name, FILT_MIDI.exts.into())
+                .add_file_filter_extensions(FILT_PIYOPIYO.name, FILT_PIYOPIYO.exts.into())
+                .add_file_filter_extensions(FILT_ORGANYA.name, FILT_ORGANYA.exts.into())
+                .add_file_filter_extensions(FILT_SF2.name, FILT_SF2.exts.into())
+                .add_file_filter_extensions(FILT_PTVOICE.name, FILT_PTVOICE.exts.into())
+                .add_file_filter_extensions(FILT_PTNOISE.name, FILT_PTNOISE.exts.into())
+                .add_save_extension(FILT_PTCOP.name, FILT_PTCOP.exts[0])
+                .add_save_extension(FILT_WAV.name, FILT_WAV.exts[0])
+                .add_save_extension(FILT_PTVOICE.name, FILT_PTVOICE.exts[0])
+                .add_save_extension(FILT_PTNOISE.name, FILT_PTNOISE.exts[0]),
             #[cfg(not(target_arch = "wasm32"))]
             recently_opened: RecentlyUsedList::default(),
             #[cfg(not(target_arch = "wasm32"))]
