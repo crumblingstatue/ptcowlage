@@ -28,6 +28,30 @@ pub enum FileOp {
     },
 }
 
+impl FileOp {
+    /// If true, this is a save prompt, else it's an open prompt
+    pub fn is_save(&self) -> bool {
+        match self {
+            FileOp::OpenProj
+            | FileOp::ImportAllPtcop
+            | FileOp::ImportMidi
+            | FileOp::ImportPiyoPiyo
+            | FileOp::ImportOrganya
+            | FileOp::ReplacePtVoiceSingle(..)
+            | FileOp::ReplacePtNoiseSingle(..)
+            | FileOp::ReplaceWavSingle(..)
+            | FileOp::ImportPtNoise
+            | FileOp::ImportPtVoice
+            | FileOp::ImportOggVorbis => false,
+            FileOp::SaveProjAs
+            | FileOp::ExportWav
+            | FileOp::ExportPtvoice { .. }
+            | FileOp::ExportPtnoise { .. }
+            | FileOp::ExportWavData { .. } => true,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct FileFilt {
     pub name: &'static str,
