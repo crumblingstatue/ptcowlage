@@ -54,6 +54,7 @@ impl Cmd {
         match self {
             Self::ReloadCurrentFile => Some(Self::ReloadCurrentFile),
             Self::SaveCurrentFile => Some(Self::SaveCurrentFile),
+            Self::ClearProject => Some(Self::ClearProject),
             Self::FilePrompt(op) => {
                 match op {
                     FileOp::OpenProj
