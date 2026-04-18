@@ -14,6 +14,7 @@
     // and make the logic more complex
     clippy::collapsible_if,
     clippy::collapsible_else_if,
+    clippy::collapsible_match,
     // Especially hard to avoid when prototyping
     clippy::too_many_arguments,
     // This lint is just stupid
