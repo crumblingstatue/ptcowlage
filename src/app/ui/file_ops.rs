@@ -68,6 +68,28 @@ impl FileOp {
             FileOp::ImportOggVorbis => FILT_OGG,
         }
     }
+    /// Label used by [`crate::app::command_queue::Cmd::label`]
+    pub(crate) fn cmd_label(&self) -> &'static str {
+        match self {
+            FileOp::OpenProj => "open project",
+            FileOp::ImportAllPtcop => "import voices from ptcop",
+            FileOp::ImportMidi => "import midi",
+            FileOp::SaveProjAs => "save project as",
+            FileOp::ImportPiyoPiyo => "import PiyoPiyo",
+            FileOp::ImportOrganya => "import Organya",
+            FileOp::ExportWav => "export .wav",
+            FileOp::ReplacePtVoiceSingle(..) => "replace voice with .ptvoice",
+            FileOp::ReplacePtNoiseSingle(..) => "replace voice with .ptnoise",
+            FileOp::ReplaceWavSingle(..) => "replace voice with .wav",
+            FileOp::ImportPtNoise => "import .ptnoise",
+            FileOp::ImportPtVoice => "import .ptvoice",
+            FileOp::ExportPtvoice { .. } => "export .ptvoice",
+            FileOp::ExportPtnoise { .. } => "export .ptnoise",
+            FileOp::ImportOggVorbis => "import .ogg",
+            // Not user facing
+            FileOp::ExportWavData { .. } => "",
+        }
+    }
 }
 
 #[derive(Clone, Copy)]

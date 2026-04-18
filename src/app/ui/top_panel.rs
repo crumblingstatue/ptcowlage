@@ -313,14 +313,16 @@ fn song_menu_ui(
         app_ui_state.windows.toggle::<TitleAndCommentWindow>();
     }
     ui.separator();
-    if ui
-        .add(
-            egui::Button::new("Repeat last command")
-                .shortcut_text(ui.format_shortcut(&REPEAT_LAST_SHORTCUT)),
-        )
-        .clicked()
-    {
-        app_cmd.repeat_last();
+    if let Some(cmd) = app_cmd.last() {
+        if ui
+            .add(
+                egui::Button::new(format!("Repeat '{}'", cmd.label()))
+                    .shortcut_text(ui.format_shortcut(&REPEAT_LAST_SHORTCUT)),
+            )
+            .clicked()
+        {
+            app_cmd.repeat_last();
+        }
     }
 }
 

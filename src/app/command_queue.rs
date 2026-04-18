@@ -84,6 +84,29 @@ impl Cmd {
             _ => None,
         }
     }
+    /// Short description used in e.g. label of "Repeat command x" button
+    pub fn label(&self) -> &'static str {
+        match self {
+            Cmd::ReloadCurrentFile => "reload project",
+            Cmd::OpenEventInEventsTab { .. } => "open events tab",
+            Cmd::RemoveNoteAtIdx { .. } => "remove note",
+            Cmd::ReplaceAudioThread => "replace audio thread",
+            Cmd::SaveCurrentFile => "save project",
+            Cmd::OpenVoice(..) => "open voice",
+            Cmd::OverwriteEvent { .. } => "ovewrite event",
+            Cmd::InsertEvent { .. } => "insert event",
+            Cmd::FilePrompt(file_op) => file_op.cmd_label(),
+            // These are not user-facing commands
+            Cmd::ClearProject
+            | Cmd::OpenPtcopFromPath { .. }
+            | Cmd::ResetUnitVoice { .. }
+            | Cmd::Modal(..)
+            | Cmd::ResetVoiceForUnitsWithVoiceIdx { .. }
+            | Cmd::SetActiveTab(..)
+            | Cmd::SetEventsFilter(..)
+            | Cmd::Toast { .. } => "",
+        }
+    }
 }
 
 #[derive(Default)]
@@ -113,11 +136,13 @@ impl CommandQueue {
     pub fn tab(&mut self, tab: crate::app::ui::Tab) {
         self.push(Cmd::SetActiveTab(tab));
     }
-
     pub(crate) fn repeat_last(&mut self) {
         if let Some(cmd) = &self.last {
             // We already know it's repeatable because it was added via `repeatable()`
             self.push(cmd.repeatable().unwrap());
         }
+    }
+    pub(crate) fn last(&self) -> Option<&Cmd> {
+        self.last.as_ref()
     }
 }
