@@ -900,9 +900,13 @@ fn import_voices_from_ptcop(path: &Path, song: &mut SongState) {
 
 impl App {
     // INVARIANT: Locks the song
-    pub fn load_song_from_path(&mut self, path: PathBuf) -> anyhow::Result<()> {
+    pub fn load_song_from_path(&mut self, mut path: PathBuf) -> anyhow::Result<()> {
         let data = std::fs::read(&path).context("Failed to read file")?;
         self.load_song_from_bytes(&data)?;
+        // Canonicalize path, so recently used list works correctly
+        if let Ok(canon) = path.canonicalize() {
+            path = canon;
+        }
         #[cfg(not(target_arch = "wasm32"))]
         self.recently_opened.use_(path.clone());
         self.open_file = Some(path);
