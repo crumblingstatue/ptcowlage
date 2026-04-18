@@ -50,6 +50,24 @@ impl FileOp {
             | FileOp::ExportWavData { .. } => true,
         }
     }
+    pub fn filt(&self) -> FileFilt {
+        match self {
+            FileOp::ImportMidi => FILT_MIDI,
+            FileOp::OpenProj | FileOp::ImportAllPtcop | FileOp::SaveProjAs => FILT_PTCOP,
+            FileOp::ImportPiyoPiyo => FILT_PIYOPIYO,
+            FileOp::ImportOrganya => FILT_ORGANYA,
+            FileOp::ExportWav | FileOp::ReplaceWavSingle(..) | FileOp::ExportWavData { .. } => {
+                FILT_WAV
+            }
+            FileOp::ReplacePtVoiceSingle(..)
+            | FileOp::ImportPtVoice
+            | FileOp::ExportPtvoice { .. } => FILT_PTVOICE,
+            FileOp::ReplacePtNoiseSingle(..)
+            | FileOp::ImportPtNoise
+            | FileOp::ExportPtnoise { .. } => FILT_PTNOISE,
+            FileOp::ImportOggVorbis => FILT_OGG,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]

@@ -10,10 +10,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 Tab,
-                file_ops::{
-                    self, FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileFilt,
-                    FileOp,
-                },
+                file_ops::{FILT_MIDI, FILT_ORGANYA, FILT_PIYOPIYO, FILT_PTCOP, FILT_SF2, FileOp},
                 modal::Modal,
             },
         },
@@ -338,7 +335,8 @@ impl App {
         (picked_path, file_op)
     }
 
-    fn open_file_prompt(&mut self, filt: FileFilt, file_op: FileOp) {
+    fn open_file_prompt(&mut self, file_op: FileOp) {
+        let filt = file_op.filt();
         #[cfg(not(target_arch = "wasm32"))]
         {
             if file_op == FileOp::OpenProj
@@ -995,69 +993,60 @@ impl App {
                 );
             }
             Cmd::PromptImportPtVoice => {
-                self.open_file_prompt(file_ops::FILT_PTVOICE, FileOp::ImportPtVoice);
+                self.open_file_prompt(FileOp::ImportPtVoice);
             }
             Cmd::PromptImportPtNoise => {
-                self.open_file_prompt(file_ops::FILT_PTNOISE, FileOp::ImportPtNoise);
+                self.open_file_prompt(FileOp::ImportPtNoise);
             }
             Cmd::PromptImportOggVorbis => {
-                self.open_file_prompt(file_ops::FILT_OGG, FileOp::ImportOggVorbis);
+                self.open_file_prompt(FileOp::ImportOggVorbis);
             }
             Cmd::PromptImportAllPtcop => {
-                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::ImportAllPtcop);
+                self.open_file_prompt(FileOp::ImportAllPtcop);
             }
             Cmd::PromptReplacePtVoiceSingle(voice_idx) => {
-                self.open_file_prompt(
-                    file_ops::FILT_PTVOICE,
-                    FileOp::ReplacePtVoiceSingle(voice_idx),
-                );
+                self.open_file_prompt(FileOp::ReplacePtVoiceSingle(voice_idx));
             }
             Cmd::PromptReplacePtNoiseSingle(voice_idx) => {
-                self.open_file_prompt(
-                    file_ops::FILT_PTNOISE,
-                    FileOp::ReplacePtNoiseSingle(voice_idx),
-                );
+                self.open_file_prompt(FileOp::ReplacePtNoiseSingle(voice_idx));
             }
             Cmd::PromptReplaceWavSingle(voice_idx) => {
-                self.open_file_prompt(file_ops::FILT_WAV, FileOp::ReplaceWavSingle(voice_idx));
+                self.open_file_prompt(FileOp::ReplaceWavSingle(voice_idx));
             }
             Cmd::PromptSaveAs => {
-                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::SaveProjAs);
+                self.open_file_prompt(FileOp::SaveProjAs);
             }
             Cmd::PromptImportMidi => {
-                self.open_file_prompt(file_ops::FILT_MIDI, FileOp::ImportMidi);
+                self.open_file_prompt(FileOp::ImportMidi);
             }
             Cmd::PromptImportPiyo => {
-                self.open_file_prompt(file_ops::FILT_PIYOPIYO, FileOp::ImportPiyoPiyo);
+                self.open_file_prompt(FileOp::ImportPiyoPiyo);
             }
             Cmd::PromptImportOrg => {
-                self.open_file_prompt(file_ops::FILT_ORGANYA, FileOp::ImportOrganya);
+                self.open_file_prompt(FileOp::ImportOrganya);
             }
             Cmd::PromptExportWav => {
-                self.open_file_prompt(file_ops::FILT_WAV, FileOp::ExportWav);
+                self.open_file_prompt(FileOp::ExportWav);
             }
             Cmd::PromptExportWavData {
                 data,
                 ch_num,
                 sample_rate,
             } => {
-                self.open_file_prompt(
-                    file_ops::FILT_WAV,
-                    FileOp::ExportWavData {
-                        data,
-                        ch_num,
-                        sample_rate,
-                    },
-                );
+                self.open_file_prompt(FileOp::ExportWavData {
+                    data,
+                    ch_num,
+                    sample_rate,
+                });
             }
             Cmd::PromptExportPtnoise { voice } => {
-                self.open_file_prompt(file_ops::FILT_PTNOISE, FileOp::ExportPtnoise { voice });
+                self.open_file_prompt(FileOp::ExportPtnoise { voice });
             }
             Cmd::PromptExportPtvoice { voice } => {
-                self.open_file_prompt(file_ops::FILT_PTVOICE, FileOp::ExportPtvoice { voice });
+                self.open_file_prompt(FileOp::ExportPtvoice { voice });
             }
             Cmd::PromptOpenPtcop => {
-                self.open_file_prompt(file_ops::FILT_PTCOP, FileOp::OpenProj);
+                self.open_file_prompt(FileOp::OpenProj);
             }
             Cmd::ClearProject => {
                 let mut song = self.song.lock().unwrap();
