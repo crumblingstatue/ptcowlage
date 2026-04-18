@@ -404,13 +404,11 @@ fn file_menu_ui(
         app_cmd.push(Cmd::FilePrompt(FileOp::ImportOrganya));
     }
     ui.separator();
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        if ui.button("Preferences").clicked() {
-            windows.toggle::<crate::app::ui::windows::PreferencesWindow>();
-        }
-        ui.separator();
+    if ui.button("Preferences").clicked() {
+        windows.toggle::<crate::app::ui::windows::PreferencesWindow>();
     }
+    ui.separator();
+
     #[cfg(not(target_arch = "wasm32"))]
     if ui.button("Export wav").clicked() {
         app_cmd.push(Cmd::FilePrompt(FileOp::ExportWav));

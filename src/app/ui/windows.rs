@@ -65,19 +65,19 @@ impl Window for LogWindow {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 pub struct PreferencesWindow {
+    #[cfg(not(target_arch = "wasm32"))]
     file_dia: egui_file_dialog::FileDialog,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Window for PreferencesWindow {
     fn title(&self) -> &'static str {
         "Preferences"
     }
 
     fn update(&mut self, ui: &mut egui::Ui, _song: &mut SongState, prefs: &mut Preferences) {
+        #[cfg(not(target_arch = "wasm32"))]
         ui.horizontal(|ui| {
             ui.label("Japanese fallback font");
             ui.add(
@@ -93,11 +93,14 @@ impl Window for PreferencesWindow {
             &mut prefs.midi_auto_poly_migrate,
             "Auto poly-migrate on midi import",
         );
-        self.file_dia.update(ui.ctx());
-        if let Some(path) = self.file_dia.take_picked() {
-            match path.to_str() {
-                Some(s) => s.clone_into(&mut prefs.jp_fallback_font_path),
-                None => prefs.jp_fallback_font_path = "<path not valid utf-8>".into(),
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.file_dia.update(ui.ctx());
+            if let Some(path) = self.file_dia.take_picked() {
+                match path.to_str() {
+                    Some(s) => s.clone_into(&mut prefs.jp_fallback_font_path),
+                    None => prefs.jp_fallback_font_path = "<path not valid utf-8>".into(),
+                }
             }
         }
     }
