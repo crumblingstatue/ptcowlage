@@ -140,16 +140,16 @@ pub fn ui(
             });
             ui.menu_button(" Import", |ui| {
                 if ui.button((img::COW.smol(), "All from .ptcop...")).clicked() {
-                    app_cmd.push(Cmd::PromptImportAllPtcop);
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ImportAllPtcop));
                 }
                 if ui.button((img::SAXO.smol(), ".ptvoice")).clicked() {
-                    app_cmd.push(Cmd::PromptImportPtVoice);
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ImportPtVoice));
                 }
                 if ui.button((img::DRUM.smol(), ".ptnoise")).clicked() {
-                    app_cmd.push(Cmd::PromptImportPtNoise);
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ImportPtNoise));
                 }
                 if ui.button((img::FISH.smol(), ".ogg (vorbis)")).clicked() {
-                    app_cmd.push(Cmd::PromptImportOggVorbis);
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ImportOggVorbis));
                 }
             });
             ui.separator();
@@ -377,13 +377,13 @@ fn voice_ui(
         }
         ui.menu_button("🔁 Replace", |ui| {
             if ui.button((img::SAXO.smol(), "With .ptvoice")).clicked() {
-                app_cmd.push(Cmd::PromptReplacePtVoiceSingle(idx));
+                app_cmd.push(Cmd::FilePrompt(FileOp::ReplacePtVoiceSingle(idx)));
             }
             if ui.button((img::DRUM.smol(), "With .ptnoise")).clicked() {
-                app_cmd.push(Cmd::PromptReplacePtNoiseSingle(idx));
+                app_cmd.push(Cmd::FilePrompt(FileOp::ReplacePtNoiseSingle(idx)));
             }
             if ui.button((img::MIC.smol(), "With .wav")).clicked() {
-                app_cmd.push(Cmd::PromptReplaceWavSingle(idx));
+                app_cmd.push(Cmd::FilePrompt(FileOp::ReplaceWavSingle(idx)));
             }
             ui.menu_button("✴ With new", |ui| {
                 if ui.button((img::SAXO.smol(), "Wave")).clicked() {
@@ -402,12 +402,12 @@ fn voice_ui(
         match &voice.base.data {
             VoiceData::Noise(_) => {
                 if ui.button("💾 Export .ptnoise").clicked() {
-                    app_cmd.push(Cmd::PromptExportPtnoise { voice: idx });
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ExportPtnoise { voice: idx }));
                 }
             }
             VoiceData::Wave(_) => {
                 if ui.button("💾 Export .ptvoice").clicked() {
-                    app_cmd.push(Cmd::PromptExportPtvoice { voice: idx });
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ExportPtvoice { voice: idx }));
                 }
             }
             _ => {}
@@ -579,11 +579,11 @@ pub fn voice_ui_inner(
                     slot.inst.sample_buf.len()
                 ));
                 if ui.button("Export .wav").clicked() {
-                    app_cmd.push(Cmd::PromptExportWavData {
+                    app_cmd.push(Cmd::FilePrompt(FileOp::ExportWavData {
                         data: slot.inst.sample_buf.clone(),
                         ch_num: ChNum::Stereo,
                         sample_rate: ptcow::NATIVE_SAMPLE_RATE.into(),
-                    });
+                    }));
                 }
             }
             InstanceTab::Envelope => {

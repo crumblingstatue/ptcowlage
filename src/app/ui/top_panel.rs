@@ -5,6 +5,7 @@ use {
             command_queue::{Cmd, CommandQueue},
             ui::{
                 Tab, UiState,
+                file_ops::FileOp,
                 modal::Modal,
                 piano_freeplay_ui,
                 windows::{LogWindow, TitleAndCommentWindow, Windows},
@@ -214,7 +215,7 @@ pub fn top_panel(app: &mut crate::app::App, ui: &mut egui::Ui) {
     }
 
     if bt_open || sc_open {
-        app.cmd.push(Cmd::PromptOpenPtcop);
+        app.cmd.push(Cmd::FilePrompt(FileOp::OpenProj));
     }
 
     if bt_reload || sc_reload {
@@ -388,17 +389,17 @@ fn file_menu_ui(
             .clicked();
     }
     if ui.button("Save as").clicked() {
-        app_cmd.push(Cmd::PromptSaveAs);
+        app_cmd.push(Cmd::FilePrompt(FileOp::SaveProjAs));
     }
     ui.separator();
     if ui.button("Import midi").clicked() {
-        app_cmd.push(Cmd::PromptImportMidi);
+        app_cmd.push(Cmd::FilePrompt(FileOp::ImportMidi));
     }
     if ui.button("Import PiyoPiyo").clicked() {
-        app_cmd.push(Cmd::PromptImportPiyo);
+        app_cmd.push(Cmd::FilePrompt(FileOp::ImportPiyoPiyo));
     }
     if ui.button("Import Organya").clicked() {
-        app_cmd.push(Cmd::PromptImportOrg);
+        app_cmd.push(Cmd::FilePrompt(FileOp::ImportOrganya));
     }
     ui.separator();
     #[cfg(not(target_arch = "wasm32"))]
@@ -410,7 +411,7 @@ fn file_menu_ui(
     }
     #[cfg(not(target_arch = "wasm32"))]
     if ui.button("Export wav").clicked() {
-        app_cmd.push(Cmd::PromptExportWav);
+        app_cmd.push(Cmd::FilePrompt(FileOp::ExportWav));
     }
     #[cfg(target_arch = "wasm32")]
     ui.hyperlink_to(

@@ -1,7 +1,7 @@
 use {
-    crate::app::ui::modal::Modal,
+    crate::app::ui::{file_ops::FileOp, modal::Modal},
     egui_toast::ToastKind,
-    ptcow::{ChNum, EventPayload, SourceSampleRate, VoiceIdx},
+    ptcow::{EventPayload, VoiceIdx},
     std::collections::VecDeque,
 };
 
@@ -32,18 +32,6 @@ pub enum Cmd {
         text: String,
         duration: f64,
     },
-    PromptImportPtVoice,
-    PromptImportPtNoise,
-    PromptImportAllPtcop,
-    PromptSaveAs,
-    PromptImportMidi,
-    PromptImportPiyo,
-    PromptImportOrg,
-    PromptExportWav,
-    PromptOpenPtcop,
-    PromptReplacePtVoiceSingle(VoiceIdx),
-    PromptReplacePtNoiseSingle(VoiceIdx),
-    PromptReplaceWavSingle(VoiceIdx),
     ClearProject,
     #[cfg(not(target_arch = "wasm32"))]
     OpenPtcopFromPath {
@@ -53,47 +41,45 @@ pub enum Cmd {
         unit: ptcow::UnitIdx,
         voice: VoiceIdx,
     },
-    PromptExportPtnoise {
-        voice: VoiceIdx,
-    },
-    PromptExportPtvoice {
-        voice: VoiceIdx,
-    },
     Modal(Box<dyn FnOnce(&mut Modal)>),
-    PromptImportOggVorbis,
     ResetVoiceForUnitsWithVoiceIdx {
         idx: VoiceIdx,
     },
-    PromptExportWavData {
-        data: Vec<u8>,
-        ch_num: ChNum,
-        sample_rate: SourceSampleRate,
-    },
+    FilePrompt(FileOp),
 }
 
 impl Cmd {
     /// Returns a copy of this command if it's repeatable, `None` otherwise
     fn repeatable(&self) -> Option<Self> {
         match self {
-            cmd @ (Cmd::ReloadCurrentFile
-            | Cmd::SaveCurrentFile
-            | Cmd::PromptImportPtVoice
-            | Cmd::PromptImportPtNoise
-            | Cmd::PromptImportAllPtcop
-            | Cmd::PromptSaveAs
-            | Cmd::PromptImportMidi
-            | Cmd::PromptImportPiyo
-            | Cmd::PromptImportOrg
-            | Cmd::PromptExportWav
-            | Cmd::PromptOpenPtcop
-            | Cmd::PromptReplacePtNoiseSingle(_)
-            | Cmd::PromptReplacePtVoiceSingle(_)) => Some(unsafe {
-                // Avoid having to separately match each copiable variant by using a little unsafe
+            Self::ReloadCurrentFile => Some(Self::ReloadCurrentFile),
+            Self::SaveCurrentFile => Some(Self::SaveCurrentFile),
+            Self::FilePrompt(op) => {
+                match op {
+                    FileOp::OpenProj
+                    | FileOp::ImportAllPtcop
+                    | FileOp::ImportMidi
+                    | FileOp::SaveProjAs
+                    | FileOp::ImportPiyoPiyo
+                    | FileOp::ImportOrganya
+                    | FileOp::ExportWav
+                    | FileOp::ReplacePtVoiceSingle(..)
+                    | FileOp::ReplacePtNoiseSingle(..)
+                    | FileOp::ReplaceWavSingle(..)
+                    | FileOp::ImportPtNoise
+                    | FileOp::ImportPtVoice
+                    | FileOp::ExportPtvoice { .. }
+                    | FileOp::ExportPtnoise { .. }
+                    | FileOp::ImportOggVorbis => {
+                        // Avoid having to separately match each copiable variant by using a little unsafe
 
-                // # Safety
-                // These variants are trivially copiable
-                std::ptr::read(cmd)
-            }),
+                        // # Safety
+                        // These variants are trivially copiable
+                        Some(unsafe { std::ptr::read(self) })
+                    }
+                    FileOp::ExportWavData { .. } => None,
+                }
+            }
             _ => None,
         }
     }

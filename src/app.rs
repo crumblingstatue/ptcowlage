@@ -992,62 +992,6 @@ impl App {
                         .options(ToastOptions::default().duration_in_seconds(duration)),
                 );
             }
-            Cmd::PromptImportPtVoice => {
-                self.open_file_prompt(FileOp::ImportPtVoice);
-            }
-            Cmd::PromptImportPtNoise => {
-                self.open_file_prompt(FileOp::ImportPtNoise);
-            }
-            Cmd::PromptImportOggVorbis => {
-                self.open_file_prompt(FileOp::ImportOggVorbis);
-            }
-            Cmd::PromptImportAllPtcop => {
-                self.open_file_prompt(FileOp::ImportAllPtcop);
-            }
-            Cmd::PromptReplacePtVoiceSingle(voice_idx) => {
-                self.open_file_prompt(FileOp::ReplacePtVoiceSingle(voice_idx));
-            }
-            Cmd::PromptReplacePtNoiseSingle(voice_idx) => {
-                self.open_file_prompt(FileOp::ReplacePtNoiseSingle(voice_idx));
-            }
-            Cmd::PromptReplaceWavSingle(voice_idx) => {
-                self.open_file_prompt(FileOp::ReplaceWavSingle(voice_idx));
-            }
-            Cmd::PromptSaveAs => {
-                self.open_file_prompt(FileOp::SaveProjAs);
-            }
-            Cmd::PromptImportMidi => {
-                self.open_file_prompt(FileOp::ImportMidi);
-            }
-            Cmd::PromptImportPiyo => {
-                self.open_file_prompt(FileOp::ImportPiyoPiyo);
-            }
-            Cmd::PromptImportOrg => {
-                self.open_file_prompt(FileOp::ImportOrganya);
-            }
-            Cmd::PromptExportWav => {
-                self.open_file_prompt(FileOp::ExportWav);
-            }
-            Cmd::PromptExportWavData {
-                data,
-                ch_num,
-                sample_rate,
-            } => {
-                self.open_file_prompt(FileOp::ExportWavData {
-                    data,
-                    ch_num,
-                    sample_rate,
-                });
-            }
-            Cmd::PromptExportPtnoise { voice } => {
-                self.open_file_prompt(FileOp::ExportPtnoise { voice });
-            }
-            Cmd::PromptExportPtvoice { voice } => {
-                self.open_file_prompt(FileOp::ExportPtvoice { voice });
-            }
-            Cmd::PromptOpenPtcop => {
-                self.open_file_prompt(FileOp::OpenProj);
-            }
             Cmd::ClearProject => {
                 let mut song = self.song.lock().unwrap();
                 *song = SongState::new(self.out.rate);
@@ -1082,6 +1026,9 @@ impl App {
             Cmd::ResetVoiceForUnitsWithVoiceIdx { idx } => {
                 let mut song = self.song.lock().unwrap();
                 reset_voice_for_units_with_voice_idx(&mut song, idx);
+            }
+            Cmd::FilePrompt(op) => {
+                self.open_file_prompt(op);
             }
         }
     }
