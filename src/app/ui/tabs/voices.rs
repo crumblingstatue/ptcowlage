@@ -79,7 +79,7 @@ impl VoicesUiState {
     }
 }
 
-#[derive(Default, PartialEq, Hash, Clone, Copy)]
+#[derive(Default, PartialEq, Hash, Clone, Copy, Debug)]
 #[repr(u8)]
 pub enum SelectedSlot {
     #[default]

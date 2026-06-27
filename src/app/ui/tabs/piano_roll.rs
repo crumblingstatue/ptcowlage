@@ -9,7 +9,10 @@ use {
         pxtone_misc::KeyInfo,
     },
     arrayvec::ArrayVec,
-    eframe::egui::{self, PopupAnchor, scroll_area::ScrollBarVisibility},
+    eframe::egui::{
+        self, PopupAnchor,
+        scroll_area::{DragScroll, ScrollBarVisibility},
+    },
     ptcow::{
         EventPayload, Key, Meas, SampleT, Tick, Timing, Unit, UnitIdx,
         timing::{NonZeroMeas, tick_to_meas},
@@ -194,7 +197,7 @@ fn roll_ui(
     } else {
         egui::scroll_area::ScrollSource {
             scroll_bar: true,
-            drag: false,
+            drag: DragScroll::Never,
             mouse_wheel: true,
         }
     };

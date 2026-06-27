@@ -807,11 +807,11 @@ impl eframe::App for App {
                 retain
             });
         }
-        egui::Panel::top("top_panel").show_inside(ui, |ui| ui::top_panel::top_panel(self, ui));
+        egui::Panel::top("top_panel").show(ui, |ui| ui::top_panel::top_panel(self, ui));
         if self.ui_state.show_left_panel() {
-            egui::Panel::left("left_panel").show_inside(ui, |ui| ui::left_panel::ui(self, ui));
+            egui::Panel::left("left_panel").show(ui, |ui| ui::left_panel::ui(self, ui));
         }
-        egui::CentralPanel::default().show_inside(ui, |ui| ui::central_panel(self, ui));
+        egui::CentralPanel::default().show(ui, |ui| ui::central_panel(self, ui));
         self.ui_state
             .windows
             .update(ui, &mut self.song.lock().unwrap(), &mut self.prefs);
