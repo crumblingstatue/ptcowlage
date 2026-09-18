@@ -648,31 +648,24 @@ impl App {
         Ok(())
     }
 
-    fn handle_dropped_file(
-        &mut self,
-        dropfile: &egui::DroppedFile,
-        bytes: &Arc<[u8]>,
-    ) -> anyhow::Result<()> {
-        if let Some((name, ext)) = dropfile.name.split_once('.') {
-            match ext {
-                "ptcop" | "pttune" => {
-                    // Web version loads dropped files directly as bytes
-                    if let Err(e) = self.load_song_from_bytes(bytes) {
-                        self.modal.err(format!("Error loading project:\n{e}"));
-                    }
+    fn handle_dropped_file(&mut self, ext: &str, bytes: &[u8]) -> anyhow::Result<()> {
+        match ext {
+            "ptcop" | "pttune" => {
+                // Web version loads dropped files directly as bytes
+                if let Err(e) = self.load_song_from_bytes(bytes) {
+                    self.modal.err(format!("Error loading project:\n{e}"));
                 }
-                "mid" => {
-                    self.import_midi_from_bytes(bytes)?;
-                }
-                "pmd" => {
-                    self.import_piyopiyo_from_bytes(bytes)?;
-                }
-                "org" => {
-                    self.import_organya_from_bytes(bytes)?;
-                }
-                _ => {}
             }
-            self.open_file = Some(format!("{name}.{ext}").into());
+            "mid" => {
+                self.import_midi_from_bytes(bytes)?;
+            }
+            "pmd" => {
+                self.import_piyopiyo_from_bytes(bytes)?;
+            }
+            "org" => {
+                self.import_organya_from_bytes(bytes)?;
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -817,25 +810,23 @@ impl eframe::App for App {
             .update(ui, &mut self.song.lock().unwrap(), &mut self.prefs);
 
         #[cfg(not(target_arch = "wasm32"))]
-        let (mut picked_path, mut file_op) = self.handle_file_dia_update(ui);
+        let (mut picked_path, file_op) = self.handle_file_dia_update(ui);
         #[cfg(target_arch = "wasm32")]
         let (mut picked_path, mut file_op) = (None, None);
 
         ui.input(|inp| {
             for dropfile in &inp.raw.dropped_files {
-                if let Some(path) = &dropfile.path {
-                    picked_path = Some(path.clone());
-                    if let Some(ext) = path.extension().map(|ext| ext.to_str().unwrap()) {
-                        file_op = match ext {
-                            "ptcop" | "pttune" => Some(FileOp::OpenProj),
-                            "mid" | "midi" => Some(FileOp::ImportMidi),
-                            "pmd" => Some(FileOp::ImportPiyoPiyo),
-                            "org" => Some(FileOp::ImportOrganya),
-                            _ => None,
-                        };
+                match dropfile.bytes() {
+                    Ok(bytes) => {
+                        let path = dropfile.path();
+                        picked_path = Some(path.to_owned());
+                        if let Some(ext) = path.extension().map(|ext| ext.to_str().unwrap()) {
+                            if let Err(e) = self.handle_dropped_file(ext, &bytes) {
+                                self.modal.err(e);
+                            }
+                        }
                     }
-                } else if let Some(bytes) = &dropfile.bytes {
-                    if let Err(e) = self.handle_dropped_file(dropfile, bytes) {
+                    Err(e) => {
                         self.modal.err(e);
                     }
                 }
