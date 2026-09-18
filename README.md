@@ -15,6 +15,8 @@ Powered by the [ptcow](<https://github.com/crumblingstatue/ptcow/>) PxTone playb
 
 ## Web version
 
+**Note: The web version is currently unmaintained**
+
 There is a web version that lives at <https://crumblingstatue.github.io/ptcowlage/>.
 
 ## Building
